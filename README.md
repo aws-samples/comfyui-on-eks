@@ -8,7 +8,7 @@ Stable Diffusion 作为当下最流行的开源 AI 图像生成模型在游戏�
 
 ### 二、ComfyUI 简介
 
-其中 ComfyUI 是一个基于节点式工作流的 Stable Diffusion 方案，它将 Stable Diffsuion 模型推理时各个流程拆分成不同的节点，让用户可以更加清晰地了解 Stable Diffusion 的原理，并且可以更加精细化地控制整个流程。同时得益于 ComfyUI 在 SDXL 模型上相较于其他方案的性能优化，使得它越来越多地被美术创作者所使用。
+ComfyUI 是一个基于节点式工作流的 Stable Diffusion 方案，它将 Stable Diffsuion 模型推理时各个流程拆分成不同的节点，让用户可以更加清晰地了解 Stable Diffusion 的原理，并且可以更加精细化地控制整个流程。同时得益于 ComfyUI 在 SDXL 模型上相较于其他方案的性能优化，使得它越来越多地被美术创作者所使用。
 
 
 
@@ -84,7 +84,7 @@ https://github.com/aws-samples/comfyui-on-eks
 
 
 
-下载部署代码，切换分支，安装 npm packages 并检查环境
+下载部署代码，**切换分支，安装 npm packages 并检查环境**
 
 ```shell
 git clone https://github.com/aws-samples/comfyui-on-eks ~/comfyui-on-eks
@@ -411,6 +411,8 @@ kubectl logs -f $podName
 
 使用 API 的方式来测试，在 `comfyui-on-eks/test` 目录下执行以下命令
 
+**Run on Linux**
+
 ```shell
 ingress_address=$(kubectl get ingress|grep comfyui-ingress|awk '{print $4}')
 sed -i "s/SERVER_ADDRESS = .*/SERVER_ADDRESS = \"${ingress_address}\"/g" invoke_comfyui_api.py
@@ -418,6 +420,18 @@ sed -i "s/HTTPS = .*/HTTPS = False/g" invoke_comfyui_api.py
 sed -i "s/SHOW_IMAGES = .*/SHOW_IMAGES = False/g" invoke_comfyui_api.py
 ./invoke_comfyui_api.py
 ```
+
+**Run on MacOS**
+
+```shell
+ingress_address=$(kubectl get ingress|grep comfyui-ingress|awk '{print $4}')
+sed -i '' "s/SERVER_ADDRESS = .*/SERVER_ADDRESS = \"${ingress_address}\"/g" invoke_comfyui_api.py
+sed -i '' "s/HTTPS = .*/HTTPS = False/g" invoke_comfyui_api.py
+sed -i '' "s/SHOW_IMAGES = .*/SHOW_IMAGES = False/g" invoke_comfyui_api.py
+./invoke_comfyui_api.py
+```
+
+
 
 API 调用逻辑参考 `comfyui-on-eks/test/invoke_comfyui_api.py`，注意以下几点：
 
@@ -472,8 +486,6 @@ kubectl delete -f comfyui-on-eks/manifests/PersistentVolume/
 kubectl delete -f comfyui-on-eks/manifests/Karpenter/
 ```
 
-
-
 删除上述部署的资源
 
 ```shell
@@ -489,4 +501,3 @@ cdk destroy Comfyui-Cluster
 ### 八、总结
 
 本文介绍了一种在 EKS 上部署 ComfyUI 的方案，通过 Instance store 和 S3 的结合，在降低存储成本的同时最大化模型加载和切换的性能，同时通过 Serverless 的方式自动化进行模型的同步，使用 spot 实例降低 GPU 实例成本，并且通过 CloudFront 进行全球加速，以满足跨地区美术工作室协作的场景。整套方案以 IaC 的方式管理底层基础设施，最小化运维成本。
-
