@@ -84,21 +84,34 @@ https://github.com/aws-samples/comfyui-on-eks
 
 
 
-下载部署代码，切换分支，安装 npm packages
+下载部署代码，切换分支，安装 npm packages 并检查环境
 
 ```shell
 git clone https://github.com/aws-samples/comfyui-on-eks ~/comfyui-on-eks
 cd ~/comfyui-on-eks && git checkout Blog1
-npm installl
+npm install
+npm list
+cdk list
 ```
+
+运行 `npm list` 确认已安装下面的 packages
 
 ```shell
 comfyui-on-eks@0.1.0 ~/comfyui-on-eks
 ├── @aws-quickstart/eks-blueprints@1.13.1
-├── @types/node@20.7.1
-├── aws-cdk-lib@2.99.1
+├── aws-cdk-lib@2.115.0
 ├── aws-cdk@2.99.1
 └── ...
+```
+
+运行 `cdk list` 确认环境已准备完成，有以下 CloudFormation 可以部署
+
+```
+Comfyui-Cluster
+CloudFrontEntry
+LambdaModelsSync
+S3OutputsStorage
+ComfyuiEcrRepo
 ```
 
 
