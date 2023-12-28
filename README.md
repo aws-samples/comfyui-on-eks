@@ -1,4 +1,4 @@
-## 云端AI生图——面向美术工作室的Stable Diffusion生图方案
+## 基于 Amazon EKS 的 Stable Diffusion ComfyUI 部署方案
 
 ### 一、背景介绍
 
@@ -8,7 +8,14 @@ Stable Diffusion 作为当下最流行的开源 AI 图像生成模型在游戏�
 
 ### 二、ComfyUI 简介
 
-ComfyUI 是一个基于节点式工作流的 Stable Diffusion 方案，它将 Stable Diffsuion 模型推理时各个流程拆分成不同的节点，让用户可以更加清晰地了解 Stable Diffusion 的原理，并且可以更加精细化地控制整个流程。同时得益于 ComfyUI 在 SDXL 模型上相较于其他方案的性能优化，使得它越来越多地被美术创作者所使用。
+ComfyUI 是一个开源的基于节点式工作流的 Stable Diffusion 方案，它将 Stable Diffsuion 模型推理时各个流程拆分成不同的节点，让用户可以更加清晰地了解 Stable Diffusion 的原理，并且可以更加精细化地控制整个流程。总体来看，ComfyUI 的学习曲线虽然比较陡，但是相较于其他的 Stable Diffusion runtime 有以下的优势：
+
+1. 在 SDXL 模型推理上相较于其他 UI 有很大的性能优化，图片生成速度相较于 webui 有 10%~25% 的提升。
+2. 高度自定义，可以让用户更加精准和细粒度控制整个图片生成过程，深度用户可以通过 ComfyUI 更简单地生成更好的图片。
+3. workflow 以 json 或者图片的形式更易于分享传播，可以更好地提高效率。
+4. 开发者友好，workflow 的 API 调用可以通过简单加载相同的 API 格式 json 文件，以任何语言来调用生成图片。
+
+基于 ComfyUI 以上的各种优势，使得它越来越多地被美术创作者所使用。
 
 
 
