@@ -20,13 +20,6 @@ export class CloudFrontEntry extends cdk.Stack {
             }
         })
 
-        // === [Personal Config] ===
-        const arraywangCertificate = acm.Certificate.fromCertificateArn(this,
-            'certificate',
-            'arn:aws:acm:us-east-1:930179054915:certificate/158ccf2a-532c-4450-97d3-e6f54f74f7cf'
-        )
-        // === [Personal Config] ===
-
         // Create a new CloudFront distribution for the EKS ingress
         const cloudFrontEntry = new cloudFront.Distribution(this, 'cloudFrontEntry', {
             defaultBehavior: {
@@ -38,17 +31,6 @@ export class CloudFrontEntry extends cdk.Stack {
                 allowedMethods: cloudFront.AllowedMethods.ALLOW_ALL,
                 viewerProtocolPolicy: cloudFront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
             },
-            // === [Personal Config] ===
-            certificate: arraywangCertificate,
-            domainNames: ['comfyui.array.wang'],
-            enableLogging: true,
-            logBucket: new s3.Bucket(this, 'cloudFrontEntryLogBucket', {
-                bucketName: 'comfyui-cloudfront-log-' + this.account + '-' + this.region,
-                removalPolicy: cdk.RemovalPolicy.DESTROY,
-                autoDeleteObjects: true,
-                objectOwnership: s3.ObjectOwnership.OBJECT_WRITER,
-            }),
-            // === [Personal Config] ===
         })
 
         // Output the name of the ingress
