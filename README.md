@@ -94,7 +94,7 @@ https://github.com/aws-samples/comfyui-on-eks
 下载部署代码，**切换分支，安装 npm packages 并检查环境**
 
 ```shell
-git clone https://github.com/aws-samples/comfyui-on-eks ~/comfyui-on-eks
+git clone https://github.com/aws-samples/comfyui-on-eks.git ~/comfyui-on-eks
 cd ~/comfyui-on-eks && git checkout Blog1
 npm install
 npm list
