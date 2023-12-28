@@ -1,0 +1,41 @@
+apiVersion: karpenter.sh/v1alpha5
+kind: Provisioner
+metadata:
+  name: karpenter-provisioner
+spec:
+  requirements:
+    - key: karpenter.sh/capacity-type
+      operator: In
+      values: ["on-demand", "spot"]
+    - key: node.kubernetes.io/instance-type
+      operator: In
+      values: ["g5.2xlarge", "g4dn.2xlarge"]
+  providerRef:
+    name: node-gpu
+  ttlSecondsAfterEmpty: 30
+---
+apiVersion: karpenter.k8s.aws/v1alpha1
+kind: AWSNodeTemplate
+metadata:
+  name: node-gpu
+spec:
+  subnetSelector:
+    Name: "Comfyui-Cluster/Comfyui-Cluster-vpc/Private*"
+  securityGroupSelector:
+    Name: "eks-cluster-sg-Comfyui-Cluster*"
+  blockDeviceMappings:
+    - deviceName: /dev/xvda
+      ebs:
+        volumeSize: 100Gi
+        volumeType: gp3
+  tags:
+    Name: ComfyUI-EKS-GPU-Node
+    Cost-Center: AI-Lab
+  userData: |
+    #!/bin/bash
+    mkfs -t xfs /dev/nvme1n1
+    mkdir -p /comfyui-models
+    mount /dev/nvme1n1 /comfyui-models
+    account=$(aws sts get-caller-identity --query 'Account' --output text)
+    region=$(ec2-metadata --availability-zone | sed 's/.$//'|awk '{print $NF}')
+    aws s3 sync s3://comfyui-models-${account}-${region} /comfyui-models

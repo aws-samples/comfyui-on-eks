@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: comfyui
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: comfyui
+  template:
+    metadata:
+      labels:
+        app: comfyui
+    spec:
+      volumes:
+      - name: stable-diffusion-models
+        hostPath:
+          path: /comfyui-models # Need to sync all models in node's user-data
+      - name: comfyui-outputs
+        persistentVolumeClaim:
+          claimName: comfyui-outputs-pvc # Need to apply sd-outputs-s3.yaml first
+      containers:
+      - name: comfyui
+        image: 123456789012.dkr.ecr.us-west-2.amazonaws.com/comfyui-images:latest
+        ports:
+        - containerPort: 8848
+        volumeMounts:
+        - mountPath: /app/ComfyUI/models
+          name: stable-diffusion-models
+        - mountPath: /app/ComfyUI/output
+          name: comfyui-outputs
+        resources:
+          requests:
+            nvidia.com/gpu: 1
+          limits:
+            nvidia.com/gpu: 1
