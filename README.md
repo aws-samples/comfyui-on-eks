@@ -82,7 +82,15 @@ git clone https://github.com/aws-samples/comfyui-on-eks ~/comfyui-on-eks
 * [npm](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm/)
 * [CDK](https://docs.aws.amazon.com/cdk/v2/guide/getting_started.html): latest version
 
-**以及安装以下版本的 npm packages**
+
+
+下载部署代码，切换分支，安装 npm packages
+
+```shell
+git clone https://github.com/aws-samples/comfyui-on-eks ~/comfyui-on-eks
+cd ~/comfyui-on-eks && git checkout Blog1
+npm installl
+```
 
 ```shell
 comfyui-on-eks@0.1.0 ~/comfyui-on-eks
@@ -91,14 +99,6 @@ comfyui-on-eks@0.1.0 ~/comfyui-on-eks
 ├── aws-cdk-lib@2.99.1
 ├── aws-cdk@2.99.1
 └── ...
-```
-
-下载部署代码
-
-```shell
-git clone https://github.com/aws-samples/comfyui-on-eks ~/comfyui-on-eks
-npm installl
-cd ~/comfyui-on-eks && git checkout 
 ```
 
 
