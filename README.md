@@ -48,10 +48,10 @@ Stable Diffusion 作为当下最流行的开源 AI 图像生成模型在游戏�
 
 
 
-此方案已开源，可以通过以下命令获取部署和测试代码。具体部署指引请参考第六节。
+此方案已开源，可以通过以下地址获取部署和测试代码。具体部署指引请参考第六节。
 
 ```shell
-git clone https://github.com/aws-samples/comfyui-on-eks ~/comfyui-on-eks
+https://github.com/aws-samples/comfyui-on-eks
 ```
 
 
