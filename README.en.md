@@ -85,11 +85,14 @@ This solution assumes that you have already installed, deployed, and are familia
 
 * [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html): latest version
 * [eksctl](https://eksctl.io/installation/)
-* [helm](https://helm.sh/docs/intro/install/)
 * [kubectl](https://kubernetes.io/docs/tasks/tools/)
 * [Docker](https://docs.docker.com/engine/install/)
 * [npm](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm/)
 * [CDK](https://docs.aws.amazon.com/cdk/v2/guide/getting_started.html): latest version
+
+
+
+Make sure that you have enough vCPU quota for G instances. (At least 8 vCPU for a g5.2xl/g4dn.2x used in this guidance)
 
 
 
@@ -122,10 +125,6 @@ LambdaModelsSync
 S3OutputsStorage
 ComfyuiEcrRepo
 ```
-
-
-
-
 
 #### 6.2 Deploy EKS Cluster
 
@@ -279,7 +278,7 @@ Key considerations for Karpenter's deployment:
 The KarpenterInstanceNodeRole acquired in Section 6.2 needs an additional S3 access permission to allow GPU nodes to sync files from S3. Execute the following command:
 
 ```shell
-KarpenterInstanceNodeRole="Comfyui-Cluster-ComfyuiClusterkarpenternoderoleE627-juyEInBqoNtU" # Modify the region to your current region.
+KarpenterInstanceNodeRole="Comfyui-Cluster-ComfyuiClusterkarpenternoderoleE627-juyEInBqoNtU" # Modify the region to your own.
 aws iam attach-role-policy --policy-arn arn:aws:iam::aws:policy/AmazonS3FullAccess --role-name $KarpenterInstanceNodeRole
 ```
 
@@ -313,10 +312,35 @@ kubectl apply -f comfyui-on-eks/manifests/PersistentVolume/sd-outputs-s3.yaml
 
 ##### 6.5.4 Deploy EKS S3 CSI Driver
 
+Now we need to add your IAM principal to EKS cluster 
+
+Edit `configmap/aws-auth` and add your IAM principal manually with following command
+
+```shell
+kubectl edit -n kube-system configmap/aws-auth
+```
+
+If your IAM principal is user, add your userarn into mapUsers like following
+
+```yaml
+mapUsers: '[{"userarn":"arn:aws:iam::123456789012:user/YOUR_USERNAME","username":"admin","groups":["system:masters"]}]'
+```
+
+For more details refer to [Add IAM principals to your Amazon EKS cluster](https://docs.aws.amazon.com/eks/latest/userguide/add-user-role.html)
+
+Ensure that the your IAM principal is included in the EKS cluster's `aws-auth` configmap.
+
+```shell
+identity=$(aws sts get-caller-identity --query 'Arn' --output text)
+kubectl describe configmap aws-auth -n kube-system|grep $identity
+```
+
+
+
 Execute the following command to create a role and service account for the S3 CSI driver, enabling it to read and write to S3.
 
 ```shell
-REGION="us-west-2" # Modify the region to your current region.
+region="us-west-2" # Modify the region to your current region.
 account=$(aws sts get-caller-identity --query Account --output text)
 ROLE_NAME=EKS-S3-CSI-DriverRole-$account-$region
 POLICY_ARN=arn:aws:iam::aws:policy/AmazonS3FullAccess
@@ -327,24 +351,17 @@ eksctl create iamserviceaccount \
     --attach-policy-arn $POLICY_ARN \
     --approve \
     --role-name $ROLE_NAME \
-    --region $REGION
+    --region $region
 ```
 
-Ensure that the identity executing the above commands is included in the EKS cluster's `aws-auth` configmap.
 
-```shell
-identity=$(aws sts get-caller-identity --query 'Arn' --output text)
-kubectl describe configmap aws-auth -n kube-system|grep $identity
-```
 
 Run the following command to install  `aws-mountpoint-s3-csi-driver` Addon
 
 ```shell
-helm repo add aws-mountpoint-s3-csi-driver https://awslabs.github.io/mountpoint-s3-csi-driver
-helm repo update
-helm upgrade --install aws-mountpoint-s3-csi-driver \
-    --namespace kube-system \
-    aws-mountpoint-s3-csi-driver/aws-mountpoint-s3-csi-driver
+region="us-west-2" # Modify the region to your current region.
+account=$(aws sts get-caller-identity --query Account --output text)
+eksctl create addon --name aws-mountpoint-s3-csi-driver --cluster Comfyui-Cluster --service-account-role-arn arn:aws:iam::$account:role/EKS-S3-CSI-DriverRole-$account-$region --force
 ```
 
 
@@ -388,6 +405,20 @@ A few points to note about ComfyUI Deployment and Service:
    kubect get events --watch
    ```
 
+   If you see  ERROR log like following
+
+   ```
+   AuthFailure.ServiceLinkedRoleCreationNotPermitted: The provided credentials do not have permission to create the service-linked role for EC2 Spot Instances.
+   ```
+
+   You need to create a service linked role
+
+   ```shell
+   aws iam create-service-linked-role --aws-service-name spot.amazonaws.com
+   ```
+
+   
+
 2. Different GPU instance types have different Instance Store sizes.  If the total model size in S3 exceeds the Instance Store size, you'll need to use other method to manage model storage.
 
 
@@ -398,8 +429,6 @@ When ComfyUI pod is running, execute the following command to check the log:
 podName=$(kubectl get pods |tail -1|awk '{print $1}')
 kubectl logs -f $podName
 ```
-
-
 
 
 
