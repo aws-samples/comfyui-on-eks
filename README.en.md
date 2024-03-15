@@ -312,27 +312,19 @@ kubectl apply -f comfyui-on-eks/manifests/PersistentVolume/sd-outputs-s3.yaml
 
 ##### 6.5.4 Deploy EKS S3 CSI Driver
 
-Now we need to add your IAM principal to EKS cluster 
-
-Edit `configmap/aws-auth` and add your IAM principal manually with following command
+Run the following command to add your IAM principal to EKS cluster
 
 ```shell
-kubectl edit -n kube-system configmap/aws-auth
+identity=$(aws sts get-caller-identity --query 'Arn' --output text --no-cli-pager)
+aws eks update-cluster-config --name Comfyui-Cluster --access-config authenticationMode=API_AND_CONFIG_MAP
+aws eks create-access-entry --cluster-name Comfyui-Cluster --principal-arn $identity --type STANDARD --username comfyui-user
+aws eks associate-access-policy --cluster-name Comfyui-Cluster --principal-arn $identity --access-scope type=cluster --policy-arn arn:aws:eks::aws:cluster-access-policy/AmazonEKSAdminPolicy
 ```
 
-If your IAM principal is user, add your userarn into mapUsers like following
-
-```yaml
-mapUsers: '[{"userarn":"arn:aws:iam::123456789012:user/YOUR_USERNAME","username":"admin","groups":["system:masters"]}]'
-```
-
-For more details refer to [Add IAM principals to your Amazon EKS cluster](https://docs.aws.amazon.com/eks/latest/userguide/add-user-role.html)
-
-Ensure that the your IAM principal is included in the EKS cluster's `aws-auth` configmap.
+Run the following command to ensure that your IAM principal has been added
 
 ```shell
-identity=$(aws sts get-caller-identity --query 'Arn' --output text)
-kubectl describe configmap aws-auth -n kube-system|grep $identity
+aws eks list-access-entries --cluster-name Comfyui-Cluster|grep $identity
 ```
 
 

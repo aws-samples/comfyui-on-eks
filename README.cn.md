@@ -76,11 +76,14 @@ https://github.com/aws-samples/comfyui-on-eks
 
 * [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html): latest version
 * [eksctl](https://eksctl.io/installation/)
-* [helm](https://helm.sh/docs/intro/install/)
 * [kubectl](https://kubernetes.io/docs/tasks/tools/)
 * [Docker](https://docs.docker.com/engine/install/)
 * [npm](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm/)
 * [CDK](https://docs.aws.amazon.com/cdk/v2/guide/getting_started.html): latest version
+
+
+
+确保账号下有足够的 G 实例配额。（本方案使用 g5.2x/g4dn.2x 至少需要 8vCPU）
 
 
 
@@ -309,10 +312,29 @@ kubectl apply -f comfyui-on-eks/manifests/PersistentVolume/sd-outputs-s3.yaml
 
 ##### 6.5.4 部署 EKS S3 CSI Driver
 
+
+
+执行以下命令，将你的 IAM principal 加到 EKS cluster 中去
+
+```shell
+identity=$(aws sts get-caller-identity --query 'Arn' --output text --no-cli-pager)
+aws eks update-cluster-config --name Comfyui-Cluster --access-config authenticationMode=API_AND_CONFIG_MAP
+aws eks create-access-entry --cluster-name Comfyui-Cluster --principal-arn $identity --type STANDARD --username comfyui-user
+aws eks associate-access-policy --cluster-name Comfyui-Cluster --principal-arn $identity --access-scope type=cluster --policy-arn arn:aws:eks::aws:cluster-access-policy/AmazonEKSAdminPolicy
+```
+
+执行以下命令，确认你的 IAM principal 已加到 EKS cluster 中
+
+```shell
+aws eks list-access-entries --cluster-name Comfyui-Cluster|grep $identity
+```
+
+
+
 执行以下命令，创建 S3 CSI driver 的 role 和 service account，以允许 S3 CSI driver 对 S3 进行读写。
 
 ```shell
-REGION="us-west-2" # 修改 region 为你当前的 region
+region="us-west-2" # 修改 region 为你当前的 region
 account=$(aws sts get-caller-identity --query Account --output text)
 ROLE_NAME=EKS-S3-CSI-DriverRole-$account-$region
 POLICY_ARN=arn:aws:iam::aws:policy/AmazonS3FullAccess
@@ -323,14 +345,7 @@ eksctl create iamserviceaccount \
     --attach-policy-arn $POLICY_ARN \
     --approve \
     --role-name $ROLE_NAME \
-    --region $REGION
-```
-
-确保执行上述命令的 Identity 在 EKS 集群的 `aws-auth` configmap 里
-
-```shell
-identity=$(aws sts get-caller-identity --query 'Arn' --output text)
-kubectl describe configmap aws-auth -n kube-system|grep $identity
+    --region $region
 ```
 
 
@@ -338,11 +353,9 @@ kubectl describe configmap aws-auth -n kube-system|grep $identity
 执行以下命令，安装 `aws-mountpoint-s3-csi-driver` Addon
 
 ```shell
-helm repo add aws-mountpoint-s3-csi-driver https://awslabs.github.io/mountpoint-s3-csi-driver
-helm repo update
-helm upgrade --install aws-mountpoint-s3-csi-driver \
-    --namespace kube-system \
-    aws-mountpoint-s3-csi-driver/aws-mountpoint-s3-csi-driver
+region="us-west-2" # 修改 region 为你当前的 region
+account=$(aws sts get-caller-identity --query Account --output text)
+eksctl create addon --name aws-mountpoint-s3-csi-driver --cluster Comfyui-Cluster --service-account-role-arn arn:aws:iam::$account:role/EKS-S3-CSI-DriverRole-$account-$region --force
 ```
 
 
@@ -389,6 +402,20 @@ ComfyUI 的 deployment 和 service 部署注意以下几点：
    ```shell
    kubect get events --watch
    ```
+
+   如果你看到下面的 ERROR log
+
+   ```shell
+   AuthFailure.ServiceLinkedRoleCreationNotPermitted: The provided credentials do not have permission to create the service-linked role for EC2 Spot Instances.
+   ```
+
+   执行以下命令创建一个 service linked role
+
+   ```shell
+   aws iam create-service-linked-role --aws-service-name spot.amazonaws.com
+   ```
+
+   
 
 2. 不同的 GPU 实例有不同的 Instance Store 大小，如果 S3 存储的模型总大小超过了 Instance Store 的大小，则需要使用 EFS 的方式来管理模型存储
 
