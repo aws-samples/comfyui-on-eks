@@ -516,6 +516,7 @@ kubectl delete -f comfyui-on-eks/manifests/Karpenter/
 删除上述部署的资源
 
 ```shell
+aws ecr batch-delete-image --repository-name comfyui-images --image-ids imageTag=latest
 cdk destroy ComfyuiEcrRepo
 cdk destroy CloudFrontEntry
 cdk destroy S3OutputsStorage

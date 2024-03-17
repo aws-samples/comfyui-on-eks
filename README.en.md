@@ -510,6 +510,7 @@ kubectl delete -f comfyui-on-eks/manifests/Karpenter/
 Run the following command to delete all deployed resources:
 
 ```shell
+aws ecr batch-delete-image --repository-name comfyui-images --image-ids imageTag=latest
 cdk destroy ComfyuiEcrRepo
 cdk destroy CloudFrontEntry
 cdk destroy S3OutputsStorage
