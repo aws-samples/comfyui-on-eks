@@ -355,7 +355,7 @@ eksctl create iamserviceaccount \
 ```shell
 region="us-west-2" # 修改 region 为你当前的 region
 account=$(aws sts get-caller-identity --query Account --output text)
-eksctl create addon --name aws-mountpoint-s3-csi-driver --cluster Comfyui-Cluster --service-account-role-arn arn:aws:iam::$account:role/EKS-S3-CSI-DriverRole-$account-$region --force
+eksctl create addon --name aws-mountpoint-s3-csi-driver --version v1.0.0-eksbuild.1 --cluster Comfyui-Cluster --service-account-role-arn arn:aws:iam::$account:role/EKS-S3-CSI-DriverRole-$account-$region --force
 ```
 
 
@@ -400,7 +400,7 @@ ComfyUI 的 deployment 和 service 部署注意以下几点：
    ```
 
    ```shell
-   kubect get events --watch
+   kubectl get events --watch
    ```
 
    如果你看到下面的 ERROR log

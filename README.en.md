@@ -278,7 +278,7 @@ Key considerations for Karpenter's deployment:
 The KarpenterInstanceNodeRole acquired in Section 6.2 needs an additional S3 access permission to allow GPU nodes to sync files from S3. Execute the following command:
 
 ```shell
-KarpenterInstanceNodeRole="Comfyui-Cluster-ComfyuiClusterkarpenternoderoleE627-juyEInBqoNtU" # Modify the region to your own.
+KarpenterInstanceNodeRole="Comfyui-Cluster-ComfyuiClusterkarpenternoderoleE627-juyEInBqoNtU" # Modify the role to your own.
 aws iam attach-role-policy --policy-arn arn:aws:iam::aws:policy/AmazonS3FullAccess --role-name $KarpenterInstanceNodeRole
 ```
 
@@ -353,7 +353,7 @@ Run the following command to install  `aws-mountpoint-s3-csi-driver` Addon
 ```shell
 region="us-west-2" # Modify the region to your current region.
 account=$(aws sts get-caller-identity --query Account --output text)
-eksctl create addon --name aws-mountpoint-s3-csi-driver --cluster Comfyui-Cluster --service-account-role-arn arn:aws:iam::$account:role/EKS-S3-CSI-DriverRole-$account-$region --force
+eksctl create addon --name aws-mountpoint-s3-csi-driver --version v1.0.0-eksbuild.1 --cluster Comfyui-Cluster --service-account-role-arn "arn:aws:iam::${account}:role/EKS-S3-CSI-DriverRole-${account}-${region}" --force
 ```
 
 
@@ -394,7 +394,7 @@ A few points to note about ComfyUI Deployment and Service:
    ```
 
    ```shell
-   kubect get events --watch
+   kubectl get events --watch
    ```
 
    If you see  ERROR log like following
