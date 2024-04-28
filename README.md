@@ -100,7 +100,7 @@ Download the code, **checkout the branch, install rpm packages, and check the en
 
 ```shell
 git clone https://github.com/aws-samples/comfyui-on-eks ~/comfyui-on-eks
-cd ~/comfyui-on-eks && git checkout Blog1
+cd ~/comfyui-on-eks && git checkout v0.2.0
 npm install
 npm list
 cdk list
@@ -110,9 +110,9 @@ Run `npm list` to ensure following packages are installed
 
 ```
 comfyui-on-eks@0.1.0 ~/comfyui-on-eks
-├── @aws-quickstart/eks-blueprints@1.13.1
-├── aws-cdk-lib@2.115.0
-├── aws-cdk@2.99.1
+├── @aws-quickstart/eks-blueprints@1.14.1
+├── aws-cdk-lib@2.133.0
+├── aws-cdk@2.133.0
 └── ...
 ```
 
@@ -254,10 +254,22 @@ docker image inspect $image_name|grep Architecture
 
 ##### 6.5.2 Deploy Karpenter for Managing GPU Instance Scaling
 
-Run the following command to deploy Karpenter Provisioner:
+Get the KarpenterInstanceNodeRole in Section 6.2 and run the following command to deploy Karpenter:
+
+**Run on Linux**
 
 ```shell
-kubectl apply -f comfyui-on-eks/manifests/Karpenter/karpenter_provisioner.yaml
+KarpenterInstanceNodeRole="Comfyui-Cluster-ComfyuiClusterkarpenternoderoleE627-juyEInBqoNtU" # Modify the role to your own.
+sed -i "s/role: KarpenterInstanceNodeRole.*/role: $KarpenterInstanceNodeRole/g" comfyui-on-eks/manifests/Karpenter/karpenter_v1beta1.yaml
+kubectl apply -f comfyui-on-eks/manifests/Karpenter/karpenter_v1beta1.yaml
+```
+
+**Run on MacOS**
+
+```shell
+KarpenterInstanceNodeRole="Comfyui-Cluster-ComfyuiClusterkarpenternoderoleE627-juyEInBqoNtU" # Modify the role to your own.
+sed -i '' "s/role: KarpenterInstanceNodeRole.*/role: $KarpenterInstanceNodeRole/g" comfyui-on-eks/manifests/Karpenter/karpenter_v1beta1.yaml
+kubectl apply -f comfyui-on-eks/manifests/Karpenter/karpenter_v1beta1.yaml
 ```
 
 To verify the deployment of Karpenter, use this command:
@@ -273,9 +285,7 @@ Key considerations for Karpenter's deployment:
    1. Formatting the instance store local disk and mounting it to the `/comfyui-models` directory.
    2. Synchronizing model files stored on S3 to the local instance store.
 
-
-
-The KarpenterInstanceNodeRole acquired in Section 6.2 needs an additional S3 access permission to allow GPU nodes to sync files from S3. Execute the following command:
+The KarpenterInstanceNodeRole needs an additional S3 access permission to allow GPU nodes to sync files from S3. Execute the following command:
 
 ```shell
 KarpenterInstanceNodeRole="Comfyui-Cluster-ComfyuiClusterkarpenternoderoleE627-juyEInBqoNtU" # Modify the role to your own.

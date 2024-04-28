@@ -91,7 +91,7 @@ https://github.com/aws-samples/comfyui-on-eks
 
 ```shell
 git clone https://github.com/aws-samples/comfyui-on-eks ~/comfyui-on-eks
-cd ~/comfyui-on-eks && git checkout Blog1
+cd ~/comfyui-on-eks && git checkout v0.2.0
 npm install
 npm list
 cdk list
@@ -101,9 +101,9 @@ cdk list
 
 ```shell
 comfyui-on-eks@0.1.0 ~/comfyui-on-eks
-├── @aws-quickstart/eks-blueprints@1.13.1
-├── aws-cdk-lib@2.115.0
-├── aws-cdk@2.99.1
+├── @aws-quickstart/eks-blueprints@1.14.1
+├── aws-cdk-lib@2.133.0
+├── aws-cdk@2.133.0
 └── ...
 ```
 
@@ -256,10 +256,22 @@ docker image inspect $image_name|grep Architecture
 
 ##### 6.5.2 部署 Karpenter 用以管理 GPU 实例的扩缩容
 
-执行以下命令来部署  Karpenter 的 Provisioner
+获取 6.2 节输出的 KarpenterInstanceNodeRole，执行以下命令来部署  Karpenter
+
+**Run on Linux**
 
 ```shell
-kubectl apply -f comfyui-on-eks/manifests/Karpenter/karpenter_provisioner.yaml
+KarpenterInstanceNodeRole="Comfyui-Cluster-ComfyuiClusterkarpenternoderoleE627-juyEInBqoNtU" # Modify the role to your own.
+sed -i "s/role: KarpenterInstanceNodeRole.*/role: $KarpenterInstanceNodeRole/g" comfyui-on-eks/manifests/Karpenter/karpenter_v1beta1.yaml
+kubectl apply -f comfyui-on-eks/manifests/Karpenter/karpenter_v1beta1.yaml
+```
+
+**Run on MacOS**
+
+```shell
+KarpenterInstanceNodeRole="Comfyui-Cluster-ComfyuiClusterkarpenternoderoleE627-juyEInBqoNtU" # Modify the role to your own.
+sed -i '' "s/role: KarpenterInstanceNodeRole.*/role: $KarpenterInstanceNodeRole/g" comfyui-on-eks/manifests/Karpenter/karpenter_v1beta1.yaml
+kubectl apply -f comfyui-on-eks/manifests/Karpenter/karpenter_v1beta1.yaml
 ```
 
 执行以下命令来验证 Karpenter 的部署结果
