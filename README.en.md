@@ -230,7 +230,7 @@ Run the `build_and_push.sh` script on a machine where Docker has been successful
 
 ```shell
 region="us-west-2" # Modify the region to your current region.
-cd comfyui-on-eks/comfyui_image/ && bash build_and_push.sh $region
+cd ~/comfyui-on-eks/comfyui_image/ && bash build_and_push.sh $region
 ```
 
 
@@ -254,7 +254,7 @@ docker image inspect $image_name|grep Architecture
 
 ##### 6.5.2 Deploy Karpenter for Managing GPU Instance Scaling
 
-Get the KarpenterInstanceNodeRole in Section 6.2 and run the following command to deploy Karpenter Provisioner:
+Get the KarpenterInstanceNodeRole in Section 6.2 and run the following command to deploy Karpenter:
 
 **Run on Linux**
 

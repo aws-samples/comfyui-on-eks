@@ -232,7 +232,7 @@ cd ~/comfyui-on-eks && cdk deploy ComfyuiEcrRepo
 
 ```shell
 region="us-west-2" # 修改 region 为你当前的 region
-cd comfyui-on-eks/comfyui_image/ && bash build_and_push.sh $region
+cd ~/comfyui-on-eks/comfyui_image/ && bash build_and_push.sh $region
 ```
 
 
