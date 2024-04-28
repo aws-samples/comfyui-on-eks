@@ -326,6 +326,11 @@ Run the following command to add your IAM principal to EKS cluster
 
 ```shell
 identity=$(aws sts get-caller-identity --query 'Arn' --output text --no-cli-pager)
+if [[ $identity == *"assumed-role"* ]]; then
+    role_name=$(echo $identity | cut -d'/' -f2)
+    account_id=$(echo $identity | cut -d':' -f5)
+    identity="arn:aws:iam::$account_id:role/$role_name"
+fi
 aws eks update-cluster-config --name Comfyui-Cluster --access-config authenticationMode=API_AND_CONFIG_MAP
 aws eks create-access-entry --cluster-name Comfyui-Cluster --principal-arn $identity --type STANDARD --username comfyui-user
 aws eks associate-access-policy --cluster-name Comfyui-Cluster --principal-arn $identity --access-scope type=cluster --policy-arn arn:aws:eks::aws:cluster-access-policy/AmazonEKSAdminPolicy
