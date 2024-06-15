@@ -462,7 +462,7 @@ ingress_address=$(kubectl get ingress|grep comfyui-ingress|awk '{print $4}')
 sed -i "s/SERVER_ADDRESS = .*/SERVER_ADDRESS = \"${ingress_address}\"/g" invoke_comfyui_api.py
 sed -i "s/HTTPS = .*/HTTPS = False/g" invoke_comfyui_api.py
 sed -i "s/SHOW_IMAGES = .*/SHOW_IMAGES = False/g" invoke_comfyui_api.py
-./invoke_comfyui_api.py
+./invoke_comfyui_api.py sdxl_refiner_prompt_api.json
 ```
 
 **Run on MacOS**
@@ -472,7 +472,7 @@ ingress_address=$(kubectl get ingress|grep comfyui-ingress|awk '{print $4}')
 sed -i '' "s/SERVER_ADDRESS = .*/SERVER_ADDRESS = \"${ingress_address}\"/g" invoke_comfyui_api.py
 sed -i '' "s/HTTPS = .*/HTTPS = False/g" invoke_comfyui_api.py
 sed -i '' "s/SHOW_IMAGES = .*/SHOW_IMAGES = False/g" invoke_comfyui_api.py
-./invoke_comfyui_api.py
+./invoke_comfyui_api.py sdxl_refiner_prompt_api.json
 ```
 
 
