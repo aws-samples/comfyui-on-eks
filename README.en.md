@@ -1,3 +1,14 @@
+## Stable Diffusion 3 Support
+
+ComfyUI has already supported Stable Diffusion 3, to use Stable Diffusion 3 with this solution you only need to:
+
+1. Build docker image with the latest version of ComfyUI
+2. Download and put SD3 models to the corresponding S3 directory. [ComfyUI SD3 Examples](https://comfyanonymous.github.io/ComfyUI_examples/sd3/)
+
+Use comfyui sd3 workflow to invoke, just refer to `comfyui-on-eks/test/` folder.
+
+![sd3](images/sd3.png)
+
 ## Deploy Stable Diffusion on Amazon EKS elastically and efficiently
 
 

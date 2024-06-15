@@ -1,3 +1,16 @@
+## Stable Diffusion 3 支持
+
+ComfyUI 已经支持了 Stable Diffusion 3，要在当前的方案中使用 Stable Diffusion 3，只需要：
+
+1. 用最新版本的 ComfyUI build docker 镜像
+2. 将 SD3 的模型放到对应的 S3 目录，参考  [ComfyUI SD3 Examples](https://comfyanonymous.github.io/ComfyUI_examples/sd3/)
+
+用 comfyui sd3 的 workflow 来调用模型推理，参考 `comfyui-on-eks/test/` 目录
+
+![sd3](images/sd3.png)
+
+
+
 ## 云端AI生图——面向美术工作室的Stable Diffusion生图方案
 
 ### 一、背景介绍
