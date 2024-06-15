@@ -12,8 +12,6 @@ import threading
 SERVER_ADDRESS = "abcdefg123456.cloudfront.net"
 HTTPS = True
 SHOW_IMAGES = True
-#REQUEST_API_JSON = "./sdxl_refiner_prompt_api.json"
-REQUEST_API_JSON = "./sd3_api.json"
 
 # Send prompt request to server and get prompt_id and AWSALB cookie
 def queue_prompt(prompt, client_id, server_address):
@@ -115,4 +113,10 @@ def single_inference(server_address, request_api_json):
     print("------")
 
 if __name__ == "__main__":
+    # Get the file path from the command line
+    if len(sys.argv) == 2:
+        REQUEST_API_JSON = sys.argv[1]
+    else:
+        print("Usage: python3 invoke_comfyui_api.py <request_api_json>")
+        sys.exit(1)
     single_inference(SERVER_ADDRESS, REQUEST_API_JSON)
