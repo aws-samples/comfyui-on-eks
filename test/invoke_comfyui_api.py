@@ -12,7 +12,8 @@ import threading
 SERVER_ADDRESS = "abcdefg123456.cloudfront.net"
 HTTPS = True
 SHOW_IMAGES = True
-REQUEST_API_JSON = "./sdxl_refiner_prompt_api.json"
+#REQUEST_API_JSON = "./sdxl_refiner_prompt_api.json"
+REQUEST_API_JSON = "./sd3_api.json"
 
 # Send prompt request to server and get prompt_id and AWSALB cookie
 def queue_prompt(prompt, client_id, server_address):
@@ -79,6 +80,8 @@ def edit_prompt(prompt, sd_version):
         # Set random seed for sdxl
         prompt["10"]["inputs"]["noise_seed"] = random.randint(0, sys.maxsize)
         prompt["11"]["inputs"]["noise_seed"] = random.randint(0, sys.maxsize)
+    elif sd_version == '3':
+        prompt["3"]["inputs"]["seed"] = random.randint(0, sys.maxsize)
     return prompt
 
 def single_inference(server_address, request_api_json):
@@ -90,6 +93,8 @@ def single_inference(server_address, request_api_json):
         sd_version = "1.5"
     elif "sdxl" in request_api_json:
         sd_version = "xl"
+    elif "sd3" in request_api_json:
+        sd_version = "3"
     prompt = edit_prompt(prompt, sd_version)
     images, prompt_id = get_images(prompt, client_id, server_address)
     if SHOW_IMAGES:
