@@ -13,7 +13,7 @@ ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
 
 echo "AccountID: $ACCOUNT_ID, Region: $REGION"
 
-docker build --platform="linux/amd64" . -t comfyui-images
+docker build --platform="linux/amd64" . -t comfyui-images --no-cache
 docker tag comfyui-images:latest ${ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com/comfyui-images:latest
 aws ecr get-login-password --region ${REGION} | docker login --username AWS --password-stdin ${ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com
 docker push ${ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com/comfyui-images:latest
