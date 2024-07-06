@@ -550,3 +550,32 @@ cdk destroy Comfyui-Cluster
 
 This article introduces a solution for deploying ComfyUI on EKS. By combining instance store and S3, it maximizes model loading and switching performance while reducing storage costs. It also automatically syncs models in a serverless way, leverages spot instances to lower GPU instance costs, and accelerates globally via CloudFront to meet the needs of geographically distributed art studios. The entire solution manages underlying infrastructure as code to minimize operational overhead.
 
+---
+
+
+
+### Cost Analysis
+
+Assuming the following scenario:
+
+* Deploying 1 g5.2xlarge instance for image generation
+* Generating a 1024x1024 image takes average 9 seconds, with average size of 1.5MB
+* Daily usage time is 8 hours, with 20 days of usage per month
+* The number of images that can be generated per month is 8 x 20 x 3600 / 9 = 64000
+* The total size of images to be stored each month is 64000 x 1.5MB / 1000 = 96GB
+* DTO traffic size is approximately 100GB (96GB + HTTP requests)
+* ComfyUI images of different versions total 20GB
+
+The total cost of deploying this solution in us-west-2 is approximately **$441.878 (using CloudFront for external access) or $442.378 (using ALB for external access)**
+
+| Service                                | Pricing | Detail                                                       |
+| -------------------------------------- | ------- | ------------------------------------------------------------ |
+| Amazon EKS (Control Plane)             | $73     | Fixed Pricing                                                |
+| Amazon EC2 (ComfyUI-EKS-GPU-Node)      | $193.92 | 1 g5.2xlarge instance (On-Demand)<br />1 x $1.212/h x 8h x 20days/month |
+| Amazon EC2 (Comfyui-EKS-LW-Node)       | $137.68 | 2 t3a.xlarge instance (1yr RI No upfront since it's fixed long running)<br />2 x $68.84/month |
+| Amazon S3 (Standard) for models        | $2.3    | Total models size 100GB x $0.023/GB                          |
+| Amazon S3 (Standard) for output images | $2.208  | 64000 images/month x 1.5MB/image / 1000 x $0.023/GB<br />Rotate all images per month |
+| Amazon ECR                             | $2      | 20GB different versions of images x $0.1/GB                  |
+| AWS ALB                                | $22.27  | 1 ALB $16.43 fixed hourly charges<br />+<br />$0.008/LCU/h x 730h x 1LCU x 1ALB |
+| DTO (use ALB)                          | $9      | 100GB x $0.09/GB                                             |
+| DTO (use CloudFront)                   | $8.5    | 100GB x $0.085/GB                                            |
