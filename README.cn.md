@@ -559,3 +559,33 @@ cdk destroy Comfyui-Cluster
 ### 八、总结
 
 本文介绍了一种在 EKS 上部署 ComfyUI 的方案，通过 Instance store 和 S3 的结合，在降低存储成本的同时最大化模型加载和切换的性能，同时通过 Serverless 的方式自动化进行模型的同步，使用 spot 实例降低 GPU 实例成本，并且通过 CloudFront 进行全球加速，以满足跨地区美术工作室协作的场景。整套方案以 IaC 的方式管理底层基础设施，最小化运维成本。
+
+
+
+---
+
+### 成本预估
+
+假设场景：
+
+* 部署 1 台 g5.2xlarge 来支持图像生成
+* 一张 1024x1024 的图片生成平均需要 9s，平均大小为 1.5MB
+* 每天使用时间为 8h，每个月使用 20 天
+* 每个月可以生成 8 x 20 x 3600 / 9 = 64000 张图片
+* 每个月需要存储的图片大小为 64000 x 1.5MB / 1000 = 96GB
+* DTO 流量大小约 100GB（96GB + 加上 HTTP 请求）
+* ComfyUI 不同版本的镜像共 20G
+
+使用此方案部署在 us-west-2 的总价约为 **$441.878（使用 CloudFront 对外）或 $442.378（使用 ALB 对外）**
+
+| Service                                | Pricing | Detail                                                       |
+| -------------------------------------- | ------- | ------------------------------------------------------------ |
+| Amazon EKS (Control Plane)             | $73     | Fixed Pricing                                                |
+| Amazon EC2 (ComfyUI-EKS-GPU-Node)      | $193.92 | 1 g5.2xlarge instance (On-Demand)<br />1 x $1.212/h x 8h x 20days/month |
+| Amazon EC2 (Comfyui-EKS-LW-Node)       | $137.68 | 2 t3a.xlarge instance (1yr RI No upfront since it's fixed long running)<br />2 x $68.84/month |
+| Amazon S3 (Standard) for models        | $2.3    | Total models size 100GB x $0.023/GB                          |
+| Amazon S3 (Standard) for output images | $2.208  | 64000 images/month x 1.5MB/image / 1000 x $0.023/GB<br />Rotate all images per month |
+| Amazon ECR                             | $2      | 20GB different versions of images x $0.1/GB                  |
+| AWS ALB                                | $22.27  | 1 ALB $16.43 fixed hourly charges<br />+<br />$0.008/LCU/h x 730h x 1LCU x 1ALB |
+| DTO (use ALB)                          | $9      | 100GB x $0.09/GB                                             |
+| DTO (use CloudFront)                   | $8.5    | 100GB x $0.085/GB                                            |
