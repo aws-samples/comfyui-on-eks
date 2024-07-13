@@ -69,17 +69,13 @@ def get_images(prompt, client_id, server_address):
             output_images[node_id] = images_output
     return output_images, prompt_id
 
-
-def edit_prompt(prompt, sd_version):
-    if sd_version == "1.5":
-        # Set random seed for sd1.5
-        prompt["3"]["inputs"]["seed"] = random.randint(0, sys.maxsize)
-    elif sd_version == 'xl':
-        # Set random seed for sdxl
-        prompt["10"]["inputs"]["noise_seed"] = random.randint(0, sys.maxsize)
-        prompt["11"]["inputs"]["noise_seed"] = random.randint(0, sys.maxsize)
-    elif sd_version == '3':
-        prompt["3"]["inputs"]["seed"] = random.randint(0, sys.maxsize)
+def random_seed(prompt):
+    for node in prompt:
+        if 'inputs' in prompt[node]:
+            if 'seed' in prompt[node]['inputs']:
+                prompt[node]['inputs']['seed'] = random.randint(0, sys.maxsize)
+            if 'noise_seed' in prompt[node]['inputs']:
+                prompt[node]['inputs']['noise_seed'] = random.randint(0, sys.maxsize)
     return prompt
 
 def single_inference(server_address, request_api_json):
@@ -87,13 +83,7 @@ def single_inference(server_address, request_api_json):
     client_id = str(uuid.uuid4())
     with open(request_api_json, "r") as f:
         prompt = json.load(f)
-    if "sd1.5" in request_api_json:
-        sd_version = "1.5"
-    elif "sdxl" in request_api_json:
-        sd_version = "xl"
-    elif "sd3" in request_api_json:
-        sd_version = "3"
-    prompt = edit_prompt(prompt, sd_version)
+    prompt = random_seed(prompt)
     images, prompt_id = get_images(prompt, client_id, server_address)
     if SHOW_IMAGES:
         for node_id in images:
