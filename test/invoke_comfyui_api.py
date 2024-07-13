@@ -56,17 +56,15 @@ def get_images(prompt, client_id, server_address):
             print("Generation finished.")
             break
 
-    #history = get_history(prompt_id, server_address, aws_alb_cookie)[prompt_id]
     history = history[prompt_id]
-    for o in history['outputs']:
-        for node_id in history['outputs']:
-            node_output = history['outputs'][node_id]
-            if 'images' in node_output:
-                images_output = []
-                for image in node_output['images']:
-                    image_data = get_image(image['filename'], image['subfolder'], image['type'], server_address, aws_alb_cookie)
-                    images_output.append(image_data)
-            output_images[node_id] = images_output
+    for node_id in history['outputs']:
+        node_output = history['outputs'][node_id]
+        if 'images' in node_output:
+            images_output = []
+            for image in node_output['images']:
+                image_data = get_image(image['filename'], image['subfolder'], image['type'], server_address, aws_alb_cookie)
+                images_output.append(image_data)
+        output_images[node_id] = images_output
     return output_images, prompt_id
 
 def random_seed(prompt):
