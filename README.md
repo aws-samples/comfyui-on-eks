@@ -145,7 +145,7 @@ The configuration details for the `Comfyui-Cluster Stack` can be explored in the
 
 Upon successful deployment, the CDK outputs will present a `ConfigCommand`. This command is used to update the configuration, enabling access to the EKS cluster via kubectl.
 
-![eks-blueprints-cmd](/Users/ray/Desktop/images/eks-blueprints-cmd.png)
+![eks-blueprints-cmd](images/eks-blueprints-cmd.png)
 
 **Execute the above ConfigCommand to authorize kubectl to access the EKS cluster**
 
