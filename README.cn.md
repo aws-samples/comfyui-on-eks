@@ -1,31 +1,173 @@
-## Stable Diffusion 3 支持
+## Custom Nodes 支持
 
-ComfyUI 已经支持了 Stable Diffusion 3，要在当前的方案中使用 Stable Diffusion 3，只需要：
+通常 ComfyUI 的用户会使用各种不同的 custom nodes 来构建自己的 workflow，在这过程中也会使用 [ComfyUI-Manager](https://github.com/ltdrdata/ComfyUI-Manager) 来方便地安装和管理自己的 custom nodes。
 
-1. 用最新版本的 ComfyUI build docker 镜像
-2. 将 SD3 的模型放到对应的 S3 目录，参考  [ComfyUI SD3 Examples](https://comfyanonymous.github.io/ComfyUI_examples/sd3/)
+当前的 solution 要支持 custom nodes 只需要准备两样东西（如果你还不熟悉当前的 solution，建议先浏览一遍部署过程）：
 
-用 comfyui sd3 的 workflow 来调用模型推理，参考 `comfyui-on-eks/test/` 目录
-
-![sd3](images/sd3.png)
+1. 代码和环境：custom nodes 的代码放在 `$HOME/ComfyUI/custom_nodes` 下，环境通过 `pip install -r` 所有 custom nodes 目录下的 requirements.txt 来准备（如果有一些 custom nodes 的依赖冲突需要单独处理），同时安装一些 custom nodes 会用到的系统软件包。以上操作均通过 Dockerfile 来实现，构建一个包含了所需 custom nodes 的镜像。
+2. 模型：custom nodes 用到的模型放到 `s3://comfyui-models-{account_id}-{region}` 下的不同目录即可，会触发 Lambda 给所有 GPU nodes 发送指令将新上传的模型同步到本地。
 
 
 
-## 云端AI生图——面向美术工作室的Stable Diffusion生图方案
-
-### 一、背景介绍
-
-Stable Diffusion 作为当下最流行的开源 AI 图像生成模型在游戏行业有着广泛的应用实践，无论是 ToC 面向玩家的游戏社区场景，还是 ToB 面向游戏工作室的美术制作场景，都可以发挥很大的价值。而如何更好地使用 Stable Diffusion 也成了非常热门的话题，社区也贡献了多种 runtime 来实现 Stable Diffusion 的图像生成，其中广泛流行的包括：[stable-diffusion-webui](https://github.com/AUTOMATIC1111/stable-diffusion-webui), [ComfyUI](https://github.com/comfyanonymous/ComfyUI),  [Fooocus](https://github.com/lllyasviel/Fooocus) 等。同时，如何在企业内部部署运维和迭代 Stable Diffusion 图像生成平台也涌现了多种方案。本文将以 ComfyUI 为例，介绍如何在 AWS 上部署面向美术团队的 Stable Diffusion 图像生成平台。
+接下来以 [Stable Video Diffusion (SVD) - Image to video generation with high FPS](https://comfyworkflows.com/workflows/bf3b455d-ba13-4063-9ab7-ff1de0c9fa75) 这个 workflow 为例介绍如何支持 custom nodes（你也可以使用你自己的 workflow）
 
 
 
-### 二、ComfyUI 简介
+### 1. 构建镜像
 
-ComfyUI 是一个基于节点式工作流的 Stable Diffusion 方案，它将 Stable Diffsuion 模型推理时各个流程拆分成不同的节点，让用户可以更加清晰地了解 Stable Diffusion 的原理，并且可以更加精细化地控制整个流程。同时得益于 ComfyUI 在 SDXL 模型上相较于其他方案的性能优化，使得它越来越多地被美术创作者所使用。
+当 load 这个 workflow 的时候会显示缺失的 custom nodes，我们接下来将会把缺失的 custom nodes 打进镜像中去
+
+ <img src="images/miss_custom_nodes.png" style="zoom:50%;" />
+
+有两种方式构建镜像：
+
+1. 从 Github 构建镜像：在 Dockerfile 中为每个 custom nodes 下载代码，并准备环境和依赖
+2. 从本地构建镜像：将本地的 Dev 环境所有 custom nodes 都 COPY 到镜像中，并准备环境和依赖
 
 
 
-### 三、方案特点
+构建镜像前请切换到对应 branch
+
+```shell
+git clone https://github.com/aws-samples/comfyui-on-eks ~/comfyui-on-eks
+cd ~/comfyui-on-eks && git checkout custom_nodes_demo
+```
+
+
+
+#### 1.1 从 Github 构建镜像
+
+通过在 Dockerfile 中使用 RUN 命令来安装 custom nodes 和依赖，需要先找到缺失的 custom nodes 的 Github 地址
+
+```dockerfile
+...
+RUN apt-get update && apt-get install -y \
+    git \
+    python3.10 \
+    python3-pip \
+    # needed by custom node ComfyUI-VideoHelperSuite
+    libsm6 \
+    libgl1 \
+    libglib2.0-0
+...
+# Custom nodes demo of https://comfyworkflows.com/workflows/bf3b455d-ba13-4063-9ab7-ff1de0c9fa75
+
+## custom node ComfyUI-Stable-Video-Diffusion
+RUN cd /app/ComfyUI/custom_nodes && git clone https://github.com/thecooltechguy/ComfyUI-Stable-Video-Diffusion.git && cd ComfyUI-Stable-Video-Diffusion/ && python3 install.py
+## custom node ComfyUI-VideoHelperSuite
+RUN cd /app/ComfyUI/custom_nodes && git clone https://github.com/Kosinkadink/ComfyUI-VideoHelperSuite.git && pip3 install -r ComfyUI-VideoHelperSuite/requirements.txt
+## custom node ComfyUI-Frame-Interpolation
+RUN cd /app/ComfyUI/custom_nodes && git clone https://github.com/Fannovel16/ComfyUI-Frame-Interpolation.git && cd ComfyUI-Frame-Interpolation/ && python3 install.py
+...
+```
+
+完整 Dockerfile 参考 `comfyui-on-eks/comfyui_image/Dockerfile.github`
+
+执行以下命令构建并上传 Docker image
+
+```shell
+region="us-west-2" # Modify the region to your current region.
+cd ~/comfyui-on-eks/comfyui_image/ && bash build_and_push.sh $region Dockerfile.github
+```
+
+优点：
+
+* 清楚了解每个 custom nodes 的安装方式、版本、环境依赖等，对整个 ComfyUI 环境更加可控
+
+缺点：
+
+* 当 custom nodes 数量太多时安装管理比较耗时，并且需要自己找到每个 custom node 的地址（另一方面说也是优点，对整个 ComfyUI 环境更加熟悉）
+
+
+
+#### 1.2 从本地构建镜像 
+
+很多时候我们通过 [ComfyUI-Manager](https://github.com/ltdrdata/ComfyUI-Manager) 来安装缺失的 custom nodes，ComfyUI-Manager 屏蔽了安装的细节，甚至我们也无法清楚知道安装了哪些 custome nodes，此时我们可以通过在 Dockerfile 中 COPY 整个 ComfyUI 目录（除去 input、output、models 等目录）来构建镜像
+
+从本地构建镜像的前提是本地已经有可运行 custom nodes 的 ComfyUI 环境，在 ComfyUI 同级目录下创建 `.dockerignore` 文件，添加以下内容，在 build docker image 时 COPY 目录忽略以下目录内容
+
+```
+ComfyUI/models
+ComfyUI/input
+ComfyUI/output
+ComfyUI/custom_nodes/ComfyUI-Manager
+```
+
+将 `comfyui-on-eks/comfyui_image/Dockerfile.local` 和 `comfyui-on-eks/comfyui_image/build_and_push.sh` 两个文件 `cp` 到本地 `ComfyUI` 的同级目录，如
+
+```shell
+ubuntu@comfyui:~$ ll
+-rwxrwxr-x  1 ubuntu ubuntu       792 Jul 16 10:27 build_and_push.sh*
+drwxrwxr-x 19 ubuntu ubuntu      4096 Jul 15 08:10 ComfyUI/
+-rw-rw-r--  1 ubuntu ubuntu       784 Jul 16 10:41 Dockerfile.local
+-rw-rw-r--  1 ubuntu ubuntu        81 Jul 16 10:45 .dockerignore
+...
+```
+
+`Dockerfile.local` 中通过 COPY 的方式将代码 build 进 image
+
+```dockerfile
+...
+# Python Evn
+RUN pip3 install torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cu121
+COPY ComfyUI /app/ComfyUI
+RUN pip3 install -r /app/ComfyUI/requirements.txt
+
+# Custom Nodes Env, may encounter some conflicts
+RUN find /app/ComfyUI/custom_nodes -maxdepth 2 -name "requirements.txt"|xargs -I {} pip install -r {}
+...
+```
+
+完整 Dockerfile 参考 `comfyui-on-eks/comfyui_image/Dockerfile.local`
+
+执行以下命令构建并上传 Docker image
+
+```shell
+region="us-west-2" # Modify the region to your current region.
+bash build_and_push.sh $region Dockerfile.local
+```
+
+优点：
+
+* 可以很方便快速地将本地 Dev 环境 build 成镜像发布部署，当 custom nodes 很多时不需要关注 custom nodes 安装、版本和依赖的细节
+
+缺点：
+
+* 不关注 custom nodes 的部署环境可能会有冲突问题，以及依赖缺失问题，需要手动测试解决
+
+
+
+### 2. 上传模型
+
+用你熟悉的方法将 workflow 中需要的所有模型上传到 `s3://comfyui-models-{account_id}-{region}` 下对应目录即可，GPU nodes 会自动从 S3 同步（Lambda 触发），如果模型较大且数量较多则需要多等一段时间，可以通过 `aws ssm start-session --target ${instance_id}` 命令登录 GPU nodes，用 `ps` 命令查看 `aws s3 sync` 的同步进程。
+
+
+
+### 3. 本地测试 docker image（可选，推荐）
+
+由于 custom nodes 的种类很多，依赖和版本各不相同，运行环境比较复杂，建议在第1步 build 完 image 后，在本地测试 docker image 是否运行正常。
+
+参考 `comfyui-on-eks/comfyui_image/test_docker_image_locally.sh` 这里的代码，准备好 models 和 input 目录（假设本地的 `/home/ubuntu/ComfyUI/models` 和 `/home/ubuntu/ComfyUI/input` 目录分别存放用到的模型和上传的图片），执行脚本运行 docker 进行测试
+
+```shell
+comfyui-on-eks/comfyui_image/test_docker_image_locally.sh
+```
+
+
+
+### 4. Rolling Update K8S pods
+
+用你熟悉的方法 rolling update 线上的 K8S pods 的 image 后，对服务进行测试
+
+ ![svd-custom-nodes](images/svd-custom-nodes.gif)
+
+
+
+---
+
+
+
+## 方案特点
 
 我们根据实际的使用场景设计方案，总结有以下特点：
 
@@ -39,7 +181,7 @@ ComfyUI 是一个基于节点式工作流的 Stable Diffusion 方案，它将 St
 
 
 
-### 四、方案架构
+## 方案架构
 
 ![Architecture](images/arch.png)
 
@@ -69,7 +211,7 @@ https://github.com/aws-samples/comfyui-on-eks
 
 
 
-### 五、图片生成效果
+## 图片生成效果
 
 部署完成后可以通过浏览器直接访问 CloudFront 的域名或 Kubernetes Ingress 的域名来使用 ComfyUI 的前端
 
@@ -81,9 +223,9 @@ https://github.com/aws-samples/comfyui-on-eks
 
 
 
-### 六、方案部署指引
+## 方案部署指引
 
-#### 6.1 准备工作
+### 1. 准备工作
 
 此方案默认你已安装部署好并熟练使用以下工具：
 
@@ -104,7 +246,7 @@ https://github.com/aws-samples/comfyui-on-eks
 
 ```shell
 git clone https://github.com/aws-samples/comfyui-on-eks ~/comfyui-on-eks
-cd ~/comfyui-on-eks && git checkout v0.3.0
+cd ~/comfyui-on-eks && git checkout custom_nodes_demo
 npm install
 npm list
 cdk list
@@ -132,7 +274,7 @@ ComfyuiEcrRepo
 
 
 
-#### 6.2 部署 EKS 集群
+### 2. 部署 EKS 集群
 
 执行以下命令
 
@@ -170,11 +312,11 @@ kubectl get svc
 
 至此，EKS 集群已完成部署。
 
-同时请注意，EKS Blueprints 输出了 KarpenterInstanceNodeRole，它是 Karpenter 管理的 Node 的 role，请记下这个 role 接下来将在 6.5.2 节进行配置。
+同时请注意，EKS Blueprints 输出了 KarpenterInstanceNodeRole，它是 Karpenter 管理的 Node 的 role，请记下这个 role 接下来将在 5.2 节进行配置。
 
 
 
-#### 6.3 部署存储模型的 S3 bucket 以及 Lambda 动态同步模型
+### 3. 部署存储模型的 S3 bucket 以及 Lambda 动态同步模型
 
 执行以下命令
 
@@ -211,7 +353,7 @@ cd ~/comfyui-on-eks/test/ && bash init_s3_for_models.sh $region
 
 
 
-#### 6.4 部署 S3 bucket 用以存储上传到 ComfyUI 以及 ComfyUI 生成的图片
+### 4. 部署 S3 bucket 用以存储上传到 ComfyUI 以及 ComfyUI 生成的图片
 
 执行以下命令
 
@@ -225,51 +367,21 @@ cd ~/comfyui-on-eks && cdk deploy S3Storag
 
 
 
-#### 6.5 部署 ComfyUI Workload
+### 5. 部署 ComfyUI Workload
 
 ComfyUI 的 Workload 部署用 Kubernetes 来实现，请按以下顺序来依次部署。
 
 
 
-##### 6.5.1 构建并上传 ComfyUI Docker 镜像
+#### 5.1 构建并上传 ComfyUI Docker 镜像
 
-执行以下命令，创建 ECR repo 来存放 ComfyUI 镜像
-
-```shell
-cd ~/comfyui-on-eks && cdk deploy ComfyuiEcrRepo
-```
+参考上文 Custom Nodes 支持
 
 
 
-在准备阶段部署好 Docker 的机器上运行 `build_and_push.sh` 脚本
+#### 5.2 部署 Karpenter 用以管理 GPU 实例的扩缩容
 
-```shell
-region="us-west-2" # 修改 region 为你当前的 region
-cd ~/comfyui-on-eks/comfyui_image/ && bash build_and_push.sh $region
-```
-
-
-
-ComfyUI 的 Docker 镜像请参考 `comfyui-on-eks/comfyui_image/Dockerfile`，需要注意以下几点：
-
-1. 在 Dockerfile 中通过 git clone & git checkout 的方式来固定 ComfyUI 的版本，可以根据业务需求修改为不同的 ComfyUI 版本。
-2. Dockerfile 中没有安装 customer node 等插件，可以使用 RUN 来按需添加。
-3. 此方案每次的 ComfyUI 版本迭代都只需要通过重新 build 镜像，更换镜像来实现。
-
-构建完镜像后，执行以下命令确保镜像的 Architecture 是 X86 架构，因为此方案使用的 GPU 实例均是基于 X86 的机型。
-
-```shell
-region="us-west-2" # 修改 region 为你当前的 region
-ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-image_name=${ACCOUNT_ID}.dkr.ecr.${region}.amazonaws.com/comfyui-images:latest
-docker image inspect $image_name|grep Architecture
-```
-
-
-
-##### 6.5.2 部署 Karpenter 用以管理 GPU 实例的扩缩容
-
-获取 6.2 节输出的 KarpenterInstanceNodeRole，执行以下命令来部署  Karpenter
+获取第 2 节输出的 KarpenterInstanceNodeRole，执行以下命令来部署  Karpenter
 
 **Run on Linux**
 
@@ -300,7 +412,7 @@ Karpenter 的部署需要注意以下几点：
    1. 格式化 instance store 本地盘，并 mount 到 `/comfyui-models` 目录。
    2. 将存储在 S3 上的模型文件同步到本地 instance store。
 
-在 6.2 节获取到的 KarpenterInstanceNodeRole 需要添加一条 S3 的访问权限，以允许 GPU node 从 S3 同步文件，请执行以下命令
+在第 2 节获取到的 KarpenterInstanceNodeRole 需要添加一条 S3 的访问权限，以允许 GPU node 从 S3 同步文件，请执行以下命令
 
 ```shell
 KarpenterInstanceNodeRole="Comfyui-Cluster-ComfyuiClusterkarpenternoderoleE627-juyEInBqoNtU" # 修改为你自己的 role
@@ -309,7 +421,7 @@ aws iam attach-role-policy --policy-arn arn:aws:iam::aws:policy/AmazonS3FullAcce
 
 
 
-##### 6.5.3 部署 S3 PV 和 PVC 用以存储生成的图片
+#### 5.3 部署 S3 PV 和 PVC 用以存储生成的图片
 
 执行以下命令来部署 S3 CSI 的 PV 和 PVC
 
@@ -339,7 +451,7 @@ kubectl apply -f comfyui-on-eks/manifests/PersistentVolume/
 
 
 
-##### 6.5.4 部署 EKS S3 CSI Driver
+#### 5.4 部署 EKS S3 CSI Driver
 
 
 
@@ -394,7 +506,7 @@ eksctl create addon --name aws-mountpoint-s3-csi-driver --version v1.0.0-eksbuil
 
 
 
-##### 6.5.5 部署 ComfyUI Deployment 和 Service
+#### 5.5 部署 ComfyUI Deployment 和 Service
 
 执行以下命令来替换容器 image 镜像
 
@@ -466,9 +578,9 @@ kubectl logs -f $podName
 
 
 
-#### 6.6 测试 ComfyUI on EKS 部署结果
+### 6. 测试 ComfyUI on EKS 部署结果
 
-##### 6.6.1 API 测试
+#### 6.1 API 测试
 
 使用 API 的方式来测试，在 `comfyui-on-eks/test` 目录下执行以下命令
 
@@ -500,7 +612,7 @@ API 调用逻辑参考 `comfyui-on-eks/test/invoke_comfyui_api.py`，注意以�
 2. 使用到了两个模型：sd_xl_base_1.0.safetensors, sd_xl_refiner_1.0.safetensors
 3. 可以在 sdxl_refiner_prompt_api.json 里或 invoke_comfyui_api.py 修改 prompt 进行测试
 
-##### 6.6.2 浏览器测试
+#### 6.2 浏览器测试
 
 执行以下命令获取 ingress 地址
 
@@ -516,7 +628,7 @@ kubectl get ingress
 
 
 
-#### 6.6 部署 CloudFront 边缘加速（可选）
+### 7. 部署 CloudFront 边缘加速（可选）
 
 在 `comfyui-on-eks` 目录下执行以下命令，为 Kubernetes 的 ingress 接入 CloudFront 边缘加速
 
@@ -533,11 +645,11 @@ cdk deploy CloudFrontEntry
 
 
 
-部署完成后会打出 Outputs，其中包含了 CloudFront 的 URL `CloudFrontEntry.cloudFrontEntryUrl`，参考 6.6 节通过 API 或浏览器的方式进行测试。
+部署完成后会打出 Outputs，其中包含了 CloudFront 的 URL `CloudFrontEntry.cloudFrontEntryUrl`，参考第 6 节通过 API 或浏览器的方式进行测试。
 
 
 
-### 七、清理资源
+## 清理资源
 
 执行以下命令删除所有 Kubernetes 资源
 
@@ -560,15 +672,7 @@ cdk destroy Comfyui-Cluster
 
 
 
-### 八、总结
-
-本文介绍了一种在 EKS 上部署 ComfyUI 的方案，通过 Instance store 和 S3 的结合，在降低存储成本的同时最大化模型加载和切换的性能，同时通过 Serverless 的方式自动化进行模型的同步，使用 spot 实例降低 GPU 实例成本，并且通过 CloudFront 进行全球加速，以满足跨地区美术工作室协作的场景。整套方案以 IaC 的方式管理底层基础设施，最小化运维成本。
-
-
-
----
-
-### 成本预估
+## 成本预估
 
 假设场景：
 
