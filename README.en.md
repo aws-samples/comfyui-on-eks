@@ -96,7 +96,7 @@ Download the code, **checkout the branch, install rpm packages, and check the en
 
 ```shell
 git clone https://github.com/aws-samples/comfyui-on-eks ~/comfyui-on-eks
-cd ~/comfyui-on-eks && git checkout custom_nodes_demo
+cd ~/comfyui-on-eks && git checkout v0.3.0
 npm install
 npm list
 cdk list
