@@ -161,7 +161,7 @@ comfyui-on-eks/comfyui_image/test_docker_image_locally.sh
 
 Use your preferred method to perform a rolling update of the image for the online K8S pods, and then test the service.
 
- ![svd-custom-nodes](/Users/ray/comfyui-on-eks-aws-samples/images/svd-custom-nodes.gif)
+ ![svd-custom-nodes](images/svd-custom-nodes.gif)
 
 
 
