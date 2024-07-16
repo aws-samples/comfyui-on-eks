@@ -35,12 +35,14 @@ def upload_image(image_path, server_address):
         response = requests.post("{}/upload/image".format(server_address), files=files)
     print(response.text)
 
+# Get image from server
 def get_image(filename, subfolder, folder_type, server_address, aws_alb_cookie):
     data = {"filename": filename, "subfolder": subfolder, "type": folder_type}
     url_values = urllib.parse.urlencode(data)
     response = requests.get("{}/view?{}".format(server_address, url_values), headers={"Cookie": aws_alb_cookie})
     return response.content
 
+# Get invocation history from server
 def get_history(prompt_id, server_address, aws_alb_cookie):
     response = requests.get("{}/history/{}".format(server_address, prompt_id), headers={"Cookie": aws_alb_cookie})
     return response.json()
