@@ -1,0 +1,26 @@
+# Build docker image from local environment
+FROM nvidia/cuda:12.1.1-cudnn8-devel-ubuntu22.04
+
+WORKDIR $HOME/app
+
+# Including some custom nodes needed packages
+RUN apt-get update && apt-get install -y \
+    git \
+    python3.10 \
+    python3-pip \
+    # needed by custom node ComfyUI-VideoHelperSuite
+    libsm6 \
+    libgl1 \
+    libglib2.0-0
+
+# Python Evn
+RUN pip3 install torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cu121
+COPY ComfyUI /app/ComfyUI
+RUN pip3 install -r /app/ComfyUI/requirements.txt
+
+# Custom Nodes Env, may encounter some conflicts
+RUN find /app/ComfyUI/custom_nodes -maxdepth 2 -name "requirements.txt"|xargs -I {} pip install -r {}
+COPY truetype /usr/share/fonts/truetype
+
+EXPOSE 8848
+CMD ["python3", "-u", "/app/ComfyUI/main.py", "--listen", "0.0.0.0", "--port", "8848"]

@@ -1,0 +1,30 @@
+FROM nvidia/cuda:12.1.1-cudnn8-devel-ubuntu22.04
+
+WORKDIR $HOME/app
+
+RUN apt-get update && apt-get install -y \
+    git \
+    python3.10 \
+    python3-pip \
+    # needed by custom node ComfyUI-VideoHelperSuite
+    libsm6 \
+    libgl1 \
+    libglib2.0-0
+
+# Python Evn
+RUN pip3 install torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cu121
+RUN git clone https://github.com/comfyanonymous/ComfyUI.git
+RUN cd /app/ComfyUI && git checkout 5eb98f00927ace00b6b3d01ed9c76b113fc4ec9f
+RUN pip3 install -r /app/ComfyUI/requirements.txt
+
+# Custom nodes demo of https://comfyworkflows.com/workflows/bf3b455d-ba13-4063-9ab7-ff1de0c9fa75
+
+## custom node ComfyUI-Stable-Video-Diffusion
+RUN cd /app/ComfyUI/custom_nodes && git clone https://github.com/thecooltechguy/ComfyUI-Stable-Video-Diffusion.git && cd ComfyUI-Stable-Video-Diffusion/ && python3 install.py
+## custom node ComfyUI-VideoHelperSuite
+RUN cd /app/ComfyUI/custom_nodes && git clone https://github.com/Kosinkadink/ComfyUI-VideoHelperSuite.git && pip3 install -r ComfyUI-VideoHelperSuite/requirements.txt
+## custom node ComfyUI-Frame-Interpolation
+RUN cd /app/ComfyUI/custom_nodes && git clone https://github.com/Fannovel16/ComfyUI-Frame-Interpolation.git && cd ComfyUI-Frame-Interpolation/ && python3 install.py
+
+EXPOSE 8848
+CMD ["python3", "-u", "/app/ComfyUI/main.py", "--listen", "0.0.0.0", "--port", "8848"]
