@@ -104,7 +104,7 @@ https://github.com/aws-samples/comfyui-on-eks
 
 ```shell
 git clone https://github.com/aws-samples/comfyui-on-eks ~/comfyui-on-eks
-cd ~/comfyui-on-eks && git checkout v0.2.0
+cd ~/comfyui-on-eks && git checkout v0.3.0
 npm install
 npm list
 cdk list
@@ -113,10 +113,10 @@ cdk list
 运行 `npm list` 确认已安装下面的 packages
 
 ```shell
-comfyui-on-eks@0.1.0 ~/comfyui-on-eks
-├── @aws-quickstart/eks-blueprints@1.14.1
-├── aws-cdk-lib@2.133.0
-├── aws-cdk@2.133.0
+comfyui-on-eks@0.3.0 ~/comfyui-on-eks
+├── @aws-quickstart/eks-blueprints@1.15.1
+├── aws-cdk-lib@2.147.3
+├── aws-cdk@2.147.3
 └── ...
 ```
 
@@ -126,7 +126,7 @@ comfyui-on-eks@0.1.0 ~/comfyui-on-eks
 Comfyui-Cluster
 CloudFrontEntry
 LambdaModelsSync
-S3OutputsStorage
+S3Storage
 ComfyuiEcrRepo
 ```
 
@@ -211,17 +211,17 @@ cd ~/comfyui-on-eks/test/ && bash init_s3_for_models.sh $region
 
 
 
-#### 6.4 部署存储 ComfyUI 生成图片的 S3 bucket
+#### 6.4 部署 S3 bucket 用以存储上传到 ComfyUI 以及 ComfyUI 生成的图片
 
 执行以下命令
 
 ```shell
-cd ~/comfyui-on-eks && cdk deploy S3OutputsStorage
+cd ~/comfyui-on-eks && cdk deploy S3Storag
 ```
 
 
 
-`S3OutputsStorage` 的 stack 只创建一个 S3 bucket，命名规则为 `comfyui-outputs-{account_id}-{region}`，用于存储 ComfyUI 生成的图片
+`S3OutputsStorage` 的 stack 只创建两个 S3 bucket，命名规则为 `comfyui-outputs-{account_id}-{region}` 和 `comfyui-inputs-{account_id}-{region}`，用于存储上传到 ComfyUI 以及 ComfyUI 生成的图片。
 
 
 
@@ -320,7 +320,9 @@ region="us-west-2" # 修改 region 为你当前的 region
 account=$(aws sts get-caller-identity --query Account --output text)
 sed -i "s/region .*/region $region/g" comfyui-on-eks/manifests/PersistentVolume/sd-outputs-s3.yaml
 sed -i "s/bucketName: .*/bucketName: comfyui-outputs-$account-$region/g" comfyui-on-eks/manifests/PersistentVolume/sd-outputs-s3.yaml
-kubectl apply -f comfyui-on-eks/manifests/PersistentVolume/sd-outputs-s3.yaml
+sed -i "s/region .*/region $region/g" comfyui-on-eks/manifests/PersistentVolume/sd-inputs-s3.yaml
+sed -i "s/bucketName: .*/bucketName: comfyui-inputs-$account-$region/g" comfyui-on-eks/manifests/PersistentVolume/sd-inputs-s3.yaml
+kubectl apply -f comfyui-on-eks/manifests/PersistentVolume/
 ```
 
 **Run on MacOS**
@@ -330,7 +332,9 @@ region="us-west-2" # 修改 region 为你当前的 region
 account=$(aws sts get-caller-identity --query Account --output text)
 sed -i '' "s/region .*/region $region/g" comfyui-on-eks/manifests/PersistentVolume/sd-outputs-s3.yaml
 sed -i '' "s/bucketName: .*/bucketName: comfyui-outputs-$account-$region/g" comfyui-on-eks/manifests/PersistentVolume/sd-outputs-s3.yaml
-kubectl apply -f comfyui-on-eks/manifests/PersistentVolume/sd-outputs-s3.yaml
+sed -i '' "s/region .*/region $region/g" comfyui-on-eks/manifests/PersistentVolume/sd-inputs-s3.yaml
+sed -i '' "s/bucketName: .*/bucketName: comfyui-inputs-$account-$region/g" comfyui-on-eks/manifests/PersistentVolume/sd-inputs-s3.yaml
+kubectl apply -f comfyui-on-eks/manifests/PersistentVolume/
 ```
 
 
@@ -549,7 +553,7 @@ kubectl delete -f comfyui-on-eks/manifests/Karpenter/
 aws ecr batch-delete-image --repository-name comfyui-images --image-ids imageTag=latest
 cdk destroy ComfyuiEcrRepo
 cdk destroy CloudFrontEntry
-cdk destroy S3OutputsStorage
+cdk destroy S3Storage
 cdk destroy LambdaModelsSync
 cdk destroy Comfyui-Cluster
 ```
