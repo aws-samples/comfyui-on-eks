@@ -25,7 +25,7 @@ export default class BlueprintConstruct {
 
         // Add-ons
         const karpenterAddOn = new blueprints.addons.KarpenterAddOn({
-            version: 'v0.34.5',
+            version: '0.37.0',
             values: {replicas: 1}
         });
         const addOns: Array<blueprints.ClusterAddOn> = [
@@ -62,7 +62,7 @@ export default class BlueprintConstruct {
         ];
 
         const clusterProvider = new blueprints.GenericClusterProvider({
-            version: KubernetesVersion.V1_29,
+            version: KubernetesVersion.V1_30,
             tags: {
                 "Name": "comfyui-eks-cluster",
                 "Type": "generic-cluster"
