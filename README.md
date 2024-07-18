@@ -1,3 +1,9 @@
+## Custom Nodes Support
+
+Switch to branch [custom_nodes_demo](https://github.com/aws-samples/comfyui-on-eks/tree/custom_nodes_demo) for details.
+
+
+
 ## Stable Diffusion 3 Support
 
 ComfyUI has already supported Stable Diffusion 3, to use Stable Diffusion 3 with this solution you only need to:
@@ -9,30 +15,9 @@ Use comfyui sd3 workflow to invoke, just refer to `comfyui-on-eks/test/` folder.
 
 ![sd3](images/sd3.png)
 
-## Deploy Stable Diffusion on Amazon EKS elastically and efficiently
 
 
-
-### 1. Background
-
-As the most popular open-source AI image generation model today, Stable Diffusion has gained widespread adoption in the gaming industry. Its versatility shines in both ToC (Targeting Consumer) scenarios, engaging player communities, and ToB (Targeting Business) scenarios, enhancing art production in game studios. The effective use of Stable Diffusion has sparked considerable interest. The community has actively contributed various runtimes for Stable Diffusion. Notable examples include [stable-diffusion-webui](https://github.com/AUTOMATIC1111/stable-diffusion-webui), [ComfyUI](https://github.com/comfyanonymous/ComfyUI), and [Fooocus](https://github.com/lllyasviel/Fooocus). Furthermore, there're also a lot of solutions for the deployment, management of Stable Diffusion image generation platforms. This article will focus on ComfyUI, demonstrating how to deploy a Stable Diffusion image generation platform on AWS, specifically for art teams.
-
-
-
-### 2. ComfyUI Introduction
-
-ComfyUI is an open-source, node-based workflow solution for Stable Diffusion. It deconstructs the various processes of the Stable Diffusion model into distinct nodes. This approach not only provides users with a clearer understanding of how Stable Diffusion works but also allows for more precise control over the entire process. Although ComfyUI has a steeper learning curve, it offers several advantages over other Stable Diffusion runtimes:
-
-1. Significant performance optimization in SDXL model inference compared to other interfaces, with image generation speeds improving by 10% to 25% over other runtimes.
-2. High customizability enables users to control the image generation process more accurately and in finer detail. Advanced users can generate better-quality images more easily with ComfyUI.
-3. Workflows, which can be shared as JSON or image files, facilitate easier dissemination and improved efficiency.
-4. Developer-friendly, with workflow API calls that can be made in any programming language by simply loading JSON files in the same API format.
-
-Due to these advantages, ComfyUI is increasingly being adopted by art creators.
-
-
-
-### 3. Solution Features
+## Solution Features
 
 The solution is characterized by the following features:
 
@@ -46,7 +31,7 @@ The solution is characterized by the following features:
 
 
 
-### 4. Solution Architecture
+## Solution Architecture
 
 ![Architecture](images/arch.png)
 
@@ -76,7 +61,7 @@ https://github.com/aws-samples/comfyui-on-eks
 
 
 
-### 5. Image Generation
+## Image Generation
 
 Once deployed, you can access and use the ComfyUI frontend directly through a browser by visiting the domain name of CloudFront or the domain name of Kubernetes Ingress.
 
@@ -88,9 +73,9 @@ You can also interact with ComfyUI by saving its workflow as a JSON file that's 
 
 
 
-### 6. Deployment Instructions
+## Deployment Instructions
 
-#### 6.1 Prerequisites
+### 1. Prerequisites
 
 This solution assumes that you have already installed, deployed, and are familiar with the following tools:
 
@@ -111,7 +96,7 @@ Download the code, **checkout the branch, install rpm packages, and check the en
 
 ```shell
 git clone https://github.com/aws-samples/comfyui-on-eks ~/comfyui-on-eks
-cd ~/comfyui-on-eks && git checkout v0.2.0
+cd ~/comfyui-on-eks && git checkout v0.3.0
 npm install
 npm list
 cdk list
@@ -120,10 +105,10 @@ cdk list
 Run `npm list` to ensure following packages are installed
 
 ```
-comfyui-on-eks@0.1.0 ~/comfyui-on-eks
-├── @aws-quickstart/eks-blueprints@1.14.1
-├── aws-cdk-lib@2.133.0
-├── aws-cdk@2.133.0
+comfyui-on-eks@0.3.0 ~/comfyui-on-eks
+├── @aws-quickstart/eks-blueprints@1.15.1
+├── aws-cdk-lib@2.147.3
+├── aws-cdk@2.147.3
 └── ...
 ```
 
@@ -133,11 +118,11 @@ Run `cdk list` to ensure the environment is all set, you will have following Clo
 Comfyui-Cluster
 CloudFrontEntry
 LambdaModelsSync
-S3OutputsStorage
+S3Storage
 ComfyuiEcrRepo
 ```
 
-#### 6.2 Deploy EKS Cluster
+### 2. Deploy EKS Cluster
 
 Run the following command
 
@@ -172,11 +157,11 @@ kubectl get svc
 
 Now, the deployment of the EKS cluster is complete.
 
-Also, note that EKS Blueprints has outputted `KarpenterInstanceNodeRole`, which is the role for the nodes managed by Karpenter. Please record this role, as it will be configured in section 6.5.2.
+Also, note that EKS Blueprints has outputted `KarpenterInstanceNodeRole`, which is the role for the nodes managed by Karpenter. Please record this role, as it will be configured in section 5.2.
 
 
 
-#### 6.3 Deploy an S3 bucket for storing models and set up Lambda for dynamic model synchronization
+### 3. Deploy an S3 bucket for storing models and set up Lambda for dynamic model synchronization
 
 Run the following command:
 
@@ -209,25 +194,25 @@ There's no need to wait for the model to finish downloading and uploading to S3.
 
 
 
-#### 6.4 Deploy S3 bucket for storing images generated by ComfyUI.
+### 4. Deploy S3 bucket for storing inputs to ComfyUI and outputs from ComfyUI
 
 Run the following command
 
 ```shell
-cd ~/comfyui-on-eks && cdk deploy S3OutputsStorage
+cd ~/comfyui-on-eks && cdk deploy S3Storage
 ```
 
 
 
-The `S3OutputsStorage` stack just creates a S3 bucket, named following the pattern `comfyui-outputs-{account_id}-{region}`, which is used to store images generated by ComfyUI.
+The `S3Storage` stack just creates two S3 buckets, named following the pattern `comfyui-outputs-{account_id}-{region}` and `comfyui-inputs-{account_id}-{region}`, which is used to store inputs and outputs.
 
 
 
-#### 6.5 Deploy ComfyUI Workload
+### 5. Deploy ComfyUI Workload
 
 The ComfyUI workload is deployed through Kubernetes. Please follow the steps below.
 
-##### 6.5.1 Build and Push ComfyUI Docker Image
+#### 5.1 Build and Push ComfyUI Docker Image
 
 Run the following command, create an ECR repo for ComfyUI image
 
@@ -263,9 +248,9 @@ docker image inspect $image_name|grep Architecture
 
 
 
-##### 6.5.2 Deploy Karpenter for Managing GPU Instance Scaling
+#### 5.2 Deploy Karpenter for Managing GPU Instance Scaling
 
-Get the KarpenterInstanceNodeRole in Section 6.2 and run the following command to deploy Karpenter:
+Get the KarpenterInstanceNodeRole in Section 2 and run the following command to deploy Karpenter:
 
 **Run on Linux**
 
@@ -305,7 +290,7 @@ aws iam attach-role-policy --policy-arn arn:aws:iam::aws:policy/AmazonS3FullAcce
 
 
 
-##### 6.5.3 Deploy S3 PV and PVC to store generated images
+#### 5.3 Deploy S3 PV and PVC to store generated images
 
 Execute the following command to deploy the PV and PVC for S3 CSI.
 
@@ -316,7 +301,9 @@ region="us-west-2" # Modify the region to your current region.
 account=$(aws sts get-caller-identity --query Account --output text)
 sed -i "s/region .*/region $region/g" comfyui-on-eks/manifests/PersistentVolume/sd-outputs-s3.yaml
 sed -i "s/bucketName: .*/bucketName: comfyui-outputs-$account-$region/g" comfyui-on-eks/manifests/PersistentVolume/sd-outputs-s3.yaml
-kubectl apply -f comfyui-on-eks/manifests/PersistentVolume/sd-outputs-s3.yaml
+sed -i "s/region .*/region $region/g" comfyui-on-eks/manifests/PersistentVolume/sd-inputs-s3.yaml
+sed -i "s/bucketName: .*/bucketName: comfyui-inputs-$account-$region/g" comfyui-on-eks/manifests/PersistentVolume/sd-inputs-s3.yaml
+kubectl apply -f comfyui-on-eks/manifests/PersistentVolume/
 ```
 
 **Run on MacOS**
@@ -326,12 +313,14 @@ region="us-west-2" # Modify the region to your current region.
 account=$(aws sts get-caller-identity --query Account --output text)
 sed -i '' "s/region .*/region $region/g" comfyui-on-eks/manifests/PersistentVolume/sd-outputs-s3.yaml
 sed -i '' "s/bucketName: .*/bucketName: comfyui-outputs-$account-$region/g" comfyui-on-eks/manifests/PersistentVolume/sd-outputs-s3.yaml
-kubectl apply -f comfyui-on-eks/manifests/PersistentVolume/sd-outputs-s3.yaml
+sed -i '' "s/region .*/region $region/g" comfyui-on-eks/manifests/PersistentVolume/sd-inputs-s3.yaml
+sed -i '' "s/bucketName: .*/bucketName: comfyui-inputs-$account-$region/g" comfyui-on-eks/manifests/PersistentVolume/sd-inputs-s3.yaml
+kubectl apply -f comfyui-on-eks/manifests/PersistentVolume/
 ```
 
 
 
-##### 6.5.4 Deploy EKS S3 CSI Driver
+#### 5.4 Deploy EKS S3 CSI Driver
 
 Run the following command to add your IAM principal to EKS cluster
 
@@ -384,7 +373,7 @@ eksctl create addon --name aws-mountpoint-s3-csi-driver --version v1.0.0-eksbuil
 
 
 
-##### 6.5.5 Deploy ComfyUI Deployment and Service
+#### 5.5 Deploy ComfyUI Deployment and Service
 
 Run the following command to replace docker image
 
@@ -450,9 +439,9 @@ kubectl logs -f $podName
 
 
 
-#### 6.6 Test ComfyUI on EKS
+### 6. Test ComfyUI on EKS
 
-##### 6.6.1 API Test
+#### 6.1 API Test
 
 Test with API, run the following command in the `comfyui-on-eks/test` directory:
 
@@ -484,7 +473,7 @@ Refer to `comfyui-on-eks/test/invoke_comfyui_api.py` for the API call logic. Not
 
 
 
-##### 6.6.2 Test with browser
+#### 6.2 Test with browser
 
 Run the following command to get the K8S ingress address:
 
@@ -500,7 +489,7 @@ The deployment and testing of ComfyUI on EKS is now complete. Next we will conne
 
 
 
-#### 6.6 Deploy CloudFront for edge acceleration (Optional)
+### 7. Deploy CloudFront for edge acceleration (Optional)
 
 Execute the following command in the `comfyui-on-eks` directory to connect the Kubernetes ingress to CloudFront:
 
@@ -521,7 +510,7 @@ After deployment completes, Outputs will be printed including the CloudFront URL
 
 
 
-### 7. Delete All Resources
+## Delete All Resources
 
 Run the following command to delete all Kubernetes resources:
 
@@ -539,22 +528,14 @@ Run the following command to delete all deployed resources:
 aws ecr batch-delete-image --repository-name comfyui-images --image-ids imageTag=latest
 cdk destroy ComfyuiEcrRepo
 cdk destroy CloudFrontEntry
-cdk destroy S3OutputsStorage
+cdk destroy S3Storage
 cdk destroy LambdaModelsSync
 cdk destroy Comfyui-Cluster
 ```
 
 
 
-### 8. Summary
-
-This article introduces a solution for deploying ComfyUI on EKS. By combining instance store and S3, it maximizes model loading and switching performance while reducing storage costs. It also automatically syncs models in a serverless way, leverages spot instances to lower GPU instance costs, and accelerates globally via CloudFront to meet the needs of geographically distributed art studios. The entire solution manages underlying infrastructure as code to minimize operational overhead.
-
----
-
-
-
-### Cost Analysis
+## Cost Analysis
 
 Assuming the following scenario:
 

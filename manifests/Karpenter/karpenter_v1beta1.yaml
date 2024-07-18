@@ -6,7 +6,7 @@ spec:
   disruption:
     consolidateAfter: 30s
     consolidationPolicy: WhenEmpty
-    expireAfter: Never
+    expireAfter: 720h # Rotate GPU nodes every 30 days
   template:
     metadata: {}
     spec:
@@ -17,12 +17,12 @@ spec:
         operator: In
         values:
         - on-demand
-        - spot
+        #- spot
       - key: node.kubernetes.io/instance-type
         operator: In
         values:
         - g5.2xlarge
-        - g4dn.2xlarge
+        #- g4dn.2xlarge
       - key: kubernetes.io/os
         operator: In
         values:

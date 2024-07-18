@@ -11,15 +11,18 @@ import threading
 import comfyui_api_utils
 
 SERVER_ADDRESS = "https://abcdefg123456.cloudfront.net"
-SHOW_IMAGES = True
+SHOW_IMAGES = False
 
+# Check if the image is ready, if not, upload it
 def review_prompt(prompt):
     for node in prompt:
         if 'inputs' in prompt[node] and 'image' in prompt[node]['inputs'] and isinstance(prompt[node]['inputs']['image'], str):
             filename = prompt[node]['inputs']['image']
             if not comfyui_api_utils.check_input_image_ready(filename, SERVER_ADDRESS):
+                # image need to be placed at the same dir
                 comfyui_api_utils.upload_image(filename, SERVER_ADDRESS)
 
+# Set random seed for the prompt
 def random_seed(prompt):
     for node in prompt:
         if 'inputs' in prompt[node]:
@@ -29,6 +32,7 @@ def random_seed(prompt):
                 prompt[node]['inputs']['noise_seed'] = random.randint(0, sys.maxsize)
     return prompt
 
+# Get the ComfyUI output images
 def get_images(prompt, client_id, server_address):
     prompt_id, aws_alb_cookie = comfyui_api_utils.queue_prompt(prompt, client_id, server_address)
     output_images = {}
@@ -55,6 +59,7 @@ def get_images(prompt, client_id, server_address):
             output_images[node_id] = images_output
     return output_images, prompt_id
 
+# Invoke the ComfyUI API with one workflow
 def single_inference(server_address, request_api_json):
     start = time.time()
     client_id = str(uuid.uuid4())

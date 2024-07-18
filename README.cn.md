@@ -1,3 +1,9 @@
+## Custom Nodes 支持
+
+切换到 [custom_nodes_demo](https://github.com/aws-samples/comfyui-on-eks/tree/custom_nodes_demo) 分支了解具体细节。
+
+
+
 ## Stable Diffusion 3 支持
 
 ComfyUI 已经支持了 Stable Diffusion 3，要在当前的方案中使用 Stable Diffusion 3，只需要：
@@ -11,21 +17,7 @@ ComfyUI 已经支持了 Stable Diffusion 3，要在当前的方案中使用 Stab
 
 
 
-## 云端AI生图——面向美术工作室的Stable Diffusion生图方案
-
-### 一、背景介绍
-
-Stable Diffusion 作为当下最流行的开源 AI 图像生成模型在游戏行业有着广泛的应用实践，无论是 ToC 面向玩家的游戏社区场景，还是 ToB 面向游戏工作室的美术制作场景，都可以发挥很大的价值。而如何更好地使用 Stable Diffusion 也成了非常热门的话题，社区也贡献了多种 runtime 来实现 Stable Diffusion 的图像生成，其中广泛流行的包括：[stable-diffusion-webui](https://github.com/AUTOMATIC1111/stable-diffusion-webui), [ComfyUI](https://github.com/comfyanonymous/ComfyUI),  [Fooocus](https://github.com/lllyasviel/Fooocus) 等。同时，如何在企业内部部署运维和迭代 Stable Diffusion 图像生成平台也涌现了多种方案。本文将以 ComfyUI 为例，介绍如何在 AWS 上部署面向美术团队的 Stable Diffusion 图像生成平台。
-
-
-
-### 二、ComfyUI 简介
-
-ComfyUI 是一个基于节点式工作流的 Stable Diffusion 方案，它将 Stable Diffsuion 模型推理时各个流程拆分成不同的节点，让用户可以更加清晰地了解 Stable Diffusion 的原理，并且可以更加精细化地控制整个流程。同时得益于 ComfyUI 在 SDXL 模型上相较于其他方案的性能优化，使得它越来越多地被美术创作者所使用。
-
-
-
-### 三、方案特点
+## 方案特点
 
 我们根据实际的使用场景设计方案，总结有以下特点：
 
@@ -39,7 +31,7 @@ ComfyUI 是一个基于节点式工作流的 Stable Diffusion 方案，它将 St
 
 
 
-### 四、方案架构
+## 方案架构
 
 ![Architecture](images/arch.png)
 
@@ -69,7 +61,7 @@ https://github.com/aws-samples/comfyui-on-eks
 
 
 
-### 五、图片生成效果
+## 图片生成效果
 
 部署完成后可以通过浏览器直接访问 CloudFront 的域名或 Kubernetes Ingress 的域名来使用 ComfyUI 的前端
 
@@ -81,9 +73,9 @@ https://github.com/aws-samples/comfyui-on-eks
 
 
 
-### 六、方案部署指引
+## 方案部署指引
 
-#### 6.1 准备工作
+### 1. 准备工作
 
 此方案默认你已安装部署好并熟练使用以下工具：
 
@@ -104,7 +96,7 @@ https://github.com/aws-samples/comfyui-on-eks
 
 ```shell
 git clone https://github.com/aws-samples/comfyui-on-eks ~/comfyui-on-eks
-cd ~/comfyui-on-eks && git checkout v0.2.0
+cd ~/comfyui-on-eks && git checkout v0.3.0
 npm install
 npm list
 cdk list
@@ -113,10 +105,10 @@ cdk list
 运行 `npm list` 确认已安装下面的 packages
 
 ```shell
-comfyui-on-eks@0.1.0 ~/comfyui-on-eks
-├── @aws-quickstart/eks-blueprints@1.14.1
-├── aws-cdk-lib@2.133.0
-├── aws-cdk@2.133.0
+comfyui-on-eks@0.3.0 ~/comfyui-on-eks
+├── @aws-quickstart/eks-blueprints@1.15.1
+├── aws-cdk-lib@2.147.3
+├── aws-cdk@2.147.3
 └── ...
 ```
 
@@ -126,13 +118,13 @@ comfyui-on-eks@0.1.0 ~/comfyui-on-eks
 Comfyui-Cluster
 CloudFrontEntry
 LambdaModelsSync
-S3OutputsStorage
+S3Storage
 ComfyuiEcrRepo
 ```
 
 
 
-#### 6.2 部署 EKS 集群
+### 2. 部署 EKS 集群
 
 执行以下命令
 
@@ -170,11 +162,11 @@ kubectl get svc
 
 至此，EKS 集群已完成部署。
 
-同时请注意，EKS Blueprints 输出了 KarpenterInstanceNodeRole，它是 Karpenter 管理的 Node 的 role，请记下这个 role 接下来将在 6.5.2 节进行配置。
+同时请注意，EKS Blueprints 输出了 KarpenterInstanceNodeRole，它是 Karpenter 管理的 Node 的 role，请记下这个 role 接下来将在 5.2 节进行配置。
 
 
 
-#### 6.3 部署存储模型的 S3 bucket 以及 Lambda 动态同步模型
+### 3. 部署存储模型的 S3 bucket 以及 Lambda 动态同步模型
 
 执行以下命令
 
@@ -211,27 +203,27 @@ cd ~/comfyui-on-eks/test/ && bash init_s3_for_models.sh $region
 
 
 
-#### 6.4 部署存储 ComfyUI 生成图片的 S3 bucket
+### 4. 部署 S3 bucket 用以存储上传到 ComfyUI 以及 ComfyUI 生成的图片
 
 执行以下命令
 
 ```shell
-cd ~/comfyui-on-eks && cdk deploy S3OutputsStorage
+cd ~/comfyui-on-eks && cdk deploy S3Storag
 ```
 
 
 
-`S3OutputsStorage` 的 stack 只创建一个 S3 bucket，命名规则为 `comfyui-outputs-{account_id}-{region}`，用于存储 ComfyUI 生成的图片
+`S3OutputsStorage` 的 stack 只创建两个 S3 bucket，命名规则为 `comfyui-outputs-{account_id}-{region}` 和 `comfyui-inputs-{account_id}-{region}`，用于存储上传到 ComfyUI 以及 ComfyUI 生成的图片。
 
 
 
-#### 6.5 部署 ComfyUI Workload
+### 5. 部署 ComfyUI Workload
 
 ComfyUI 的 Workload 部署用 Kubernetes 来实现，请按以下顺序来依次部署。
 
 
 
-##### 6.5.1 构建并上传 ComfyUI Docker 镜像
+#### 5.1 构建并上传 ComfyUI Docker 镜像
 
 执行以下命令，创建 ECR repo 来存放 ComfyUI 镜像
 
@@ -267,9 +259,9 @@ docker image inspect $image_name|grep Architecture
 
 
 
-##### 6.5.2 部署 Karpenter 用以管理 GPU 实例的扩缩容
+#### 5.2 部署 Karpenter 用以管理 GPU 实例的扩缩容
 
-获取 6.2 节输出的 KarpenterInstanceNodeRole，执行以下命令来部署  Karpenter
+获取第 2 节输出的 KarpenterInstanceNodeRole，执行以下命令来部署  Karpenter
 
 **Run on Linux**
 
@@ -300,7 +292,7 @@ Karpenter 的部署需要注意以下几点：
    1. 格式化 instance store 本地盘，并 mount 到 `/comfyui-models` 目录。
    2. 将存储在 S3 上的模型文件同步到本地 instance store。
 
-在 6.2 节获取到的 KarpenterInstanceNodeRole 需要添加一条 S3 的访问权限，以允许 GPU node 从 S3 同步文件，请执行以下命令
+在第 2 节获取到的 KarpenterInstanceNodeRole 需要添加一条 S3 的访问权限，以允许 GPU node 从 S3 同步文件，请执行以下命令
 
 ```shell
 KarpenterInstanceNodeRole="Comfyui-Cluster-ComfyuiClusterkarpenternoderoleE627-juyEInBqoNtU" # 修改为你自己的 role
@@ -309,7 +301,7 @@ aws iam attach-role-policy --policy-arn arn:aws:iam::aws:policy/AmazonS3FullAcce
 
 
 
-##### 6.5.3 部署 S3 PV 和 PVC 用以存储生成的图片
+#### 5.3 部署 S3 PV 和 PVC 用以存储生成的图片
 
 执行以下命令来部署 S3 CSI 的 PV 和 PVC
 
@@ -320,7 +312,9 @@ region="us-west-2" # 修改 region 为你当前的 region
 account=$(aws sts get-caller-identity --query Account --output text)
 sed -i "s/region .*/region $region/g" comfyui-on-eks/manifests/PersistentVolume/sd-outputs-s3.yaml
 sed -i "s/bucketName: .*/bucketName: comfyui-outputs-$account-$region/g" comfyui-on-eks/manifests/PersistentVolume/sd-outputs-s3.yaml
-kubectl apply -f comfyui-on-eks/manifests/PersistentVolume/sd-outputs-s3.yaml
+sed -i "s/region .*/region $region/g" comfyui-on-eks/manifests/PersistentVolume/sd-inputs-s3.yaml
+sed -i "s/bucketName: .*/bucketName: comfyui-inputs-$account-$region/g" comfyui-on-eks/manifests/PersistentVolume/sd-inputs-s3.yaml
+kubectl apply -f comfyui-on-eks/manifests/PersistentVolume/
 ```
 
 **Run on MacOS**
@@ -330,12 +324,14 @@ region="us-west-2" # 修改 region 为你当前的 region
 account=$(aws sts get-caller-identity --query Account --output text)
 sed -i '' "s/region .*/region $region/g" comfyui-on-eks/manifests/PersistentVolume/sd-outputs-s3.yaml
 sed -i '' "s/bucketName: .*/bucketName: comfyui-outputs-$account-$region/g" comfyui-on-eks/manifests/PersistentVolume/sd-outputs-s3.yaml
-kubectl apply -f comfyui-on-eks/manifests/PersistentVolume/sd-outputs-s3.yaml
+sed -i '' "s/region .*/region $region/g" comfyui-on-eks/manifests/PersistentVolume/sd-inputs-s3.yaml
+sed -i '' "s/bucketName: .*/bucketName: comfyui-inputs-$account-$region/g" comfyui-on-eks/manifests/PersistentVolume/sd-inputs-s3.yaml
+kubectl apply -f comfyui-on-eks/manifests/PersistentVolume/
 ```
 
 
 
-##### 6.5.4 部署 EKS S3 CSI Driver
+#### 5.4 部署 EKS S3 CSI Driver
 
 
 
@@ -390,7 +386,7 @@ eksctl create addon --name aws-mountpoint-s3-csi-driver --version v1.0.0-eksbuil
 
 
 
-##### 6.5.5 部署 ComfyUI Deployment 和 Service
+#### 5.5 部署 ComfyUI Deployment 和 Service
 
 执行以下命令来替换容器 image 镜像
 
@@ -462,9 +458,9 @@ kubectl logs -f $podName
 
 
 
-#### 6.6 测试 ComfyUI on EKS 部署结果
+### 6. 测试 ComfyUI on EKS 部署结果
 
-##### 6.6.1 API 测试
+#### 6.1 API 测试
 
 使用 API 的方式来测试，在 `comfyui-on-eks/test` 目录下执行以下命令
 
@@ -496,7 +492,7 @@ API 调用逻辑参考 `comfyui-on-eks/test/invoke_comfyui_api.py`，注意以�
 2. 使用到了两个模型：sd_xl_base_1.0.safetensors, sd_xl_refiner_1.0.safetensors
 3. 可以在 sdxl_refiner_prompt_api.json 里或 invoke_comfyui_api.py 修改 prompt 进行测试
 
-##### 6.6.2 浏览器测试
+#### 6.2 浏览器测试
 
 执行以下命令获取 ingress 地址
 
@@ -512,7 +508,7 @@ kubectl get ingress
 
 
 
-#### 6.6 部署 CloudFront 边缘加速（可选）
+### 7. 部署 CloudFront 边缘加速（可选）
 
 在 `comfyui-on-eks` 目录下执行以下命令，为 Kubernetes 的 ingress 接入 CloudFront 边缘加速
 
@@ -529,11 +525,11 @@ cdk deploy CloudFrontEntry
 
 
 
-部署完成后会打出 Outputs，其中包含了 CloudFront 的 URL `CloudFrontEntry.cloudFrontEntryUrl`，参考 6.6 节通过 API 或浏览器的方式进行测试。
+部署完成后会打出 Outputs，其中包含了 CloudFront 的 URL `CloudFrontEntry.cloudFrontEntryUrl`，参考第 6 节通过 API 或浏览器的方式进行测试。
 
 
 
-### 七、清理资源
+## 清理资源
 
 执行以下命令删除所有 Kubernetes 资源
 
@@ -549,22 +545,14 @@ kubectl delete -f comfyui-on-eks/manifests/Karpenter/
 aws ecr batch-delete-image --repository-name comfyui-images --image-ids imageTag=latest
 cdk destroy ComfyuiEcrRepo
 cdk destroy CloudFrontEntry
-cdk destroy S3OutputsStorage
+cdk destroy S3Storage
 cdk destroy LambdaModelsSync
 cdk destroy Comfyui-Cluster
 ```
 
 
 
-### 八、总结
-
-本文介绍了一种在 EKS 上部署 ComfyUI 的方案，通过 Instance store 和 S3 的结合，在降低存储成本的同时最大化模型加载和切换的性能，同时通过 Serverless 的方式自动化进行模型的同步，使用 spot 实例降低 GPU 实例成本，并且通过 CloudFront 进行全球加速，以满足跨地区美术工作室协作的场景。整套方案以 IaC 的方式管理底层基础设施，最小化运维成本。
-
-
-
----
-
-### 成本预估
+## 成本预估
 
 假设场景：
 
