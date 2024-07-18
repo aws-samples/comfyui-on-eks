@@ -84,7 +84,7 @@ This solution assumes that you have already installed, deployed, and are familia
 * [kubectl](https://kubernetes.io/docs/tasks/tools/)
 * [Docker](https://docs.docker.com/engine/install/)
 * [npm](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm/)
-* [CDK](https://docs.aws.amazon.com/cdk/v2/guide/getting_started.html): latest version
+* [CDK](https://docs.aws.amazon.com/cdk/v2/guide/getting_started.html): 2.147.3
 
 
 
