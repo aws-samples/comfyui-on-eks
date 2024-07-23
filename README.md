@@ -368,7 +368,7 @@ Run the following command to install  `aws-mountpoint-s3-csi-driver` Addon
 ```shell
 region="us-west-2" # Modify the region to your current region.
 account=$(aws sts get-caller-identity --query Account --output text)
-eksctl create addon --name aws-mountpoint-s3-csi-driver --version v1.0.0-eksbuild.1 --cluster Comfyui-Cluster --service-account-role-arn "arn:aws:iam::${account}:role/EKS-S3-CSI-DriverRole-${account}-${region}" --force
+eksctl create addon --name aws-mountpoint-s3-csi-driver --cluster Comfyui-Cluster --service-account-role-arn "arn:aws:iam::${account}:role/EKS-S3-CSI-DriverRole-${account}-${region}" --force
 ```
 
 
@@ -435,6 +435,25 @@ When ComfyUI pod is running, execute the following command to check the log:
 ```shell
 podName=$(kubectl get pods |tail -1|awk '{print $1}')
 kubectl logs -f $podName
+```
+
+
+
+You may encounter error log like this
+
+```
+E0718 16:22:59.734961       1 driver.go:96] GRPC error: rpc error: code = Internal desc = Could not mount "comfyui-outputs-123456789012-us-west-2" at "/var/lib/kubelet/pods/5d662061-4f4b-45
+4e-bac1-2a051503c3f4/volumes/kubernetes.io~csi/comfyui-outputs-pv/mount": Could not check if "/var/lib/kubelet/pods/5d662061-4f4b-454e-bac1-2a051503c3f4/volumes/kubernetes.io~csi/comfyui-ou
+tputs-pv/mount" is a mount point: stat /var/lib/kubelet/pods/5d662061-4f4b-454e-bac1-2a051503c3f4/volumes/kubernetes.io~csi/comfyui-outputs-pv/mount: no such file or directory, Failed to re
+ad /host/proc/mounts: open /host/proc/mounts: invalid argument
+```
+
+It's maybe a bug with Karpenter and mountpoint-s3-csi-driver: [Pod "Sometimes" cannot mount PVC in CSI](https://github.com/awslabs/mountpoint-s3-csi-driver/issues/174)
+
+Currently workaround is just killing the pod `s3-csi-node-xxxx` to let it restart.
+
+```shell
+kubectl delete pod s3-csi-node-xxxx -n kube-system # Modify the pod name to your own
 ```
 
 

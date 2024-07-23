@@ -456,6 +456,23 @@ kubectl logs -f $podName
 
 
 
+部署完 comfyui 的 pod 后你可能会遇到下面的报错
+
+```
+E0718 16:22:59.734961       1 driver.go:96] GRPC error: rpc error: code = Internal desc = Could not mount "comfyui-outputs-123456789012-us-west-2" at "/var/lib/kubelet/pods/5d662061-4f4b-45
+4e-bac1-2a051503c3f4/volumes/kubernetes.io~csi/comfyui-outputs-pv/mount": Could not check if "/var/lib/kubelet/pods/5d662061-4f4b-454e-bac1-2a051503c3f4/volumes/kubernetes.io~csi/comfyui-ou
+tputs-pv/mount" is a mount point: stat /var/lib/kubelet/pods/5d662061-4f4b-454e-bac1-2a051503c3f4/volumes/kubernetes.io~csi/comfyui-outputs-pv/mount: no such file or directory, Failed to re
+ad /host/proc/mounts: open /host/proc/mounts: invalid argument
+```
+
+这可能是因为一个 Karpenter 和 mountpoint-s3-csi-driver 的 bug：[Pod "Sometimes" cannot mount PVC in CSI](https://github.com/awslabs/mountpoint-s3-csi-driver/issues/174)
+
+目前的解决方法是把 `s3-csi-node-xxxx` 这个 pod kill 掉让它重启，即可正常挂载
+
+```shell
+kubectl delete pod s3-csi-node-xxxx -n kube-system # Modify the pod name to your own
+```
+
 
 
 ### 6. 测试 ComfyUI on EKS 部署结果
