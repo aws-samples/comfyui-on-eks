@@ -3,12 +3,19 @@
 import requests
 import json
 import urllib
+import pprint
+import sys
+
+
 
 # Send prompt request to server and get prompt_id and AWSALB cookie
 def queue_prompt(prompt, client_id, server_address):
     p = {"prompt": prompt, "client_id": client_id}
     data = json.dumps(p).encode('utf-8')
     response = requests.post("{}/prompt".format(server_address), data=data)
+    if response.status_code != 200:
+        print("Error: {}".format(response.text))
+        sys.exit(1)
     if 'Set-Cookie' not in response.headers:
         print("No ALB, test directly to EC2.")
         aws_alb_cookie = None
@@ -46,3 +53,10 @@ def get_image(filename, subfolder, folder_type, server_address, aws_alb_cookie):
 def get_history(prompt_id, server_address, aws_alb_cookie):
     response = requests.get("{}/history/{}".format(server_address, prompt_id), headers={"Cookie": aws_alb_cookie})
     return response.json()
+
+def get_queue_status(prompt_id,server_address):
+    response = requests.get("{}/queue".format(server_address))
+    pprint.pprint(response.json())
+
+if __name__ == "__main__":
+    test_api("https://comfyui.array.wang")

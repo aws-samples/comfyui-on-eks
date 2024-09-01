@@ -15,7 +15,7 @@
   },
   "6": {
     "inputs": {
-      "text": "a painting of a beautiful girl",
+      "text": "an oil painting of a cute dog",
       "clip": [
         "4",
         1
@@ -36,7 +36,7 @@
   "10": {
     "inputs": {
       "add_noise": "enable",
-      "noise_seed": 29319164778611,
+      "noise_seed": 0,
       "steps": 25,
       "cfg": 8,
       "sampler_name": "euler",
