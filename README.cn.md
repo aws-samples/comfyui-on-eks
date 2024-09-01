@@ -1,8 +1,15 @@
+## Flux 支持
+
+ComfyUI 已经支持了 Flux，要在当前的方案中使用 Flux，只需要：
+
+1. 用最新版本的 ComfyUI build docker 镜像，已在 [Dockerfile](https://github.com/aws-samples/comfyui-on-eks/blob/main/comfyui_image/Dockerfile) 中完成
+2. 将 Flux 的模型放到对应的 S3 目录，参考  [ComfyUI Flux Examples](https://comfyanonymous.github.io/ComfyUI_examples/flux/)
+
+用 comfyui sd3 的 workflow 来调用模型推理，参考 `comfyui-on-eks/test/` 目录
+
 ## Custom Nodes 支持
 
 切换到 [custom_nodes_demo](https://github.com/aws-samples/comfyui-on-eks/tree/custom_nodes_demo) 分支了解具体细节。
-
-
 
 ## Stable Diffusion 3 支持
 

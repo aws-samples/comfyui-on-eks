@@ -1,8 +1,15 @@
+## Flux Support
+
+ComfyUI has already supported Flux, to use Flux with this solution you only need to:
+
+1. Build docker image with the latest version of ComfyUI (Already done in [Dockerfile](https://github.com/aws-samples/comfyui-on-eks/blob/main/comfyui_image/Dockerfile))
+2. Download and put Flux models to the corresponding S3 directory. [ComfyUI Flux Examples](https://comfyanonymous.github.io/ComfyUI_examples/flux/)
+
+Use comfyui flux workflow to invoke, just refer to `comfyui-on-eks/test/` folder.
+
 ## Custom Nodes Support
 
 Switch to branch [custom_nodes_demo](https://github.com/aws-samples/comfyui-on-eks/tree/custom_nodes_demo) for details.
-
-
 
 ## Stable Diffusion 3 Support
 
