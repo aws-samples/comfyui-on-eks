@@ -6,7 +6,7 @@ spec:
   disruption:
     consolidateAfter: 30s
     consolidationPolicy: WhenEmpty
-    expireAfter: 720h # Rotate GPU nodes every 30 days
+    expireAfter: Never
   template:
     metadata: {}
     spec:
@@ -17,12 +17,13 @@ spec:
         operator: In
         values:
         - on-demand
-        #- spot
+        - spot
       - key: node.kubernetes.io/instance-type
         operator: In
         values:
+          #- g4dn.2xlarge
         - g5.2xlarge
-        #- g4dn.2xlarge
+        - g6e.xlarge
       - key: kubernetes.io/os
         operator: In
         values:
@@ -60,4 +61,8 @@ spec:
     mount /dev/nvme1n1 /comfyui-models
     account=$(aws sts get-caller-identity --query 'Account' --output text)
     region=$(ec2-metadata --availability-zone | sed 's/.$//'|awk '{print $NF}')
-    aws s3 sync s3://comfyui-models-${account}-${region} /comfyui-models
+    aws configure set default.s3.preferred_transfer_client crt
+    aws s3 sync s3://comfyui-models-${account}-${region} /comfyui-models/ &
+    #wget "https://github.com/peak/s5cmd/releases/download/v2.2.2/s5cmd_2.2.2_Linux-64bit.tar.gz" -O /tmp/s5cmd.tar.gz
+    #tar zxf /tmp/s5cmd.tar.gz -C /tmp/
+    #/tmp/s5cmd sync s3://comfyui-models-${account}-${region}/* /comfyui-models &

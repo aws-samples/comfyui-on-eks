@@ -9,7 +9,8 @@ S3_BUCKET = 's3://comfyui-models-%s-%s' % (account_id, region)
 NODE_DIR = '/comfyui-models'
 
 # Print files change in S3
-def show_files_change(event):
+def files_change(event):
+    model_keys = []
     for record in event['Records']:
         obj_name = record['s3']['object']['key']
         obj_size = record['s3']['object']['size']
@@ -23,6 +24,8 @@ def show_files_change(event):
             obj_size = str(obj_size) + 'B'
         obj_event = record['eventName']
         print(obj_name, obj_size, obj_event)
+        model_keys.append(obj_name)
+    return model_keys
 
 # Get all GPU instances in Comfyui cluster
 # Modify the filter if needed
@@ -60,17 +63,31 @@ def sync_models_to_gpu_instances(instance_ids):
     response = ssm.send_command(
         InstanceIds=instance_ids,
         DocumentName="AWS-RunShellScript",
-        Parameters={'commands': ['aws s3 sync %s %s --delete' % (S3_BUCKET, NODE_DIR)]}
+        Parameters={'commands': ['/tmp/s5cmd sync %s/* %s' % (S3_BUCKET, NODE_DIR)]}
+    )
+    return response
+
+# Sync single model to all GPU instances
+def sync_single_model_to_gpu_instances(instance_ids, model_key):
+    ssm = boto3.client('ssm')
+    response = ssm.send_command(
+        InstanceIds=instance_ids,
+        DocumentName="AWS-RunShellScript",
+        Parameters={'commands': ['/tmp/s5cmd cp %s/%s %s/%s' % (S3_BUCKET, model_key, NODE_DIR, model_key)]}
     )
     return response
 
 def lambda_handler(event, context):
-    show_files_change(event)
+    model_keys = files_change(event)
     instance_ids = get_all_gpu_instances()
     print("Following instances will be synced:", instance_ids)
-    response = sync_models_to_gpu_instances(instance_ids)
+    for model_key in model_keys:
+        response = sync_single_model_to_gpu_instances(instance_ids, model_key)
+        # print command and status
+        print(response['Command']['Parameters']['commands'], response['Command']['Status'])
+    # response = sync_models_to_gpu_instances(instance_ids)
     # print command and status
-    print(response['Command']['Parameters']['commands'], response['Command']['Status'])
+    # print(response['Command']['Parameters']['commands'], response['Command']['Status'])
     return {
         'statusCode': 200,
         'body': json.dumps('Models synced!')
