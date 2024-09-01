@@ -486,9 +486,8 @@ kubectl delete pod s3-csi-node-xxxx -n kube-system # Modify the pod name to your
 ```shell
 ingress_address=$(kubectl get ingress|grep comfyui-ingress|awk '{print $4}')
 sed -i "s/SERVER_ADDRESS = .*/SERVER_ADDRESS = \"${ingress_address}\"/g" invoke_comfyui_api.py
-sed -i "s/HTTPS = .*/HTTPS = False/g" invoke_comfyui_api.py
 sed -i "s/SHOW_IMAGES = .*/SHOW_IMAGES = False/g" invoke_comfyui_api.py
-./invoke_comfyui_api.py sdxl_refiner_prompt_api.json
+./invoke_comfyui_api.py test_workflows/sdxl_refiner_prompt_api.json
 ```
 
 **Run on MacOS**
@@ -496,16 +495,15 @@ sed -i "s/SHOW_IMAGES = .*/SHOW_IMAGES = False/g" invoke_comfyui_api.py
 ```shell
 ingress_address=$(kubectl get ingress|grep comfyui-ingress|awk '{print $4}')
 sed -i '' "s/SERVER_ADDRESS = .*/SERVER_ADDRESS = \"${ingress_address}\"/g" invoke_comfyui_api.py
-sed -i '' "s/HTTPS = .*/HTTPS = False/g" invoke_comfyui_api.py
 sed -i '' "s/SHOW_IMAGES = .*/SHOW_IMAGES = False/g" invoke_comfyui_api.py
-./invoke_comfyui_api.py sdxl_refiner_prompt_api.json
+./invoke_comfyui_api.py test_workflows/sdxl_refiner_prompt_api.json
 ```
 
 
 
 API 调用逻辑参考 `comfyui-on-eks/test/invoke_comfyui_api.py`，注意以下几点：
 
-1. API 调用执行 ComfyUI 的 workflow 存储在 `comfyui-on-eks/test/sdxl_refiner_prompt_api.json`
+1. API 调用执行 ComfyUI 的 workflow 存储在 `comfyui-on-eks/test/test_workflows/sdxl_refiner_prompt_api.json`
 2. 使用到了两个模型：sd_xl_base_1.0.safetensors, sd_xl_refiner_1.0.safetensors
 3. 可以在 sdxl_refiner_prompt_api.json 里或 invoke_comfyui_api.py 修改 prompt 进行测试
 

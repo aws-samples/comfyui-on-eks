@@ -469,9 +469,8 @@ Test with API, run the following command in the `comfyui-on-eks/test` directory:
 ```shell
 ingress_address=$(kubectl get ingress|grep comfyui-ingress|awk '{print $4}')
 sed -i "s/SERVER_ADDRESS = .*/SERVER_ADDRESS = \"${ingress_address}\"/g" invoke_comfyui_api.py
-sed -i "s/HTTPS = .*/HTTPS = False/g" invoke_comfyui_api.py
 sed -i "s/SHOW_IMAGES = .*/SHOW_IMAGES = False/g" invoke_comfyui_api.py
-./invoke_comfyui_api.py sdxl_refiner_prompt_api.json
+./invoke_comfyui_api.py test_workflows/sdxl_refiner_prompt_api.json
 ```
 
 **Run on MacOS**
@@ -479,14 +478,13 @@ sed -i "s/SHOW_IMAGES = .*/SHOW_IMAGES = False/g" invoke_comfyui_api.py
 ```shell
 ingress_address=$(kubectl get ingress|grep comfyui-ingress|awk '{print $4}')
 sed -i '' "s/SERVER_ADDRESS = .*/SERVER_ADDRESS = \"${ingress_address}\"/g" invoke_comfyui_api.py
-sed -i '' "s/HTTPS = .*/HTTPS = False/g" invoke_comfyui_api.py
 sed -i '' "s/SHOW_IMAGES = .*/SHOW_IMAGES = False/g" invoke_comfyui_api.py
-./invoke_comfyui_api.py sdxl_refiner_prompt_api.json
+./invoke_comfyui_api.py test_workflows/sdxl_refiner_prompt_api.json
 ```
 
 Refer to `comfyui-on-eks/test/invoke_comfyui_api.py` for the API call logic. Note the following points:
 
-1. The API call executes the ComfyUI workflow stored in `comfyui-on-eks/test/sdxl_refiner_prompt_api.json`. 
+1. The API call executes the ComfyUI workflow stored in `comfyui-on-eks/test/test_workflows/sdxl_refiner_prompt_api.json`.
 2. Two models are used: sd_xl_base_1.0.safetensors and sd_xl_refiner_1.0.safetensors.
 3. You can modify the prompt in sdxl_refiner_prompt_api.json or invoke_comfyui_api.py to test different inputs.
 
