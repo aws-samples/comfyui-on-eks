@@ -10,7 +10,7 @@ RUN apt-get update && apt-get install -y \
 # Python Evn
 RUN pip3 install torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cu121
 RUN git clone https://github.com/comfyanonymous/ComfyUI.git
-RUN cd /app/ComfyUI && git checkout ea63b1c092e2974be9bcf4753d5305213f188e25 && cd /app/ComfyUI && find . -name ".git"|xargs rm -rf
+RUN cd /app/ComfyUI && git checkout v0.3.9
 RUN pip3 install -r /app/ComfyUI/requirements.txt
 
 EXPOSE 8848
