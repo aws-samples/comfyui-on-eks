@@ -286,8 +286,8 @@ test_comfyui() {
     chmod +x $CDK_DIR/test/invoke_comfyui_api.py
     image_num_before_generate=$(aws s3 ls s3://comfyui-outputs-$ACCOUNT_ID-$AWS_DEFAULT_REGION/ | wc -l)
     echo "Number of images before generate: $image_num_before_generate"
-    $CDK_DIR/test/invoke_comfyui_api.py $CDK_DIR/test/test_workflows/sdxl_refiner_prompt_api.json
     i=0
+    $CDK_DIR/test/invoke_comfyui_api.py $CDK_DIR/test/test_workflows/sdxl_refiner_prompt_api.json
     while [ $? -ne 0 ]; do
         if [ $i -gt 60 ]; then
             echo "ComfyUI test failed after 5min"
