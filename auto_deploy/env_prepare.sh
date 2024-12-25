@@ -25,7 +25,7 @@ install_awscli() {
         echo "AWS CLI installation failed."
         exit 1
     fi
-    aws sts get-caller-identity --query 'Arn' --output text --no-cli-pager
+    iam_entity=$(aws sts get-caller-identity --query 'Arn' --output text --no-cli-pager)
     if [[ $? -ne 0 ]]
     then
         # Get user input for choosing 1. aws configure 2. Add iam role later
@@ -37,6 +37,8 @@ install_awscli() {
         then
             aws configure
         fi
+    else
+        echo "Make sure current IAM entity '$iam_entity' has necessary permissions to create resources."
     fi
     echo "==== Finish installing AWS CLI ===="
 }
