@@ -293,14 +293,14 @@ test_comfyui() {
             echo "ComfyUI test failed after 5min"
             exit 1
         fi
+        i=$((i+1))
         echo "ComfyUI test failed, sleep 5s and retry..."
         sleep 5
         $CDK_DIR/test/invoke_comfyui_api.py $CDK_DIR/test/test_workflows/sdxl_refiner_prompt_api.json
-        i=$((i+1))
     done
-    image_num_after_generate=$(aws s3 ls s3://comfyui-outputs-$ACCOUNT_ID-$AWS_DEFAULT_REGION/ | wc -l)
-    echo "Number of images after generate: $image_num_after_generate"
     if [ $? -eq 0 ]; then
+        image_num_after_generate=$(aws s3 ls s3://comfyui-outputs-$ACCOUNT_ID-$AWS_DEFAULT_REGION/ | wc -l)
+        echo "Number of images after generate: $image_num_after_generate"
         if [ $image_num_after_generate -gt $image_num_before_generate ]; then
             echo "Comfyui test completed successfully"
         else
@@ -308,9 +308,10 @@ test_comfyui() {
             exit 1
         fi
     else
-        echo "Comfyui test failed"
+        echo "ComfyUI test failed"
         exit 1
     fi
+
 }
 
 # ====== General functions ====== #
