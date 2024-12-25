@@ -9,17 +9,16 @@ This solution assumes that you have already installed, deployed, and are familia
 * [npm](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm/)
 * [CDK](https://docs.aws.amazon.com/cdk/v2/guide/getting_started.html): 2.173.2
 
-All of these tools can be installed by running on Ubuntu
+All of these tools can be installed by running (only support Ubuntu)
 
 ```shell
 cd ~/comfyui-on-eks/auto_deploy && bash env_prepare.sh
 ```
 
-
-
 **Checkout the branch, install npm packages, and check the environment**
 
 ```shell
+git clone https://github.com/aws-samples/comfyui-on-eks ~/comfyui-on-eks
 cd ~/comfyui-on-eks && git checkout v0.4.0
 npm install --force
 npm list

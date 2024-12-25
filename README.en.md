@@ -60,12 +60,6 @@ The solution's architecture is structured into two distinct phases: the deployme
 2. **Image Storage Post-Inference**: After inference, the pod stores the image in the `ComfyUI/output` directory, which is directly written to S3 using the S3 CSI driver.
 3. **Performance Advantages of Instance Store**: Thanks to the performance benefits of the Instance store, the time taken for initial model loading and model switching is significantly reduced.
 
-You can find the deployment code with following address, for detailed deployment instructions, please refer to Section 6.
-
-```shell
-https://github.com/aws-samples/comfyui-on-eks
-```
-
 
 
 ## Image Generation
@@ -86,7 +80,7 @@ You can refer to [detailed instructions](./archive_docs/deployment_instructions_
 
 ### 1. Prerequisites
 
-Make sure that you have enough vCPU quota for G instances. (At least 8 vCPU for a g5.2xl/g4dn.2x used in this guidance)
+Make sure that you have enough vCPU quota for G instances. (At least 8 vCPU for a g6.2x/g5.2x/g4dn.2x or 4 vCPU for a g6e.x used in this guidance)
 
 ```shell
 rm -rf ~/comfyui-on-eks && git clone https://github.com/aws-samples/comfyui-on-eks ~/comfyui-on-eks
