@@ -1,32 +1,10 @@
-## Flux 支持
+[English](./README.md)
 
-ComfyUI 已经支持了 Flux，要在当前的方案中使用 Flux，只需要：
+## 这是个什么
 
-1. 用最新版本的 ComfyUI build docker 镜像，已在 [Dockerfile](https://github.com/aws-samples/comfyui-on-eks/blob/main/comfyui_image/Dockerfile) 中完成
-2. 将 Flux 的模型放到对应的 S3 目录，参考  [ComfyUI Flux Examples](https://comfyanonymous.github.io/ComfyUI_examples/flux/)
+这是一个在 Amazon EKS 上部署 ComfyUI 的方案。
 
-用 comfyui sd3 的 workflow 来调用模型推理，参考 `comfyui-on-eks/test/` 目录
-
-## Custom Nodes 支持
-
-切换到 [custom_nodes_demo](https://github.com/aws-samples/comfyui-on-eks/tree/custom_nodes_demo) 分支了解具体细节。
-
-## Stable Diffusion 3 支持
-
-ComfyUI 已经支持了 Stable Diffusion 3，要在当前的方案中使用 Stable Diffusion 3，只需要：
-
-1. 用最新版本的 ComfyUI build docker 镜像
-2. 将 SD3 的模型放到对应的 S3 目录，参考  [ComfyUI SD3 Examples](https://comfyanonymous.github.io/ComfyUI_examples/sd3/)
-
-用 comfyui sd3 的 workflow 来调用模型推理，参考 `comfyui-on-eks/test/` 目录
-
-![sd3](images/sd3.png)
-
-
-
-## 方案特点
-
-我们根据实际的使用场景设计方案，总结有以下特点：
+## 方案特性
 
 * IaC 方式部署，极简运维，使用 [AWS Cloud Development Kit (AWS CDK)](https://aws.amazon.com/cdk/) 和 [Amazon EKS Bluprints](https://aws-quickstart.github.io/cdk-eks-blueprints/) 来管理 [Amazon Elastic Kubernetes Service (Amazon EKS)](https://aws.amazon.com/eks/) 集群以承载运行 ComfyUI。
 * 基于 [Karpenter](https://karpenter.sh/) 的能力动态伸缩，自定义节点伸缩策略以适应业务需求。
@@ -35,8 +13,6 @@ ComfyUI 已经支持了 Stable Diffusion 3，要在当前的方案中使用 Stab
 * 利用 [S3 CSI driver](https://docs.aws.amazon.com/eks/latest/userguide/s3-csi.html) 将生成的图片直接写入 [Amazon S3](https://aws.amazon.com/s3/)，降低存储成本。
 * 利用 [Amazon CloudFront](https://aws.amazon.com/cloudfront/) 边缘节点加速动态请求，以满足跨地区美术工作室共用平台的场景。(Optional)
 * 通过 Serverless 事件触发的方式，当模型上传 S3 或在 S3 删除时，触发工作节点同步模型目录数据。
-
-
 
 ## 方案架构
 
@@ -58,9 +34,7 @@ ComfyUI 已经支持了 Stable Diffusion 3，要在当前的方案中使用 Stab
 2. pod 推理完成后会将图片存放在 `ComfyUI/output` 目录，通过 S3 CSI driver 直接写入 S3。
 3. 得益于 Instance store 的性能优势，用户在第一次加载模型以及切换模型时的时间会大大缩短。
 
-
-
-## 图片生成效果
+## 图片生成 Demo
 
 部署完成后可以通过浏览器直接访问 CloudFront 的域名或 Kubernetes Ingress 的域名来使用 ComfyUI 的前端
 
@@ -108,8 +82,6 @@ cd ~/comfyui-on-eks/auto_deploy/ && bash deploy_infra.sh
 cd ~/comfyui-on-eks/auto_deploy/ && bash destroy_infra.sh
 ```
 
-
-
 ## 成本预估
 
 假设场景：
@@ -135,3 +107,34 @@ cd ~/comfyui-on-eks/auto_deploy/ && bash destroy_infra.sh
 | AWS ALB                                | $22.27  | 1 ALB $16.43 fixed hourly charges<br />+<br />$0.008/LCU/h x 730h x 1LCU x 1ALB |
 | DTO (use ALB)                          | $9      | 100GB x $0.09/GB                                             |
 | DTO (use CloudFront)                   | $8.5    | 100GB x $0.085/GB                                            |
+
+## 变更日志
+
+### 自动化部署 -- 2024.12.26
+
+可以在目录 `comfyui-on-eks/auto_deploy/` 下使用自动化脚本来部署，目前只支持 Ubuntu。
+
+### Flux 支持
+
+ComfyUI 已经支持了 Flux，要在当前的方案中使用 Flux，只需要：
+
+1. 用最新版本的 ComfyUI build docker 镜像，已在 [Dockerfile](https://github.com/aws-samples/comfyui-on-eks/blob/main/comfyui_image/Dockerfile) 中完成
+2. 将 Flux 的模型放到对应的 S3 目录，参考  [ComfyUI Flux Examples](https://comfyanonymous.github.io/ComfyUI_examples/flux/)
+
+用 comfyui sd3 的 workflow 来调用模型推理，参考 `comfyui-on-eks/test/` 目录
+
+### Custom Nodes 支持
+
+切换到 [custom_nodes_demo](https://github.com/aws-samples/comfyui-on-eks/tree/custom_nodes_demo) 分支了解具体细节。
+
+### Stable Diffusion 3 支持
+
+ComfyUI 已经支持了 Stable Diffusion 3，要在当前的方案中使用 Stable Diffusion 3，只需要：
+
+1. 用最新版本的 ComfyUI build docker 镜像
+2. 将 SD3 的模型放到对应的 S3 目录，参考  [ComfyUI SD3 Examples](https://comfyanonymous.github.io/ComfyUI_examples/sd3/)
+
+用 comfyui sd3 的 workflow 来调用模型推理，参考 `comfyui-on-eks/test/` 目录
+
+![sd3](images/sd3.png)
+

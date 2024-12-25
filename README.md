@@ -1,32 +1,10 @@
-## Flux Support
+[简体中文](./README.zh.md)
 
-ComfyUI has already supported Flux, to use Flux with this solution you only need to:
+## What's this
 
-1. Build docker image with the latest version of ComfyUI (Already done in [Dockerfile](https://github.com/aws-samples/comfyui-on-eks/blob/main/comfyui_image/Dockerfile))
-2. Download and put Flux models to the corresponding S3 directory. [ComfyUI Flux Examples](https://comfyanonymous.github.io/ComfyUI_examples/flux/)
-
-Use comfyui flux workflow to invoke, just refer to `comfyui-on-eks/test/` folder.
-
-## Custom Nodes Support
-
-Switch to branch [custom_nodes_demo](https://github.com/aws-samples/comfyui-on-eks/tree/custom_nodes_demo) for details.
-
-## Stable Diffusion 3 Support
-
-ComfyUI has already supported Stable Diffusion 3, to use Stable Diffusion 3 with this solution you only need to:
-
-1. Build docker image with the latest version of ComfyUI
-2. Download and put SD3 models to the corresponding S3 directory. [ComfyUI SD3 Examples](https://comfyanonymous.github.io/ComfyUI_examples/sd3/)
-
-Use comfyui sd3 workflow to invoke, just refer to `comfyui-on-eks/test/` folder.
-
-![sd3](images/sd3.png)
-
-
+It's a solution to deploy ComfyUI on Amazon EKS.
 
 ## Solution Features
-
-The solution is characterized by the following features:
 
 1. **Infrastructure as Code (IaC) Deployment**: We employ a minimalist approach to operations and maintenance. Using [AWS Cloud Development Kit (AWS CDK)](https://aws.amazon.com/cdk/) and [Amazon EKS Blueprints](https://aws-quickstart.github.io/cdk-eks-blueprints/), we manage the [Amazon Elastic Kubernetes Service (Amazon EKS)](https://aws.amazon.com/eks/) clusters that host and run ComfyUI.
 2. **Dynamic Scaling with Karpenter**: Leveraging the capabilities of [Karpenter](https://karpenter.sh/), we customize node scaling strategies to meet business needs.
@@ -35,8 +13,6 @@ The solution is characterized by the following features:
 5. **Direct Image Writing with S3 CSI Driver**: Images generated are directly written to [Amazon S3](https://aws.amazon.com/s3/) using the [S3 CSI driver](https://docs.aws.amazon.com/eks/latest/userguide/s3-csi.html), reducing storage costs.
 6. **Accelerated Dynamic Requests with Amazon CloudFront**: To facilitate the use of the platform by art studios across different regions, we use [Amazon CloudFront](https://aws.amazon.com/cloudfront/) for faster dynamic request processing.
 7. **Serverless Event-Triggered Model Synchronization**: When models are uploaded to or deleted from S3, serverless event triggers activate, syncing the model directory data across worker nodes.
-
-
 
 ## Solution Architecture
 
@@ -60,9 +36,7 @@ The solution's architecture is structured into two distinct phases: the deployme
 2. **Image Storage Post-Inference**: After inference, the pod stores the image in the `ComfyUI/output` directory, which is directly written to S3 using the S3 CSI driver.
 3. **Performance Advantages of Instance Store**: Thanks to the performance benefits of the Instance store, the time taken for initial model loading and model switching is significantly reduced.
 
-
-
-## Image Generation
+## Image Generation Demo
 
 Once deployed, you can access and use the ComfyUI frontend directly through a browser by visiting the domain name of CloudFront or the domain name of Kubernetes Ingress.
 
@@ -71,8 +45,6 @@ Once deployed, you can access and use the ComfyUI frontend directly through a br
 You can also interact with ComfyUI by saving its workflow as a JSON file that's callable via an API. This method facilitates better integration with your own platforms and systems. For reference on how to make these calls, see the code in `comfyui-on-eks/test/invoke_comfyui_api.py`.
 
 ![ComfyUI-API](images/comfyui-api.png)
-
-
 
 ## Deployment Instructions
 
@@ -136,3 +108,34 @@ The total cost of deploying this solution in us-west-2 is approximately **$441.8
 | AWS ALB                                | $22.27  | 1 ALB $16.43 fixed hourly charges<br />+<br />$0.008/LCU/h x 730h x 1LCU x 1ALB |
 | DTO (use ALB)                          | $9      | 100GB x $0.09/GB                                             |
 | DTO (use CloudFront)                   | $8.5    | 100GB x $0.085/GB                                            |
+
+## Change logs
+
+### Automatic Deployment -- 2024.12.26
+
+Automatic deployment scripts in `comfyui-on-eks/auto_deploy/`, only support Ubuntu now.
+
+### Flux Support
+
+ComfyUI has already supported Flux, to use Flux with this solution you only need to:
+
+1. Build docker image with the latest version of ComfyUI (Already done in [Dockerfile](https://github.com/aws-samples/comfyui-on-eks/blob/main/comfyui_image/Dockerfile))
+2. Download and put Flux models to the corresponding S3 directory. [ComfyUI Flux Examples](https://comfyanonymous.github.io/ComfyUI_examples/flux/)
+
+Use comfyui flux workflow to invoke, just refer to `comfyui-on-eks/test/` folder.
+
+### Custom Nodes Support
+
+Switch to branch [custom_nodes_demo](https://github.com/aws-samples/comfyui-on-eks/tree/custom_nodes_demo) for details.
+
+### Stable Diffusion 3 Support
+
+ComfyUI has already supported Stable Diffusion 3, to use Stable Diffusion 3 with this solution you only need to:
+
+1. Build docker image with the latest version of ComfyUI
+2. Download and put SD3 models to the corresponding S3 directory. [ComfyUI SD3 Examples](https://comfyanonymous.github.io/ComfyUI_examples/sd3/)
+
+Use comfyui sd3 workflow to invoke, just refer to `comfyui-on-eks/test/` folder.
+
+![sd3](images/sd3.png)
+
