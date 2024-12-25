@@ -63,7 +63,7 @@ cdk_deploy_s3() {
 
 upload_models_to_s3() {
     echo "==== Start uploading models to S3 ===="
-    cd $CDK_DIR/test && && bash init_s3_for_models.sh $AWS_DEFAULT_REGION &
+    cd $CDK_DIR/test && bash init_s3_for_models.sh $AWS_DEFAULT_REGION &
     echo "==== Finish uploading models to S3 ===="
 }
 
