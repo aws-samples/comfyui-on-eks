@@ -9,7 +9,7 @@ This solution assumes that you have already installed, deployed, and are familia
 * [npm](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm/)
 * [CDK](https://docs.aws.amazon.com/cdk/v2/guide/getting_started.html): 2.173.2
 
-All of these tools can be installed by run
+All of these tools can be installed by running on Ubuntu
 
 ```shell
 cd ~/comfyui-on-eks/auto_deploy && bash env_prepare.sh
@@ -69,7 +69,7 @@ The configuration details for the `Comfyui-Cluster Stack` can be explored in the
 
 Upon successful deployment, the CDK outputs will present a `ConfigCommand`. This command is used to update the configuration, enabling access to the EKS cluster via kubectl.
 
-![eks-blueprints-cmd](/Users/qruwang/comfyui-on-eks-aws-samples/images/eks-blueprints-cmd.png)
+![eks-blueprints-cmd](../images/eks-blueprints-cmd.png)
 
 **Execute the above ConfigCommand to authorize kubectl to access the EKS cluster**
 
