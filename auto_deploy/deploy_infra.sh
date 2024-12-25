@@ -63,13 +63,7 @@ cdk_deploy_s3() {
 
 upload_models_to_s3() {
     echo "==== Start uploading models to S3 ===="
-    aws s3 sync s3://array-storage/comfyui-models/ s3://comfyui-models-$ACCOUNT_ID-$AWS_DEFAULT_REGION/ &
-    if [ $? -eq 0 ]; then
-        echo "Models upload completed successfully"
-    else
-        echo "Models upload failed"
-        exit 1
-    fi
+    cd $CDK_DIR/test && && bash init_s3_for_models.sh $AWS_DEFAULT_REGION &
     echo "==== Finish uploading models to S3 ===="
 }
 
@@ -197,6 +191,7 @@ deploy_s3_csi_driver() {
 }
 
 fix_s3_csi_node() {
+    # It's a temp workaround for the issue https://github.com/awslabs/mountpoint-s3-csi-driver/issues/284
     echo "==== Start fixing S3 CSI Node ===="
     kubectl get ds s3-csi-node -n kube-system -o yaml > s3-csi-node-ds.yaml
     if [[ "$OSTYPE" == "linux-gnu"* ]]; then
