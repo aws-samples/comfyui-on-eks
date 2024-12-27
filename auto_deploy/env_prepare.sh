@@ -127,7 +127,7 @@ install_cdk() {
 
 prepare_code_dependency() {
     echo "==== Start preparing code ===="
-    cd $CDK_DIR && npm install --force && npm list && cdk list
+    cd $CDK_DIR && npm install --force && npm list && cdk bootstrap && cdk list
     if [[ $? -ne 0 ]]
     then
         echo "Code preparation failed."
