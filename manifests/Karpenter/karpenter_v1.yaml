@@ -58,5 +58,6 @@ spec:
     mount /dev/nvme1n1 /comfyui-models
     account=$(aws sts get-caller-identity --query 'Account' --output text)
     region=$(ec2-metadata --availability-zone | sed 's/.$//'|awk '{print $NF}')
+    echo "Downloading models from s3://comfyui-models-${account}-${region}"
     aws configure set default.s3.preferred_transfer_client crt
-    aws s3 sync s3://comfyui-models-${account}-${region} /comfyui-models/ &
+    aws s3 sync s3://comfyui-models-${account}-${region} /comfyui-models/
