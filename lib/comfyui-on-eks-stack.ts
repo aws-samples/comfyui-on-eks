@@ -5,8 +5,9 @@ import * as iam from 'aws-cdk-lib/aws-iam';
 import * as kms from 'aws-cdk-lib/aws-kms';
 import { Construct } from "constructs";
 import * as blueprints from '@aws-quickstart/eks-blueprints';
+import { PROJECT_NAME } from '../env'
 
-const stackName = 'Comfyui-Cluster';
+const stackName = `Comfyui-Cluster-${PROJECT_NAME}`.replace(/-$/,'')
 
 export interface BlueprintConstructProps { id: string }
 
@@ -64,7 +65,7 @@ export default class BlueprintConstruct {
         const clusterProvider = new blueprints.GenericClusterProvider({
             version: KubernetesVersion.V1_31,
             tags: {
-                "Name": "comfyui-eks-cluster",
+                "Name": `comfyui-eks-cluster-${PROJECT_NAME}`.replace(/-$/,''),
                 "Type": "generic-cluster"
             },
             mastersRole: blueprints.getResource(context => {
@@ -92,7 +93,7 @@ export default class BlueprintConstruct {
 // Node Group for lightweight workloads
 function addLightWeightNodeGroup(): blueprints.ManagedNodeGroup {
     return {
-        id: "AL2-MNG-LW",
+        id: `AL2-MNG-LW-${PROJECT_NAME}`.replace(/-$/,''),
         amiType: NodegroupAmiType.AL2_X86_64,
         instanceTypes: [new ec2.InstanceType('t3a.xlarge')],
         nodeRole: blueprints.getNamedResource("node-role") as iam.Role,
@@ -102,7 +103,7 @@ function addLightWeightNodeGroup(): blueprints.ManagedNodeGroup {
         nodeGroupSubnets: { subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS },
         launchTemplate: {
             tags: {
-                "Name": "Comfyui-EKS-LW-Node",
+                "Name": `Comfyui-EKS-LW-Node-${PROJECT_NAME}`.replace(/-$/,'')
             }
         }
     };

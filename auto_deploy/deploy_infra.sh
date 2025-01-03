@@ -10,10 +10,37 @@ if [[ $identity == *"assumed-role"* ]]; then
     identity="arn:aws:iam::$account_id:role/$role_name"
 fi
 
+PROJECT_NAME=$(node -e "const { PROJECT_NAME } = require('../env.ts'); console.log(PROJECT_NAME);" 2> /dev/null)
+project_name=$(echo "$PROJECT_NAME" | tr '[:upper:]' '[:lower:]')
+if [ -z "$project_name" ]; then 
+    input_bucket_name="comfyui-inputs-$ACCOUNT_ID-$AWS_DEFAULT_REGION"
+    output_bucket_name="comfyui-outputs-$ACCOUNT_ID-$AWS_DEFAULT_REGION"
+else
+    input_bucket_name="comfyui-inputs-$project_name-$ACCOUNT_ID-$AWS_DEFAULT_REGION"
+    output_bucket_name="comfyui-outputs-$project_name-$ACCOUNT_ID-$AWS_DEFAULT_REGION"
+fi
+
+get_stacks_names() {
+    echo "==== Start getting CloudFormation Stacks ===="
+    all_stacks=$(cd $CDK_DIR && cdk list)
+    export EKS_CLUSTER_STACK=$(echo $all_stacks|grep -o "Comfyui-Cluster[^ ]*")
+    export LAMBDA_STACK=$(echo $all_stacks|grep -o "LambdaModelsSync[^ ]*")
+    export S3_STACK=$(echo $all_stacks|grep -o "S3Storage[^ ]*")
+    export ECR_STACK=$(echo $all_stacks|grep -o "ComfyuiEcrRepo[^ ]*")
+    export CLOUDFRONT_STACK=$(echo $all_stacks|grep -o "CloudFrontEntry[^ ]*")
+    # Print more pretty
+    echo "EKS_CLUSTER_STACK : $EKS_CLUSTER_STACK"
+    echo "LAMBDA_STACK      : $LAMBDA_STACK"
+    echo "S3_STACK          : $S3_STACK"
+    echo "ECR_STACK         : $ECR_STACK"
+    echo "CLOUDFRONT_STACK  : $CLOUDFRONT_STACK"
+    echo "==== Finish getting CloudFormation Stacks ===="
+}
+
 # Deploy EKS Cluster
 cdk_deploy_eks_cluster() {
     echo "==== Start deploying EKS Cluster ===="
-    cd $CDK_DIR && cdk deploy Comfyui-Cluster --require-approval never
+    cd $CDK_DIR && cdk deploy $EKS_CLUSTER_STACK --require-approval never
     if [ $? -eq 0 ]; then
         echo "EKS deploy completed successfully"
     else
@@ -25,7 +52,7 @@ cdk_deploy_eks_cluster() {
 
 prepare_eks_env() {
     echo "==== Start preparing EKS environment ===="
-    ComfyuiClusterConfigCommand=$(aws cloudformation describe-stacks --stack-name Comfyui-Cluster --query 'Stacks[0].Outputs[?OutputKey==`ComfyuiClusterConfigCommandE455D579`].OutputValue' --output text)
+    ComfyuiClusterConfigCommand=$(aws cloudformation describe-stacks --stack-name $EKS_CLUSTER_STACK --query "Stacks[0].Outputs[?starts_with(OutputKey, 'ComfyuiCluster') && contains(OutputKey, 'ConfigCommand')].OutputValue" --output text)
     eval $ComfyuiClusterConfigCommand
     kubectl get svc &> /dev/null
     if [ $? -eq 0 ]; then
@@ -39,7 +66,7 @@ prepare_eks_env() {
 
 cdk_deploy_lambda() {
     echo "==== Start deploying LambdaModelsSync ===="
-    cd $CDK_DIR && cdk deploy LambdaModelsSync --require-approval never
+    cd $CDK_DIR && cdk deploy $LAMBDA_STACK --require-approval never
     if [ $? -eq 0 ]; then
         echo "Lambda deploy completed successfully"
     else
@@ -51,7 +78,7 @@ cdk_deploy_lambda() {
 
 cdk_deploy_s3() {
     echo "==== Start deploying S3Storage ===="
-    cd $CDK_DIR && cdk deploy S3Storage --require-approval never
+    cd $CDK_DIR && cdk deploy $S3_STACK --require-approval never
     if [ $? -eq 0 ]; then
         echo "S3 deploy completed successfully"
     else
@@ -69,7 +96,7 @@ upload_models_to_s3() {
 
 cdk_deploy_ecr() {
     echo "==== Start deploying ComfyuiEcrRepo ===="
-    cd $CDK_DIR && cdk deploy ComfyuiEcrRepo --require-approval never
+    cd $CDK_DIR && cdk deploy $ECR_STACK --require-approval never
     if [ $? -eq 0 ]; then
         echo "ECR deploy completed successfully"
     else
@@ -81,11 +108,7 @@ cdk_deploy_ecr() {
 
 build_and_push_comfyui_image() {
     echo "==== Start building and pushing Comfyui image ===="
-    TAG="latest"
-    sudo docker build --platform="linux/amd64" -f $CDK_DIR/comfyui_image/Dockerfile . -t comfyui-images:$TAG
-    sudo docker tag comfyui-images:$TAG ${ACCOUNT_ID}.dkr.ecr.${AWS_DEFAULT_REGION}.amazonaws.com/comfyui-images:$TAG
-    aws ecr get-login-password --region ${AWS_DEFAULT_REGION} | sudo docker login --username AWS --password-stdin ${ACCOUNT_ID}.dkr.ecr.${AWS_DEFAULT_REGION}.amazonaws.com
-    sudo docker push ${ACCOUNT_ID}.dkr.ecr.${AWS_DEFAULT_REGION}.amazonaws.com/comfyui-images:$TAG
+    cd $CDK_DIR/comfyui_image && bash build_and_push.sh $AWS_DEFAULT_REGION
     if [ $? -eq 0 ]; then
         echo "Comfyui image build and push completed successfully"
     else
@@ -98,14 +121,33 @@ build_and_push_comfyui_image() {
 deploy_karpenter() {
     echo "==== Start deploying Karpenter ===="
     kubectl delete -f $CDK_DIR/manifests/Karpenter/karpenter_v1.yaml --ignore-not-found
-    KarpenterInstanceNodeRole=$(aws cloudformation describe-stacks --stack-name Comfyui-Cluster --query 'Stacks[0].Outputs[?OutputKey==`KarpenterInstanceNodeRole`].OutputValue' --output text)
+    KarpenterInstanceNodeRole=$(aws cloudformation describe-stacks --stack-name $EKS_CLUSTER_STACK --query 'Stacks[0].Outputs[?OutputKey==`KarpenterInstanceNodeRole`].OutputValue' --output text)
+    if [ -z "$PROJECT_NAME" ]; then
+        sg_tag="eks-cluster-sg-Comfyui-Cluster*"
+        subnet_tag="Comfyui-Cluster\/Comfyui-Cluster-vpc\/Private*"
+        node_name="ComfyUI-EKS-GPU-Node"
+    else
+        sg_tag="eks-cluster-sg-Comfyui-Cluster-${PROJECT_NAME}*"
+        subnet_tag="Comfyui-Cluster-${PROJECT_NAME}\/Comfyui-Cluster-${PROJECT_NAME}-vpc\/Private*"
+        node_name="ComfyUI-EKS-GPU-Node-${PROJECT_NAME}"
+    fi
+
     if [ x"$KarpenterInstanceNodeRole" != "x" ]
     then
-        echo -e "KarpenterInstanceNodeRole=$KarpenterInstanceNodeRole\nDeploying Karpenter..."
+        echo "KarpenterInstanceNodeRole            : $KarpenterInstanceNodeRole"
+        echo "securityGroupSelectorTerms tags Name : $sg_tag"
+        echo "subnetSelectorTerms tags Name        : $subnet_tag"
+        echo "Deploying Karpenter..."
         if [[ "$OSTYPE" == "linux-gnu"* ]]; then
             sed -i "s/role: .*/role: $KarpenterInstanceNodeRole/g" $CDK_DIR/manifests/Karpenter/karpenter_v1.yaml
+            sed -i "s/Name: eks-cluster-sg-Comfyui-Cluster.*/Name: $sg_tag/g" $CDK_DIR/manifests/Karpenter/karpenter_v1.yaml
+            sed -i "s/Name: Comfyui-Cluster\/Comfyui-Cluster-vpc\/Private.*/Name: $subnet_tag/g" $CDK_DIR/manifests/Karpenter/karpenter_v1.yaml
+            sed -i "s/Name: ComfyUI-EKS-GPU-Node/Name: $node_name/g" $CDK_DIR/manifests/Karpenter/karpenter_v1.yaml
         elif [[ "$OSTYPE" == "darwin"* ]]; then
             sed -i '' "s/role: .*/role: $KarpenterInstanceNodeRole/g" $CDK_DIR/manifests/Karpenter/karpenter_v1.yaml
+            sed -i '' "s/Name: eks-cluster-sg-Comfyui-Cluster.*/Name: $sg_tag/g" $CDK_DIR/manifests/Karpenter/karpenter_v1.yaml
+            sed -i '' "s/Name: Comfyui-Cluster\/Comfyui-Cluster-vpc\/Private.*/Name: $subnet_tag/g" $CDK_DIR/manifests/Karpenter/karpenter_v1.yaml
+            sed -i '' "s/Name: ComfyUI-EKS-GPU-Node/Name: $node_name/g" $CDK_DIR/manifests/Karpenter/karpenter_v1.yaml
         else
             echo "Unsupported OS: $OSTYPE"
             exit 1
@@ -124,14 +166,14 @@ deploy_s3_pv_pvc() {
     kubectl delete -f $CDK_DIR/manifests/PersistentVolume/ --ignore-not-found
     if [[ "$OSTYPE" == "linux-gnu"* ]]; then
         sed -i "s/region .*/region $AWS_DEFAULT_REGION/g" $CDK_DIR/manifests/PersistentVolume/sd-outputs-s3.yaml
-        sed -i "s/bucketName: .*/bucketName: comfyui-outputs-$ACCOUNT_ID-$AWS_DEFAULT_REGION/g" $CDK_DIR/manifests/PersistentVolume/sd-outputs-s3.yaml
         sed -i "s/region .*/region $AWS_DEFAULT_REGION/g" $CDK_DIR/manifests/PersistentVolume/sd-inputs-s3.yaml
-        sed -i "s/bucketName: .*/bucketName: comfyui-inputs-$ACCOUNT_ID-$AWS_DEFAULT_REGION/g" $CDK_DIR/manifests/PersistentVolume/sd-inputs-s3.yaml
+        sed -i "s/bucketName: .*/bucketName: $output_bucket_name/g" $CDK_DIR/manifests/PersistentVolume/sd-outputs-s3.yaml
+        sed -i "s/bucketName: .*/bucketName: $input_bucket_name/g" $CDK_DIR/manifests/PersistentVolume/sd-inputs-s3.yaml
     elif [[ "$OSTYPE" == "darwin"* ]]; then
         sed -i '' "s/region .*/region $AWS_DEFAULT_REGION/g" $CDK_DIR/manifests/PersistentVolume/sd-outputs-s3.yaml
-        sed -i '' "s/bucketName: .*/bucketName: comfyui-outputs-$ACCOUNT_ID-$AWS_DEFAULT_REGION/g" $CDK_DIR/manifests/PersistentVolume/sd-outputs-s3.yaml
         sed -i '' "s/region .*/region $AWS_DEFAULT_REGION/g" $CDK_DIR/manifests/PersistentVolume/sd-inputs-s3.yaml
-        sed -i '' "s/bucketName: .*/bucketName: comfyui-inputs-$ACCOUNT_ID-$AWS_DEFAULT_REGION/g" $CDK_DIR/manifests/PersistentVolume/sd-inputs-s3.yaml
+        sed -i '' "s/bucketName: .*/bucketName: $output_bucket_name/g" $CDK_DIR/manifests/PersistentVolume/sd-outputs-s3.yaml
+        sed -i '' "s/bucketName: .*/bucketName: $input_bucket_name/g" $CDK_DIR/manifests/PersistentVolume/sd-inputs-s3.yaml
     else
         echo "Unsupported OS: $OSTYPE"
         exit 1
@@ -155,32 +197,32 @@ deploy_s3_csi_driver() {
         identity="arn:aws:iam::$account_id:role/$role_name"
     fi
 
-    authenticationMode=$(aws eks describe-cluster --name Comfyui-Cluster --query 'cluster.accessConfig.authenticationMode' --output text)
+    authenticationMode=$(aws eks describe-cluster --name $EKS_CLUSTER_STACK --query 'cluster.accessConfig.authenticationMode' --output text)
     if [ "$authenticationMode" == "API_AND_CONFIG_MAP" ]; then
         echo "authenticationMode=API_AND_CONFIG_MAP is ready"
     else
-        aws eks update-cluster-config --name Comfyui-Cluster --access-config authenticationMode=API_AND_CONFIG_MAP
+        aws eks update-cluster-config --name $EKS_CLUSTER_STACK --access-config authenticationMode=API_AND_CONFIG_MAP
         echo "Waiting for authenticationMode=API_AND_CONFIG_MAP to be ready..."
     fi
     while [ "$authenticationMode" != "API_AND_CONFIG_MAP" ]; do
         echo "authenticationMode=$authenticationMode, sleep 5s..."
         sleep 5
-        authenticationMode=$(aws eks describe-cluster --name Comfyui-Cluster --query 'cluster.accessConfig.authenticationMode' --output text)
+        authenticationMode=$(aws eks describe-cluster --name $EKS_CLUSTER_STACK --query 'cluster.accessConfig.authenticationMode' --output text)
     done
-    aws eks create-access-entry --cluster-name Comfyui-Cluster --principal-arn $identity --type STANDARD --username comfyui-user
-    aws eks associate-access-policy --cluster-name Comfyui-Cluster --principal-arn $identity --access-scope type=cluster --policy-arn arn:aws:eks::aws:cluster-access-policy/AmazonEKSAdminPolicy
-    aws eks list-access-entries --cluster-name Comfyui-Cluster|grep $identity
+    aws eks create-access-entry --cluster-name $EKS_CLUSTER_STACK --principal-arn $identity --type STANDARD --username comfyui-user
+    aws eks associate-access-policy --cluster-name $EKS_CLUSTER_STACK --principal-arn $identity --access-scope type=cluster --policy-arn arn:aws:eks::aws:cluster-access-policy/AmazonEKSAdminPolicy
+    aws eks list-access-entries --cluster-name $EKS_CLUSTER_STACK|grep $identity
     ROLE_NAME=EKS-S3-CSI-DriverRole-$ACCOUNT_ID-$AWS_DEFAULT_REGION
     POLICY_ARN=arn:aws:iam::aws:policy/AmazonS3FullAccess
     eksctl create iamserviceaccount \
         --name s3-csi-driver-sa \
         --namespace kube-system \
-        --cluster Comfyui-Cluster \
+        --cluster $EKS_CLUSTER_STACK \
         --attach-policy-arn $POLICY_ARN \
         --approve \
         --role-name $ROLE_NAME \
         --region $AWS_DEFAULT_REGION
-    eksctl create addon --name aws-mountpoint-s3-csi-driver --cluster Comfyui-Cluster --service-account-role-arn "arn:aws:iam::${ACCOUNT_ID}:role/EKS-S3-CSI-DriverRole-${ACCOUNT_ID}-${AWS_DEFAULT_REGION}" --force
+    eksctl create addon --name aws-mountpoint-s3-csi-driver --cluster $EKS_CLUSTER_STACK --service-account-role-arn "arn:aws:iam::${ACCOUNT_ID}:role/EKS-S3-CSI-DriverRole-${ACCOUNT_ID}-${AWS_DEFAULT_REGION}" --force
     if [ $? -eq 0 ]; then
         echo "S3 CSI Driver deploy completed successfully"
     else
@@ -226,11 +268,12 @@ fix_s3_csi_node() {
 deploy_comfyui() {
     echo "==== Start deploying ComfyUI ===="
     tag="latest"
+    repo_name="comfyui-images${project_name:+-$project_name}"
     kubectl delete -f $CDK_DIR/manifests/ComfyUI/ --ignore-not-found
     if [[ "$OSTYPE" == "linux-gnu"* ]]; then
-        sed -i "s/image: .*/image: ${ACCOUNT_ID}.dkr.ecr.${AWS_DEFAULT_REGION}.amazonaws.com\/comfyui-images:$tag/g" $CDK_DIR/manifests/ComfyUI/comfyui_deployment.yaml
+        sed -i "s/image: .*/image: ${ACCOUNT_ID}.dkr.ecr.${AWS_DEFAULT_REGION}.amazonaws.com\/$repo_name:$tag/g" $CDK_DIR/manifests/ComfyUI/comfyui_deployment.yaml
     elif [[ "$OSTYPE" == "darwin"* ]]; then
-        sed -i '' "s/image: .*/image: ${ACCOUNT_ID}.dkr.ecr.${AWS_DEFAULT_REGION}.amazonaws.com\/comfyui-images:$tag/g" $CDK_DIR/manifests/ComfyUI/comfyui_deployment.yaml
+        sed -i '' "s/image: .*/image: ${ACCOUNT_ID}.dkr.ecr.${AWS_DEFAULT_REGION}.amazonaws.com\/$repo_name:$tag/g" $CDK_DIR/manifests/ComfyUI/comfyui_deployment.yaml
     else
         echo "Unsupported OS: $OSTYPE"
         exit 1
@@ -284,7 +327,8 @@ test_comfyui() {
         exit 1
     fi
     chmod +x $CDK_DIR/test/invoke_comfyui_api.py
-    image_num_before_generate=$(aws s3 ls s3://comfyui-outputs-$ACCOUNT_ID-$AWS_DEFAULT_REGION/ | wc -l)
+
+    image_num_before_generate=$(aws s3 ls s3://$output_bucket_name/ | wc -l)
     echo "Number of images before generate: $image_num_before_generate"
     i=0
     $CDK_DIR/test/invoke_comfyui_api.py $CDK_DIR/test/test_workflows/sdxl_refiner_prompt_api.json
@@ -299,7 +343,7 @@ test_comfyui() {
         $CDK_DIR/test/invoke_comfyui_api.py $CDK_DIR/test/test_workflows/sdxl_refiner_prompt_api.json
     done
     if [ $? -eq 0 ]; then
-        image_num_after_generate=$(aws s3 ls s3://comfyui-outputs-$ACCOUNT_ID-$AWS_DEFAULT_REGION/ | wc -l)
+        image_num_after_generate=$(aws s3 ls s3://$output_bucket_name/ | wc -l)
         echo "Number of images after generate: $image_num_after_generate"
         if [ $image_num_after_generate -gt $image_num_before_generate ]; then
             echo "Comfyui test completed successfully"
@@ -316,6 +360,7 @@ test_comfyui() {
 
 # ====== General functions ====== #
 start_time=$(date +%s)
+get_stacks_names
 cdk_deploy_eks_cluster
 prepare_eks_env
 cdk_deploy_lambda
@@ -335,8 +380,8 @@ echo "Total time: $((end_time-start_time))s"
 # ====== Debug functions ====== #
 uninstall_s3_csi_driver() {
     echo "==== Start uninstalling S3 CSI Driver ===="
-    eksctl delete addon --name aws-mountpoint-s3-csi-driver --cluster Comfyui-Cluster
-    eksctl delete iamserviceaccount --name s3-csi-driver-sa --namespace kube-system --cluster Comfyui-Cluster
-    aws eks delete-access-entry --cluster-name Comfyui-Cluster --principal-arn $identity
+    eksctl delete addon --name aws-mountpoint-s3-csi-driver --cluster $EKS_CLUSTER_STACK
+    eksctl delete iamserviceaccount --name s3-csi-driver-sa --namespace kube-system --cluster $EKS_CLUSTER_STACK
+    aws eks delete-access-entry --cluster-name $EKS_CLUSTER_STACK --principal-arn $identity
     echo "==== Finish uninstalling S3 CSI Driver ===="
 }

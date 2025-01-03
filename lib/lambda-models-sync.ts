@@ -4,13 +4,16 @@ import { Construct } from 'constructs';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as lambdaEventSources from 'aws-cdk-lib/aws-lambda-event-sources';
 import * as iam from 'aws-cdk-lib/aws-iam';
+import { PROJECT_NAME } from '../env'
+
+const project_name = PROJECT_NAME.toLowerCase()
 
 export class LambdaModelsSync extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
     // Create S3 bucket for models
-    const bucketName = 'comfyui-models-' + this.account + '-' + this.region;
+    const bucketName = `comfyui-models-${project_name}`.replace(/-$/,'') + '-' + this.account + '-' + this.region;
     const models_bucket = new s3.Bucket(this, bucketName, {
         bucketName: bucketName,
         autoDeleteObjects: true,
@@ -18,7 +21,7 @@ export class LambdaModelsSync extends cdk.Stack {
     });
 
     // Create IAM role for lambda
-    const roleName = 'ComfyModelsSyncLambdaRole-' + this.account + '-' + this.region;
+    const roleName = `ComfyModelsSyncLambdaRole-${PROJECT_NAME}`.replace(/-$/,'') + '-' + this.account + '-' + this.region;
     const lambdaRole = new iam.Role(this, 'ComfyModelsSyncLambdaRole', {
         roleName: roleName,
         assumedBy: new iam.ServicePrincipal('lambda.amazonaws.com'),
@@ -31,7 +34,7 @@ export class LambdaModelsSync extends cdk.Stack {
         runtime: lambda.Runtime.PYTHON_3_10,
         code: lambda.Code.fromAsset('lib/ComfyModelsSyncLambda'),
         handler: 'model_sync.lambda_handler',
-        functionName: 'comfy-models-sync',
+        functionName: `comfy-models-sync-${PROJECT_NAME}`.replace(/-$/,''),
         role: lambdaRole,
     });
 

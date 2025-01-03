@@ -7,7 +7,10 @@ fi
 
 region=$1
 account=$(aws sts get-caller-identity --query Account --output text)
-bucket="comfyui-models-$account-$region"
+PROJECT_NAME=$(node -e "const { PROJECT_NAME } = require('../env.ts'); console.log(PROJECT_NAME);" 2> /dev/null)
+project_name=$(echo "$PROJECT_NAME" | tr '[:upper:]' '[:lower:]')
+bucket="comfyui-models${project_name:+-$project_name}-$account-$region"
+echo "Uploading to bucket: $bucket"
 
 dirs=(checkpoints clip clip_vision configs controlnet diffusers embeddings gligen hypernetworks loras style_models unet upscale_models vae vae_approx)
 for dir in "${dirs[@]}"
