@@ -152,7 +152,7 @@ fix_comfyui_stack_deletion() {
     for profile in $profiles
     do
         echo "Removing role from instance profile $profile"
-        aws iam remove-role-from-instance-profile --instance-profile-name $profile --role-name $ROLE_NAME
+        aws iam remove-role-from-instance-profile --instance-profile-name $profile --role-name $KarpenterInstanceNodeRole
         echo "Deleting instance profile $profile"
         aws iam delete-instance-profile --instance-profile-name $profile
     done
