@@ -148,14 +148,15 @@ fix_comfyui_stack_deletion() {
 
     # Remove KarpenterInstanceNodeRole from instance profile
     KarpenterInstanceNodeRole=$(aws cloudformation describe-stacks --stack-name $EKS_CLUSTER_STACK --query 'Stacks[0].Outputs[?OutputKey==`KarpenterInstanceNodeRole`].OutputValue' --output text 2>/dev/null)
-    InstanceProfileName=$(aws iam list-instance-profiles-for-role --role-name $KarpenterInstanceNodeRole --query 'InstanceProfiles[0].InstanceProfileName' --output text 2>/dev/null)
-    if [ -z $InstanceProfileName ]; then
-        echo "Instance profile not found"
-    else
-        echo "Remove role from instance profile"
-        aws iam remove-role-from-instance-profile --instance-profile-name $InstanceProfileName --role-name $KarpenterInstanceNodeRole
-    fi
-
+    profiles=$(aws iam list-instance-profiles-for-role --role-name $KarpenterInstanceNodeRole | jq -r '.InstanceProfiles[].InstanceProfileName' 2>/dev/null)
+    for profile in $profiles
+    do
+        echo "Removing role from instance profile $profile"
+        aws iam remove-role-from-instance-profile --instance-profile-name $profile --role-name $ROLE_NAME
+        echo "Deleting instance profile $profile"
+        aws iam delete-instance-profile --instance-profile-name $profile
+    done
+    echo "All associated instance profiles have been removed and deleted."
     aws iam delete-role --role-name $KarpenterInstanceNodeRole --no-cli-pager
 
     # vpc deletion failed
