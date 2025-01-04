@@ -2,24 +2,6 @@
 
 source ./env.sh
 
-ACCOUNT_ID=$(aws sts get-caller-identity --query 'Account' --output text)
-identity=$(aws sts get-caller-identity --query 'Arn' --output text --no-cli-pager)
-if [[ $identity == *"assumed-role"* ]]; then
-    role_name=$(echo $identity | cut -d'/' -f2)
-    account_id=$(echo $identity | cut -d':' -f5)
-    identity="arn:aws:iam::$account_id:role/$role_name"
-fi
-
-PROJECT_NAME=$(node -e "const { PROJECT_NAME } = require('../env.ts'); console.log(PROJECT_NAME);" 2> /dev/null)
-project_name=$(echo "$PROJECT_NAME" | tr '[:upper:]' '[:lower:]')
-if [ -z "$project_name" ]; then 
-    input_bucket_name="comfyui-inputs-$ACCOUNT_ID-$AWS_DEFAULT_REGION"
-    output_bucket_name="comfyui-outputs-$ACCOUNT_ID-$AWS_DEFAULT_REGION"
-else
-    input_bucket_name="comfyui-inputs-$project_name-$ACCOUNT_ID-$AWS_DEFAULT_REGION"
-    output_bucket_name="comfyui-outputs-$project_name-$ACCOUNT_ID-$AWS_DEFAULT_REGION"
-fi
-
 get_stacks_names() {
     echo "==== Start getting CloudFormation Stacks ===="
     all_stacks=$(cd $CDK_DIR && cdk list)

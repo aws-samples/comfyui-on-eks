@@ -1,9 +1,6 @@
 #!/bin/bash
 
 source ./env.sh
-PROJECT_NAME=$(node -e "const { PROJECT_NAME } = require('../env.ts'); console.log(PROJECT_NAME);" 2> /dev/null)
-project_name=$(echo "$PROJECT_NAME" | tr '[:upper:]' '[:lower:]')
-repo_name="comfyui-images${project_name:+-$project_name}"
 
 get_stacks_names() {
     echo "==== Start getting CloudFormation Stacks ===="

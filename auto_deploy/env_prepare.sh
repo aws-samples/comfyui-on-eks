@@ -2,8 +2,6 @@
 
 source ./env.sh
 
-PROJECT_NAME=$1
-
 install_dependencies() {
     sudo apt-get update
     sudo apt-get install -yy unzip curl
