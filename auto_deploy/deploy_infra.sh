@@ -108,10 +108,12 @@ deploy_karpenter() {
         sg_tag="eks-cluster-sg-Comfyui-Cluster*"
         subnet_tag="Comfyui-Cluster\/Comfyui-Cluster-vpc\/Private*"
         node_name="ComfyUI-EKS-GPU-Node"
+        bucket_name="comfyui-models-${ACCOUNT_ID}-${AWS_DEFAULT_REGION}"
     else
         sg_tag="eks-cluster-sg-Comfyui-Cluster-${PROJECT_NAME}*"
         subnet_tag="Comfyui-Cluster-${PROJECT_NAME}\/Comfyui-Cluster-${PROJECT_NAME}-vpc\/Private*"
         node_name="ComfyUI-EKS-GPU-Node-${PROJECT_NAME}"
+        bucket_name="comfyui-models-${project_name}-${ACCOUNT_ID}-${AWS_DEFAULT_REGION}"
     fi
 
     if [ x"$KarpenterInstanceNodeRole" != "x" ]
@@ -125,11 +127,13 @@ deploy_karpenter() {
             sed -i "s/Name: eks-cluster-sg-Comfyui-Cluster.*/Name: $sg_tag/g" $CDK_DIR/manifests/Karpenter/karpenter_v1.yaml
             sed -i "s/Name: Comfyui-Cluster\/Comfyui-Cluster-vpc\/Private.*/Name: $subnet_tag/g" $CDK_DIR/manifests/Karpenter/karpenter_v1.yaml
             sed -i "s/Name: ComfyUI-EKS-GPU-Node/Name: $node_name/g" $CDK_DIR/manifests/Karpenter/karpenter_v1.yaml
+            sed -i "s/s3:\/\/comfyui-models-.* /s3:\/\/$bucket_name /g" $CDK_DIR/manifests/Karpenter/karpenter_v1.yaml
         elif [[ "$OSTYPE" == "darwin"* ]]; then
             sed -i '' "s/role: .*/role: $KarpenterInstanceNodeRole/g" $CDK_DIR/manifests/Karpenter/karpenter_v1.yaml
             sed -i '' "s/Name: eks-cluster-sg-Comfyui-Cluster.*/Name: $sg_tag/g" $CDK_DIR/manifests/Karpenter/karpenter_v1.yaml
             sed -i '' "s/Name: Comfyui-Cluster\/Comfyui-Cluster-vpc\/Private.*/Name: $subnet_tag/g" $CDK_DIR/manifests/Karpenter/karpenter_v1.yaml
             sed -i '' "s/Name: ComfyUI-EKS-GPU-Node/Name: $node_name/g" $CDK_DIR/manifests/Karpenter/karpenter_v1.yaml
+            sed -i '' "s/s3:\/\/comfyui-models-.* /s3:\/\/$bucket_name /g" $CDK_DIR/manifests/Karpenter/karpenter_v1.yaml
         else
             echo "Unsupported OS: $OSTYPE"
             exit 1
