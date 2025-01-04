@@ -1,6 +1,7 @@
 #!/bin/bash
 
 source ./env.sh
+source ~/.bashrc
 
 get_stacks_names() {
     echo "==== Start getting CloudFormation Stacks ===="
