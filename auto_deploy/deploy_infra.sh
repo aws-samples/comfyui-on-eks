@@ -1,7 +1,6 @@
 #!/bin/bash
 
 source ./env.sh
-source ~/.bashrc
 
 get_stacks_names() {
     echo "==== Start getting CloudFormation Stacks ===="
@@ -340,6 +339,11 @@ test_comfyui() {
     fi
 
 }
+
+# ====== Activate NVM & CDK ====== #
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
+[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
 
 # ====== General functions ====== #
 start_time=$(date +%s)

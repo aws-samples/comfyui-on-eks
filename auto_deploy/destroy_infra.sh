@@ -1,7 +1,6 @@
 #!/bin/bash
 
 source ./env.sh
-source ~/.bashrc
 
 get_stacks_names() {
     echo "==== Start getting CloudFormation Stacks ===="
@@ -244,6 +243,11 @@ force_delete_vpc() {
     echo "Deleting VPC..."
     aws ec2 delete-vpc --vpc-id $VPC_ID
 }
+
+# ====== Activate NVM & CDK ====== #
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
+[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
 
 get_stacks_names
 delete_k8s_resources
