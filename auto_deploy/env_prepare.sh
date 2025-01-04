@@ -2,6 +2,8 @@
 
 source ./env.sh
 
+PROJECT_NAME=$1
+
 install_dependencies() {
     sudo apt-get update
     sudo apt-get install -yy unzip curl
@@ -133,8 +135,15 @@ prepare_code_dependency() {
         echo "Code preparation failed."
         exit 1
     fi
-    sed -i "s/export const PROJECT_NAME =.*/export const PROJECT_NAME = '${PROJECT_NAME}'/g" $CDK_DIR/env.ts
-    cd $CDK_DIR && cdk list
+    if [[ -z $PROJECT_NAME ]]
+    then
+        echo "PROJECT_NAME is not provided, use default empty."
+    else
+        sed -i "s/export const PROJECT_NAME =.*/export const PROJECT_NAME = '${PROJECT_NAME}'/g" $CDK_DIR/env.ts
+        sed -i "s/export PROJECT_NAME=.*/export PROJECT_NAME='${PROJECT_NAME}'/g" $CDK_DIR/auto_deploy/env.sh
+        echo "Stacks after updating PROJECT_NAME: $PROJECT_NAME"
+        cd $CDK_DIR && cdk list
+    fi
     echo "==== Finish preparing code ===="
 }
 
