@@ -1,8 +1,8 @@
 export AWS_DEFAULT_REGION="us-west-2"
 export PROJECT_NAME=""
 export project_name=$(echo "$PROJECT_NAME" | tr '[:upper:]' '[:lower:]')
-export ACCOUNT_ID=$(aws sts get-caller-identity --query 'Account' --output text)
-export identity=$(aws sts get-caller-identity --query 'Arn' --output text --no-cli-pager)
+export ACCOUNT_ID=$(aws sts get-caller-identity --query 'Account' --output text 2> /dev/null)
+export identity=$(aws sts get-caller-identity --query 'Arn' --output text --no-cli-pager 2> /dev/null)
 
 if [ -z "$project_name" ]; then
     export CDK_DIR="$HOME/comfyui-on-eks"
