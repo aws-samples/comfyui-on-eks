@@ -54,9 +54,11 @@
 
 ```shell
 rm -rf ~/comfyui-on-eks && git clone https://github.com/aws-samples/comfyui-on-eks ~/comfyui-on-eks
-cd ~/comfyui-on-eks && git checkout v0.4.0
+cd ~/comfyui-on-eks && git checkout v0.5.0
 region="us-west-2" # Modify the region to your current region
+project="" # [Optional] Default is empty, you can modify the project name to your own
 sed -i "s/export AWS_DEFAULT_REGION=.*/export AWS_DEFAULT_REGION=$region/g" ~/comfyui-on-eks/auto_deploy/env.sh
+sed -i "s/export PROJECT_NAME=.*/export PROJECT_NAME=$project/g" ~/comfyui-on-eks/auto_deploy/env.sh
 ```
 
 安装所需的工具以及 NPM 库
