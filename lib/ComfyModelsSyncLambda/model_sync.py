@@ -63,7 +63,7 @@ def sync_models_to_gpu_instances(instance_ids):
     response = ssm.send_command(
         InstanceIds=instance_ids,
         DocumentName="AWS-RunShellScript",
-        Parameters={'commands': ['/tmp/s5cmd sync %s/* %s' % (S3_BUCKET, NODE_DIR)]}
+        Parameters={'commands': ['aws s3 sync %s/* %s' % (S3_BUCKET, NODE_DIR)]}
     )
     return response
 
@@ -73,7 +73,7 @@ def sync_single_model_to_gpu_instances(instance_ids, model_key):
     response = ssm.send_command(
         InstanceIds=instance_ids,
         DocumentName="AWS-RunShellScript",
-        Parameters={'commands': ['/tmp/s5cmd cp %s/%s %s/%s' % (S3_BUCKET, model_key, NODE_DIR, model_key)]}
+        Parameters={'commands': ['aws s3 cp %s/%s %s/%s' % (S3_BUCKET, model_key, NODE_DIR, model_key)]}
     )
     return response
 
