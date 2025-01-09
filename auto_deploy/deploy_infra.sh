@@ -54,7 +54,7 @@ cdk_deploy_lambda() {
         bucket_name_prefix="comfyui-models-"
     else
         cluster_name="Comfyui-Cluster-${PROJECT_NAME}"
-        bucket_name_prefix="comfyui-models-${project_name}"
+        bucket_name_prefix="comfyui-models-${project_name}-"
     fi
 
     sed -i "s/Comfyui-Cluster/$cluster_name/g" $CDK_DIR/lib/ComfyModelsSyncLambda/model_sync.py
