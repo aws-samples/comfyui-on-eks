@@ -20,7 +20,7 @@ spec:
         values: ["spot", "on-demand"]
       - key: node.kubernetes.io/instance-type
         operator: In
-        values: ["g6e.2xlarge", "g5.2xlarge"]
+        values: ["g6.2xlarge", "g5.2xlarge"]
       - key: kubernetes.io/os
         operator: In
         values: ["linux"]
@@ -60,4 +60,4 @@ spec:
     region=$(ec2-metadata --availability-zone | sed 's/.$//'|awk '{print $NF}')
     echo "Downloading models from s3://comfyui-models-${account}-${region}"
     aws configure set default.s3.preferred_transfer_client crt
-    aws s3 sync s3://comfyui-models-${account}-${region} /comfyui-models/ &
+    aws s3 sync s3://comfyui-models-${account}-${region} /comfyui-models/
