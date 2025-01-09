@@ -48,6 +48,18 @@ prepare_eks_env() {
 
 cdk_deploy_lambda() {
     echo "==== Start deploying LambdaModelsSync ===="
+
+    if [ -z "$PROJECT_NAME" ]; then
+        cluster_name="Comfyui-Cluster"
+        bucket_name_prefix="comfyui-models-"
+    else
+        cluster_name="Comfyui-Cluster-${PROJECT_NAME}"
+        bucket_name_prefix="comfyui-models-${project_name}"
+    fi
+
+    sed -i "s/Comfyui-Cluster/$cluster_name/g" $CDK_DIR/lib/ComfyModelsSyncLambda/model_sync.py
+    sed -i "s/comfyui-models-/$bucket_name_prefix/g" $CDK_DIR/lib/ComfyModelsSyncLambda/model_sync.py
+
     cd $CDK_DIR && cdk deploy $LAMBDA_STACK --require-approval never
     if [ $? -eq 0 ]; then
         echo "Lambda deploy completed successfully"

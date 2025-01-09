@@ -42,12 +42,8 @@ def get_all_gpu_instances():
                 'Values': ['Comfyui-Cluster']
             },
             {
-                'Name': 'tag:karpenter.sh/managed-by',
-                'Values': ['Comfyui-Cluster']
-            },
-            {
-                'Name': 'tag:kubernetes.io/cluster/Comfyui-Cluster',
-                'Values': ['owned']
+                'Name': 'tag:karpenter.sh/nodepool',
+                'Values': ['karpenter-nodepool']
             },
         ],
     )
