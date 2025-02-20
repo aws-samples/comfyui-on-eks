@@ -56,7 +56,7 @@ export default class BlueprintConstruct {
                       defaultRuntime: 'containerd'
                     },
                     gfd: {
-                      version: 'v0.8.0'
+                      version: 'v0.16.2'
                     }
                   }
             }),
