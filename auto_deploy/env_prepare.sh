@@ -122,7 +122,7 @@ install_npm() {
 }
 
 install_cdk() {
-    npm install -g aws-cdk@2.173.2
+    npm install -g aws-cdk@2.177.0
 }
 
 prepare_code_dependency() {
