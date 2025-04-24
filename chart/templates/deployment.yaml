@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: comfyui
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: comfyui
+  template:
+    metadata:
+      labels:
+        app: comfyui
+    spec:
+      volumes:
+      - name: stable-diffusion-models
+        hostPath:
+          path: /comfyui-models 
+      {{- range $i, $value := .Values.volumes }}
+      - name: {{ printf "comfyui-%s" $value.name}}
+        persistentVolumeClaim:
+          claimName: {{ printf "comfyui-%s-pvc" $value.name}}
+      {{- end }}
+      containers:
+      - name: comfyui
+        image: {{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        ports:
+        - containerPort: {{ .Values.service.targetPort }}
+        volumeMounts:
+        - mountPath: /app/ComfyUI/models
+          name: stable-diffusion-models
+        {{- range $i, $value := .Values.volumes }}
+        - mountPath: {{ $value.mountPath }}
+          name: {{ printf "comfyui-%s" $value.name}}
+        {{- end }}
+        resources: {{- .Values.comfyui.resources | toYaml | nindent 10 }}
