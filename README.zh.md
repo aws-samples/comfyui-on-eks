@@ -54,17 +54,25 @@
 
 ```shell
 rm -rf ~/comfyui-on-eks && git clone https://github.com/aws-samples/comfyui-on-eks ~/comfyui-on-eks
-cd ~/comfyui-on-eks && git checkout v0.5.0
+cd ~/comfyui-on-eks && git checkout v0.6.0
 region="us-west-2" # Modify the region to your current region
 project="" # [Optional] Default is empty, you can modify the project name to your own
-sed -i "s/export AWS_DEFAULT_REGION=.*/export AWS_DEFAULT_REGION=$region/g" ~/comfyui-on-eks/auto_deploy/env.sh
-sed -i "s/export PROJECT_NAME=.*/export PROJECT_NAME=$project/g" ~/comfyui-on-eks/auto_deploy/env.sh
+if [[ x$project == 'x' ]]
+then
+	project_dir="$HOME/comfyui-on-eks"
+else
+	mv $HOME/comfyui-on-eks $HOME/comfyui-on-eks-$project
+	project_dir="$HOME/comfyui-on-eks-$project"
+fi
+sed -i "s/export AWS_DEFAULT_REGION=.*/export AWS_DEFAULT_REGION=$region/g" $project_dir/auto_deploy/env.sh
+sed -i "s/export PROJECT_NAME=.*/export PROJECT_NAME=$project/g" $project_dir/auto_deploy/env.sh
+cd $project_dir
 ```
 
 安装所需的工具以及 NPM 库
 
 ```shell
-cd ~/comfyui-on-eks/auto_deploy/ && bash env_prepare.sh
+cd $project_dir/auto_deploy/ && bash env_prepare.sh
 ```
 
 ### 2. 部署
@@ -72,8 +80,7 @@ cd ~/comfyui-on-eks/auto_deploy/ && bash env_prepare.sh
 执行以下脚本部署所有资源
 
 ```shell
-source ~/.bashrc
-cd ~/comfyui-on-eks/auto_deploy/ && bash deploy_infra.sh
+source ~/.bashrc && cd $project_dir/auto_deploy/ && bash deploy_infra.sh
 ```
 
 ### 3. 删除所有资源
@@ -81,7 +88,7 @@ cd ~/comfyui-on-eks/auto_deploy/ && bash deploy_infra.sh
 执行以下脚本删除所有资源
 
 ```
-cd ~/comfyui-on-eks/auto_deploy/ && bash destroy_infra.sh
+cd $project_dir/auto_deploy/ && bash destroy_infra.sh
 ```
 
 ## 成本预估
