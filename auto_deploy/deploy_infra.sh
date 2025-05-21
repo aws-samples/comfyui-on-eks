@@ -116,12 +116,12 @@ deploy_karpenter() {
     KarpenterInstanceNodeRole=$(aws cloudformation describe-stacks --stack-name $EKS_CLUSTER_STACK --query 'Stacks[0].Outputs[?OutputKey==`KarpenterInstanceNodeRole`].OutputValue' --output text)
     if [ -z "$PROJECT_NAME" ]; then
         sg_tag="eks-cluster-sg-Comfyui-Cluster*"
-        subnet_tag="Comfyui-Cluster\/Comfyui-Cluster-vpc\/Private*"
+        subnet_tag="Comfyui-Cluster\/ComfyuiVPC\/private*"
         node_name="ComfyUI-EKS-GPU-Node"
         bucket_name="comfyui-models-${ACCOUNT_ID}-${AWS_DEFAULT_REGION}"
     else
         sg_tag="eks-cluster-sg-Comfyui-Cluster-${PROJECT_NAME}*"
-        subnet_tag="Comfyui-Cluster-${PROJECT_NAME}\/Comfyui-Cluster-${PROJECT_NAME}-vpc\/Private*"
+        subnet_tag="Comfyui-Cluster-${PROJECT_NAME}\/ComfyuiVPC\/private*"
         node_name="ComfyUI-EKS-GPU-Node-${PROJECT_NAME}"
         bucket_name="comfyui-models-${project_name}-${ACCOUNT_ID}-${AWS_DEFAULT_REGION}"
     fi

@@ -47,7 +47,7 @@ spec:
       Name: eks-cluster-sg-Comfyui-Cluster*
   subnetSelectorTerms:
   - tags:
-      Name: Comfyui-Cluster/Comfyui-Cluster-vpc/Private*
+      Name: Comfyui-Cluster/ComfyuiVPC/private*
   tags:
     Cost-Center: AI-Lab
     Name: ComfyUI-EKS-GPU-Node
