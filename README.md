@@ -14,6 +14,28 @@ It's a solution to deploy ComfyUI on Amazon EKS.
 6. **Accelerated Dynamic Requests with Amazon CloudFront**: To facilitate the use of the platform by art studios across different regions, we use [Amazon CloudFront](https://aws.amazon.com/cloudfront/) for faster dynamic request processing.
 7. **Serverless Event-Triggered Model Synchronization**: When models are uploaded to or deleted from S3, serverless event triggers activate, syncing the model directory data across worker nodes.
 
+## Security Considerations
+
+Before proceeding with the deployment, please note the following important security considerations:
+
+1. **Network Access Control**:
+   - The Application Load Balancer (ALB) in this solution is configured for internal access only
+   - Client applications need to establish proper network connectivity to access the service
+   - Appropriate security group configurations are required for successful communication
+
+2. **Access Security Recommendations**:
+   - It is strongly recommended to implement your own authentication layer in front of the ALB
+   - Consider implementing solutions such as:
+     - AWS Cognito for user authentication
+     - API Gateway with custom authorizers
+     - Your organization's existing authentication system
+   - Implement proper IAM roles and policies for service access
+
+3. **Network Requirements**:
+   - Ensure VPC peering or Transit Gateway is configured if accessing from different VPCs
+   - Configure security groups to allow traffic only from trusted sources
+   - Consider using AWS PrivateLink for enhanced security
+
 ## Solution Architecture
 
 ![Architecture](images/arch.png)
