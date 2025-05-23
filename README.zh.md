@@ -54,7 +54,7 @@
 
 ```shell
 rm -rf ~/comfyui-on-eks && git clone https://github.com/aws-samples/comfyui-on-eks ~/comfyui-on-eks
-cd ~/comfyui-on-eks && git checkout v0.6.0
+cd ~/comfyui-on-eks && git checkout stable
 region="us-west-2" # Modify the region to your current region
 project="" # [Optional] Default is empty, you can modify the project name to your own
 if [[ x$project == 'x' ]]
