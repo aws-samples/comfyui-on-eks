@@ -286,12 +286,19 @@ deploy_comfyui() {
 
 test_comfyui() {
     echo "==== Start testing ComfyUI ===="
+
+    # Change ingress from internal to internet-facing for temp test
+    echo "Changing ingress from internal to internet-facing..."
+    ingress_name=$(kubectl get ingress -o jsonpath='{.items[0].metadata.name}')
+    kubectl annotate ingress $ingress_name kubernetes.io/ingress.class=alb alb.ingress.kubernetes.io/scheme=internet-facing --overwrite
+
+
     ingress_addr=$(kubectl get ingress -o jsonpath='{.items[0].status.loadBalancer.ingress[0].hostname}')
     # Check if Ingress is ready
     i=0
     while [ x"$ingress_addr" == "x" ]; do
-        if [ $i -gt 60 ]; then
-            echo "Ingress address is not ready after 5min"
+        if [ $i -gt 120 ]; then
+            echo "Ingress address is not ready after 10min"
             exit 1
         fi
         echo "Ingress address is not ready, sleep 5s..."
@@ -352,6 +359,10 @@ test_comfyui() {
         exit 1
     fi
 
+    # Change ingress back from internet-facing to internal
+    echo "Changing ingress back from internet-facing to internal..."
+    kubectl annotate ingress $ingress_name kubernetes.io/ingress.class=alb alb.ingress.kubernetes.io/scheme=internal --overwrite
+    echo "Ingress changed back to internal"
 }
 
 # ====== Activate NVM & CDK ====== #
