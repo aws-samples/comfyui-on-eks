@@ -12,6 +12,13 @@ export class ComfyuiEcrRepo extends cdk.Stack {
             repositoryName: `comfyui-images-${project_name}`.replace(/-$/,''),
             removalPolicy: cdk.RemovalPolicy.DESTROY,
         });
+        
+        // Add stack output for the repository URL
+        new cdk.CfnOutput(this, 'RepositoryUrl', {
+            value: repo.repositoryUri,
+            description: 'The URI of the ECR repository',
+            exportName: 'ComfyuiEcrRepoUrl',
+        });
     }
 }
 
