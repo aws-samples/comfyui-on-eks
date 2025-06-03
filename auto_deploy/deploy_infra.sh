@@ -291,23 +291,7 @@ test_comfyui() {
     echo "Changing ingress from internal to internet-facing..."
     ingress_name=$(kubectl get ingress -o jsonpath='{.items[0].metadata.name}')
     kubectl annotate ingress $ingress_name kubernetes.io/ingress.class=alb alb.ingress.kubernetes.io/scheme=internet-facing --overwrite
-
-
     ingress_addr=$(kubectl get ingress -o jsonpath='{.items[0].status.loadBalancer.ingress[0].hostname}')
-    # Check if Ingress is ready
-    i=0
-    while [ x"$ingress_addr" == "x" ]; do
-        if [ $i -gt 120 ]; then
-            echo "Ingress address is not ready after 10min"
-            exit 1
-        fi
-        echo "Ingress address is not ready, sleep 5s..."
-        sleep 5
-        ingress_addr=$(kubectl get ingress -o jsonpath='{.items[0].status.loadBalancer.ingress[0].hostname}')
-        i=$((i+1))
-    done
-
-    echo "Ingress Address: http://$ingress_addr"
 
     # Check if ComfyUI is ready
     i=0
@@ -320,6 +304,22 @@ test_comfyui() {
         sleep 5
         i=$((i+1))
     done
+
+    # Check if Ingress is ready
+    i=0
+    while [ x"$ingress_addr" == "x" ]; do
+        if [ $i -gt 240 ]; then
+            echo "Ingress address is not ready after 10min"
+            exit 1
+        fi
+        echo "Ingress address is not ready, sleep 5s..."
+        sleep 5
+        ingress_addr=$(kubectl get ingress -o jsonpath='{.items[0].status.loadBalancer.ingress[0].hostname}')
+        i=$((i+1))
+    done
+
+    echo "Ingress Address: http://$ingress_addr"
+
 
     if [[ "$OSTYPE" == "linux-gnu"* ]]; then
         sed -i "s/SERVER_ADDRESS = .*/SERVER_ADDRESS = \"http:\/\/$ingress_addr\"/g" $CDK_DIR/test/invoke_comfyui_api.py
