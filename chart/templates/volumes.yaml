@@ -1,0 +1,33 @@
+{{- range $i, $value := .Values.volumes }}
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: {{ printf "comfyui-%s-pv" $value.name }}
+spec:
+  capacity:
+    storage: {{ $value.capacity }}
+  accessModes:
+    - ReadWriteMany # supported options: ReadWriteMany / ReadOnlyMany
+  {{- $regionMount := printf "region %s" $.Values.region }}
+  {{- $mountOptions := list "allow-delete" $regionMount }}
+  mountOptions: {{ $mountOptions | toYaml | nindent 4 }}
+  csi:
+    driver: s3.csi.aws.com # required
+    volumeHandle: {{ printf "s3-csi-driver-volume-%s" $value.name }}
+    volumeAttributes:
+      bucketName: {{ $value.bucketName }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ printf "comfyui-%s-pvc" $value.name }}
+spec:
+  accessModes:
+    - ReadWriteMany # supported options: ReadWriteMany / ReadOnlyMany
+  storageClassName: "" # required for static provisioning
+  resources:
+    requests:
+      storage: {{ $value.capacity }}
+  volumeName: {{ printf "comfyui-%s-pv" $value.name }}
+{{- end }}

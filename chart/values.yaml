@@ -1,0 +1,55 @@
+# Default values for chart.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+replicaCount: 1
+region: "us-west-2"
+
+service:
+  type: NodePort
+  port: 8848
+  targetPort: 8848
+
+karpenter:
+  disruption:
+    consolidateAfter: 30s
+    consolidationPolicy: WhenEmpty
+  instances: ["g6.2xlarge", "g5.2xlarge"]
+  role: Comfyui-Cluster-Role
+  ebs:
+    volumeSize: 100Gi
+    volumeType: gp3
+  ami:
+    Family: AL2023
+    alias: al2023@v20241213
+  tags:
+    Cost-Center: AI-Lab
+    Name: ComfyUI-EKS-GPU-Node  
+
+comfyui:
+  resources:
+    requests:
+      nvidia.com/gpu: 1
+    limits:
+      nvidia.com/gpu: 1
+image:
+  repository: 12345678910.dkr.ecr.us-west-2.amazonaws.com/comfyui-images
+  pullPolicy: Always
+  tag: latest
+
+volumes:
+  -customNodes:
+      name: custom-nodes
+      bucketName: comfyui-custom-nodes-12345678910-us-west-2
+      capacity: 150Gi
+      mountPath: /app/ComfyUI/custom_nodes
+  -output:
+      name: outputs
+      bucketName: comfyui-outputs-12345678910-us-west-2
+      capacity: 1200Gi
+      mountPath: /app/ComfyUI/output
+  -input:
+      name: inputs
+      bucketName: comfyui-inputs-12345678910-us-west-2
+      capacity: 1200Gi
+      mountPath: /app/ComfyUI/input
