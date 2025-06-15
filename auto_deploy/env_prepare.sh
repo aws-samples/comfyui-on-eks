@@ -102,7 +102,7 @@ install_npm() {
     echo "==== Start installing npm ===="
 
     # Install nvm
-    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash
+    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
     export NVM_DIR="$HOME/.nvm"
     [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
     [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
@@ -122,7 +122,8 @@ install_npm() {
 }
 
 install_cdk() {
-    npm install -g aws-cdk@2.177.0
+    npm install -g aws-cdk@2.1018.1
+    cdk version
 }
 
 prepare_code_dependency() {

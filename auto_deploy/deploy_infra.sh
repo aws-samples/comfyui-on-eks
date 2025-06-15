@@ -318,6 +318,7 @@ test_comfyui() {
         i=$((i+1))
     done
 
+    ingress_addr=$(kubectl get ingress -o jsonpath='{.items[0].status.loadBalancer.ingress[0].hostname}')
     echo "Ingress Address: http://$ingress_addr"
 
 
