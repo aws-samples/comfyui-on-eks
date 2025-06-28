@@ -14,6 +14,28 @@ It's a solution to deploy ComfyUI on Amazon EKS.
 6. **Accelerated Dynamic Requests with Amazon CloudFront**: To facilitate the use of the platform by art studios across different regions, we use [Amazon CloudFront](https://aws.amazon.com/cloudfront/) for faster dynamic request processing.
 7. **Serverless Event-Triggered Model Synchronization**: When models are uploaded to or deleted from S3, serverless event triggers activate, syncing the model directory data across worker nodes.
 
+## Security Considerations
+
+Before proceeding with the deployment, please note the following important security considerations:
+
+1. **Network Access Control**:
+   - The Application Load Balancer (ALB) in this solution is configured for internal access only
+   - Client applications need to establish proper network connectivity to access the service
+   - Appropriate security group configurations are required for successful communication
+
+2. **Access Security Recommendations**:
+   - It is strongly recommended to implement your own authentication layer in front of the ALB
+   - Consider implementing solutions such as:
+     - AWS Cognito for user authentication
+     - API Gateway with custom authorizers
+     - Your organization's existing authentication system
+   - Implement proper IAM roles and policies for service access
+
+3. **Network Requirements**:
+   - Ensure VPC peering or Transit Gateway is configured if accessing from different VPCs
+   - Configure security groups to allow traffic only from trusted sources
+   - Consider using AWS PrivateLink for enhanced security
+
 ## Solution Architecture
 
 ![Architecture](images/arch.png)
@@ -56,25 +78,33 @@ Make sure that you have enough vCPU quota for G instances. (At least 8 vCPU for 
 
 ```shell
 rm -rf ~/comfyui-on-eks && git clone https://github.com/aws-samples/comfyui-on-eks ~/comfyui-on-eks
-cd ~/comfyui-on-eks && git checkout v0.5.0
+cd ~/comfyui-on-eks && git checkout stable
 region="us-west-2" # Modify the region to your current region
 project="" # [Optional] Default is empty, you can modify the project name to your own
-sed -i "s/export AWS_DEFAULT_REGION=.*/export AWS_DEFAULT_REGION=$region/g" ~/comfyui-on-eks/auto_deploy/env.sh
-sed -i "s/export PROJECT_NAME=.*/export PROJECT_NAME=$project/g" ~/comfyui-on-eks/auto_deploy/env.sh
+if [[ x$project == 'x' ]]
+then
+	project_dir="$HOME/comfyui-on-eks"
+else
+	mv $HOME/comfyui-on-eks $HOME/comfyui-on-eks-$project
+	project_dir="$HOME/comfyui-on-eks-$project"
+fi
+sed -i "s/export AWS_DEFAULT_REGION=.*/export AWS_DEFAULT_REGION=$region/g" $project_dir/auto_deploy/env.sh
+sed -i "s/export PROJECT_NAME=.*/export PROJECT_NAME=$project/g" $project_dir/auto_deploy/env.sh
+cd $project_dir
 ```
 
 Install needed tools and npm libs by running
 
 ```shell
-cd ~/comfyui-on-eks/auto_deploy/ && bash env_prepare.sh
+cd $project_dir/auto_deploy/ && bash env_prepare.sh
 ```
 
 ### 2. Deploy
 
-Deploy all resources by running 
+Deploy all resources by running
 
 ```shell
-source ~/.bashrc && cd ~/comfyui-on-eks/auto_deploy/ && bash deploy_infra.sh
+source ~/.bashrc && cd $project_dir/auto_deploy/ && bash deploy_infra.sh
 ```
 
 ### 3. Delete all resources
@@ -82,7 +112,7 @@ source ~/.bashrc && cd ~/comfyui-on-eks/auto_deploy/ && bash deploy_infra.sh
 Delete all resources by running
 
 ```shell
-cd ~/comfyui-on-eks/auto_deploy/ && bash destroy_infra.sh
+cd $project_dir/auto_deploy/ && bash destroy_infra.sh
 ```
 
 ## Cost Analysis

@@ -13,6 +13,34 @@ export interface BlueprintConstructProps { id: string }
 
 export default class BlueprintConstruct {
     constructor(scope: Construct, props: cdk.StackProps) {
+        // Custom VPC for S3 Gateway Endpoint
+        class CustomVpcProvider implements blueprints.ResourceProvider<ec2.IVpc> {
+            provide(context: blueprints.ResourceContext): ec2.IVpc {
+                const vpc = new ec2.Vpc(context.scope, 'ComfyuiVPC', {
+                    ipAddresses: ec2.IpAddresses.cidr('10.2.0.0/16'),
+                    maxAzs: 3,
+                    subnetConfiguration: [
+                        {
+                            cidrMask: 20,
+                            name: 'public',
+                            subnetType: ec2.SubnetType.PUBLIC,
+                        },
+                        {
+                            cidrMask: 20,
+                            name: 'private',
+                            subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS,
+                        }
+                    ],
+                    natGateways: 3, // 3 NAT Gateways for 3 AZs
+                    gatewayEndpoints: {
+                        s3: {
+                            service: ec2.GatewayVpcEndpointAwsService.S3
+                        }
+                    }
+                });
+                return vpc;
+            }
+        }
 
         // Instance profiles of K8S node EC2
         const nodeRole = new blueprints.CreateRoleProvider("blueprint-node-role", new iam.ServicePrincipal("ec2.amazonaws.com"),
@@ -78,11 +106,7 @@ export default class BlueprintConstruct {
 
         blueprints.EksBlueprint.builder()
             .addOns(...addOns)
-            .resourceProvider(blueprints.GlobalResources.Vpc, new blueprints.VpcProvider(undefined, {
-                primaryCidr: "10.2.0.0/16",
-                secondaryCidr: "100.64.0.0/16",
-                secondarySubnetCidrs: ["100.64.0.0/24","100.64.1.0/24","100.64.2.0/24"]
-            }))
+            .resourceProvider(blueprints.GlobalResources.Vpc, new CustomVpcProvider())
             .resourceProvider("node-role", nodeRole)
             .clusterProvider(clusterProvider)
             .teams()

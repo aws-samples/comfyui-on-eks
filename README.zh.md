@@ -14,6 +14,28 @@
 * 利用 [Amazon CloudFront](https://aws.amazon.com/cloudfront/) 边缘节点加速动态请求，以满足跨地区美术工作室共用平台的场景。(Optional)
 * 通过 Serverless 事件触发的方式，当模型上传 S3 或在 S3 删除时，触发工作节点同步模型目录数据。
 
+## 安全注意事项
+
+在开始部署之前，请注意以下重要的安全考虑事项：
+
+1. **网络访问控制**：
+   - 本方案中的应用负载均衡器（ALB）配置为仅内部访问
+   - 客户端应用需要建立适当的网络连接才能访问服务
+   - 需要配置合适的安全组以确保通信正常
+
+2. **访问安全建议**：
+   - 强烈建议在 ALB 前端实现自己的身份认证层
+   - 可以考虑实现以下解决方案：
+     - 使用 AWS Cognito 进行用户认证
+     - 使用带有自定义授权器的 API Gateway
+     - 使用您组织现有的认证系统
+   - 实施适当的 IAM 角色和策略以进行服务访问
+
+3. **网络要求**：
+   - 如果从不同的 VPC 访问，确保配置了 VPC 对等连接或 Transit Gateway
+   - 配置安全组以只允许来自可信源的流量
+   - 考虑使用 AWS PrivateLink 以增强安全性
+
 ## 方案架构
 
 ![Architecture](images/arch.png)
@@ -54,17 +76,25 @@
 
 ```shell
 rm -rf ~/comfyui-on-eks && git clone https://github.com/aws-samples/comfyui-on-eks ~/comfyui-on-eks
-cd ~/comfyui-on-eks && git checkout v0.5.0
+cd ~/comfyui-on-eks && git checkout stable
 region="us-west-2" # Modify the region to your current region
 project="" # [Optional] Default is empty, you can modify the project name to your own
-sed -i "s/export AWS_DEFAULT_REGION=.*/export AWS_DEFAULT_REGION=$region/g" ~/comfyui-on-eks/auto_deploy/env.sh
-sed -i "s/export PROJECT_NAME=.*/export PROJECT_NAME=$project/g" ~/comfyui-on-eks/auto_deploy/env.sh
+if [[ x$project == 'x' ]]
+then
+	project_dir="$HOME/comfyui-on-eks"
+else
+	mv $HOME/comfyui-on-eks $HOME/comfyui-on-eks-$project
+	project_dir="$HOME/comfyui-on-eks-$project"
+fi
+sed -i "s/export AWS_DEFAULT_REGION=.*/export AWS_DEFAULT_REGION=$region/g" $project_dir/auto_deploy/env.sh
+sed -i "s/export PROJECT_NAME=.*/export PROJECT_NAME=$project/g" $project_dir/auto_deploy/env.sh
+cd $project_dir
 ```
 
 安装所需的工具以及 NPM 库
 
 ```shell
-cd ~/comfyui-on-eks/auto_deploy/ && bash env_prepare.sh
+cd $project_dir/auto_deploy/ && bash env_prepare.sh
 ```
 
 ### 2. 部署
@@ -72,8 +102,7 @@ cd ~/comfyui-on-eks/auto_deploy/ && bash env_prepare.sh
 执行以下脚本部署所有资源
 
 ```shell
-source ~/.bashrc
-cd ~/comfyui-on-eks/auto_deploy/ && bash deploy_infra.sh
+source ~/.bashrc && cd $project_dir/auto_deploy/ && bash deploy_infra.sh
 ```
 
 ### 3. 删除所有资源
@@ -81,7 +110,7 @@ cd ~/comfyui-on-eks/auto_deploy/ && bash deploy_infra.sh
 执行以下脚本删除所有资源
 
 ```
-cd ~/comfyui-on-eks/auto_deploy/ && bash destroy_infra.sh
+cd $project_dir/auto_deploy/ && bash destroy_infra.sh
 ```
 
 ## 成本预估

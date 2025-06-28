@@ -116,12 +116,12 @@ deploy_karpenter() {
     KarpenterInstanceNodeRole=$(aws cloudformation describe-stacks --stack-name $EKS_CLUSTER_STACK --query 'Stacks[0].Outputs[?OutputKey==`KarpenterInstanceNodeRole`].OutputValue' --output text)
     if [ -z "$PROJECT_NAME" ]; then
         sg_tag="eks-cluster-sg-Comfyui-Cluster*"
-        subnet_tag="Comfyui-Cluster\/Comfyui-Cluster-vpc\/Private*"
+        subnet_tag="Comfyui-Cluster\/ComfyuiVPC\/private*"
         node_name="ComfyUI-EKS-GPU-Node"
         bucket_name="comfyui-models-${ACCOUNT_ID}-${AWS_DEFAULT_REGION}"
     else
         sg_tag="eks-cluster-sg-Comfyui-Cluster-${PROJECT_NAME}*"
-        subnet_tag="Comfyui-Cluster-${PROJECT_NAME}\/Comfyui-Cluster-${PROJECT_NAME}-vpc\/Private*"
+        subnet_tag="Comfyui-Cluster-${PROJECT_NAME}\/ComfyuiVPC\/private*"
         node_name="ComfyUI-EKS-GPU-Node-${PROJECT_NAME}"
         bucket_name="comfyui-models-${project_name}-${ACCOUNT_ID}-${AWS_DEFAULT_REGION}"
     fi
@@ -135,13 +135,13 @@ deploy_karpenter() {
         if [[ "$OSTYPE" == "linux-gnu"* ]]; then
             sed -i "s/role: .*/role: $KarpenterInstanceNodeRole/g" $CDK_DIR/manifests/Karpenter/karpenter_v1.yaml
             sed -i "s/Name: eks-cluster-sg-Comfyui-Cluster.*/Name: $sg_tag/g" $CDK_DIR/manifests/Karpenter/karpenter_v1.yaml
-            sed -i "s/Name: Comfyui-Cluster\/Comfyui-Cluster-vpc\/Private.*/Name: $subnet_tag/g" $CDK_DIR/manifests/Karpenter/karpenter_v1.yaml
+            sed -i "s/Name: Comfyui-Cluster\/ComfyuiVPC\/private.*/Name: $subnet_tag/g" $CDK_DIR/manifests/Karpenter/karpenter_v1.yaml
             sed -i "s/Name: ComfyUI-EKS-GPU-Node/Name: $node_name/g" $CDK_DIR/manifests/Karpenter/karpenter_v1.yaml
             sed -i "s/s3:\/\/comfyui-models-.* /s3:\/\/$bucket_name /g" $CDK_DIR/manifests/Karpenter/karpenter_v1.yaml
         elif [[ "$OSTYPE" == "darwin"* ]]; then
             sed -i '' "s/role: .*/role: $KarpenterInstanceNodeRole/g" $CDK_DIR/manifests/Karpenter/karpenter_v1.yaml
             sed -i '' "s/Name: eks-cluster-sg-Comfyui-Cluster.*/Name: $sg_tag/g" $CDK_DIR/manifests/Karpenter/karpenter_v1.yaml
-            sed -i '' "s/Name: Comfyui-Cluster\/Comfyui-Cluster-vpc\/Private.*/Name: $subnet_tag/g" $CDK_DIR/manifests/Karpenter/karpenter_v1.yaml
+            sed -i '' "s/Name: Comfyui-Cluster\/ComfyuiVPC\/private.*/Name: $subnet_tag/g" $CDK_DIR/manifests/Karpenter/karpenter_v1.yaml
             sed -i '' "s/Name: ComfyUI-EKS-GPU-Node/Name: $node_name/g" $CDK_DIR/manifests/Karpenter/karpenter_v1.yaml
             sed -i '' "s/s3:\/\/comfyui-models-.* /s3:\/\/$bucket_name /g" $CDK_DIR/manifests/Karpenter/karpenter_v1.yaml
         else
@@ -286,21 +286,12 @@ deploy_comfyui() {
 
 test_comfyui() {
     echo "==== Start testing ComfyUI ===="
-    ingress_addr=$(kubectl get ingress -o jsonpath='{.items[0].status.loadBalancer.ingress[0].hostname}')
-    # Check if Ingress is ready
-    i=0
-    while [ x"$ingress_addr" == "x" ]; do
-        if [ $i -gt 60 ]; then
-            echo "Ingress address is not ready after 5min"
-            exit 1
-        fi
-        echo "Ingress address is not ready, sleep 5s..."
-        sleep 5
-        ingress_addr=$(kubectl get ingress -o jsonpath='{.items[0].status.loadBalancer.ingress[0].hostname}')
-        i=$((i+1))
-    done
 
-    echo "Ingress Address: http://$ingress_addr"
+    # Change ingress from internal to internet-facing for temp test
+    echo "Changing ingress from internal to internet-facing..."
+    ingress_name=$(kubectl get ingress -o jsonpath='{.items[0].metadata.name}')
+    kubectl annotate ingress $ingress_name kubernetes.io/ingress.class=alb alb.ingress.kubernetes.io/scheme=internet-facing --overwrite
+    ingress_addr=$(kubectl get ingress -o jsonpath='{.items[0].status.loadBalancer.ingress[0].hostname}')
 
     # Check if ComfyUI is ready
     i=0
@@ -313,6 +304,23 @@ test_comfyui() {
         sleep 5
         i=$((i+1))
     done
+
+    # Check if Ingress is ready
+    i=0
+    while [ x"$ingress_addr" == "x" ]; do
+        if [ $i -gt 240 ]; then
+            echo "Ingress address is not ready after 10min"
+            exit 1
+        fi
+        echo "Ingress address is not ready, sleep 5s..."
+        sleep 5
+        ingress_addr=$(kubectl get ingress -o jsonpath='{.items[0].status.loadBalancer.ingress[0].hostname}')
+        i=$((i+1))
+    done
+
+    ingress_addr=$(kubectl get ingress -o jsonpath='{.items[0].status.loadBalancer.ingress[0].hostname}')
+    echo "Ingress Address: http://$ingress_addr"
+
 
     if [[ "$OSTYPE" == "linux-gnu"* ]]; then
         sed -i "s/SERVER_ADDRESS = .*/SERVER_ADDRESS = \"http:\/\/$ingress_addr\"/g" $CDK_DIR/test/invoke_comfyui_api.py
@@ -352,6 +360,10 @@ test_comfyui() {
         exit 1
     fi
 
+    # Change ingress back from internet-facing to internal
+    echo "Changing ingress back from internet-facing to internal..."
+    kubectl annotate ingress $ingress_name kubernetes.io/ingress.class=alb alb.ingress.kubernetes.io/scheme=internal --overwrite
+    echo "Ingress changed back to internal"
 }
 
 # ====== Activate NVM & CDK ====== #
