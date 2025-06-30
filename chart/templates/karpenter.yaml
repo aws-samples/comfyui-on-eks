@@ -1,0 +1,58 @@
+apiVersion: karpenter.sh/v1
+kind: NodePool
+metadata:
+  name: karpenter-nodepool
+spec:
+  disruption: {{ .Values.karpenter.disruption | toYaml | nindent 4}}
+  template:
+    metadata: {}
+    spec:
+      expireAfter: Never
+      nodeClassRef:
+        group: karpenter.k8s.aws
+        kind: EC2NodeClass
+        name: node-gpu
+      requirements: 
+        - key: "karpenter.sh/capacity-type"
+          operator: In
+          values: ["spot", "on-demand"]
+        - key: node.kubernetes.io/instance-type
+          operator: In
+          values: {{ .Values.karpenter.instances | toJson  }}
+        - key: kubernetes.io/os
+          operator: In
+          values: ["linux"]
+        - key: kubernetes.io/arch
+          operator: In
+          values: ["amd64"]
+---
+apiVersion: karpenter.k8s.aws/v1
+kind: EC2NodeClass
+metadata:
+  name: node-gpu
+spec:
+  amiFamily: {{ .Values.karpenter.ami.Family }}
+  amiSelectorTerms:
+    - alias: {{ .Values.karpenter.ami.alias }}
+  blockDeviceMappings:
+  - deviceName: /dev/xvda
+    ebs: {{ .Values.karpenter.ebs | toYaml | nindent 6 }}
+  role: {{ .Values.karpenter.role }}
+  securityGroupSelectorTerms:
+  - tags:
+      Name: eks-cluster-sg-Comfyui-Cluster*
+  subnetSelectorTerms:
+  - tags:
+      Name: Comfyui-Cluster/Comfyui-Cluster-vpc/Private*
+  tags: {{ .Values.karpenter.tags | toYaml | nindent 4 }}
+
+  userData: |
+    #!/bin/bash
+    mkfs -t xfs /dev/nvme1n1
+    mkdir -p /comfyui-models
+    mount /dev/nvme1n1 /comfyui-models
+    account=$(aws sts get-caller-identity --query 'Account' --output text)
+    region=$(ec2-metadata --availability-zone | sed 's/.$//'|awk '{print $NF}')
+    echo "Downloading models from s3://comfyui-models-${account}-${region}"
+    aws configure set default.s3.preferred_transfer_client crt
+    aws s3 sync s3://comfyui-models-${account}-${region} /comfyui-models/
