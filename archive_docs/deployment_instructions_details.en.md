@@ -179,7 +179,7 @@ Get the KarpenterInstanceNodeRole in Section 2 and run the following command to 
 
 ```shell
 KarpenterInstanceNodeRole="Comfyui-Cluster-ComfyuiClusterkarpenternoderoleE627-juyEInBqoNtU" # Modify the role to your own.
-sed -i "s/role: KarpenterInstanceNodeRole.*/role: $KarpenterInstanceNodeRole/g" comfyui-on-eks/manifests/Karpenter/karpenter_v1.yaml
+sed -i "s/role: .*/role: $KarpenterInstanceNodeRole/g" comfyui-on-eks/manifests/Karpenter/karpenter_v1.yaml
 kubectl apply -f comfyui-on-eks/manifests/Karpenter/karpenter_v1.yaml
 ```
 
@@ -187,7 +187,7 @@ kubectl apply -f comfyui-on-eks/manifests/Karpenter/karpenter_v1.yaml
 
 ```shell
 KarpenterInstanceNodeRole="Comfyui-Cluster-ComfyuiClusterkarpenternoderoleE627-juyEInBqoNtU" # Modify the role to your own.
-sed -i '' "s/role: KarpenterInstanceNodeRole.*/role: $KarpenterInstanceNodeRole/g" comfyui-on-eks/manifests/Karpenter/karpenter_v1.yaml
+sed -i '' "s/role: .*/role: $KarpenterInstanceNodeRole/g" comfyui-on-eks/manifests/Karpenter/karpenter_v1.yaml
 kubectl apply -f comfyui-on-eks/manifests/Karpenter/karpenter_v1.yaml
 ```
 
