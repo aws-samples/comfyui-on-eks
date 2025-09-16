@@ -218,7 +218,7 @@ deploy_s3_csi_driver() {
         --approve \
         --role-name $ROLE_NAME \
         --region $AWS_DEFAULT_REGION
-    eksctl create addon --name aws-mountpoint-s3-csi-driver --cluster $EKS_CLUSTER_STACK --service-account-role-arn "arn:aws:iam::${ACCOUNT_ID}:role/EKS-S3-CSI-DriverRole-${ACCOUNT_ID}-${AWS_DEFAULT_REGION}" --force
+    eksctl create addon --name aws-mountpoint-s3-csi-driver --version 1.12.0 --cluster $EKS_CLUSTER_STACK --service-account-role-arn "arn:aws:iam::${ACCOUNT_ID}:role/EKS-S3-CSI-DriverRole-${ACCOUNT_ID}-${AWS_DEFAULT_REGION}" --force
     if [ $? -eq 0 ]; then
         echo "S3 CSI Driver deploy completed successfully"
     else
@@ -226,39 +226,6 @@ deploy_s3_csi_driver() {
         exit 1
     fi
     echo "==== Finish deploying S3 CSI Driver ===="
-}
-
-fix_s3_csi_node() {
-    # It's a temp workaround for the issue https://github.com/awslabs/mountpoint-s3-csi-driver/issues/284
-    echo "==== Start fixing S3 CSI Node ===="
-    kubectl get ds s3-csi-node -n kube-system -o yaml > s3-csi-node-ds.yaml
-    if [[ "$OSTYPE" == "linux-gnu"* ]]; then
-        sed -i "s/image: .*aws-s3-csi-driver.*/image: public.ecr.aws\/q4h1b4d0\/array-mountpoint-s3-csi-driver:20240724.10/g" s3-csi-node-ds.yaml
-    elif [[ "$OSTYPE" == "darwin"* ]]; then
-        sed -i '' "s/image: .*aws-s3-csi-driver.*/image: public.ecr.aws\/q4h1b4d0\/array-mountpoint-s3-csi-driver:20240724.10/g" s3-csi-node-ds.yaml
-    else
-        echo "Unsupported OS: $OSTYPE"
-        exit 1
-    fi
-    kubectl apply -f s3-csi-node-ds.yaml
-    if [ $? -eq 0 ]; then
-        echo "S3 CSI Node fix completed successfully"
-    else
-        echo "S3 CSI Node fix failed"
-        exit 1
-    fi
-    rm -rf s3-csi-node-ds.yaml
-    i=0
-    while [ "$(kubectl get pods -n kube-system | grep s3-csi-node | awk '{print $3}'| tail -1)" != "Running" ]; do
-        echo "s3-csi-node pod is not ready, sleep 5s..."
-        sleep 5
-        i=$((i+1))
-        if [ $i -gt 60 ]; then
-            echo "s3-csi-node pod is not ready after 5min"
-            exit 1
-        fi
-    done
-    echo "==== Finish fixing S3 CSI Node ===="
 }
 
 deploy_comfyui() {
@@ -384,17 +351,7 @@ build_and_push_comfyui_image
 deploy_karpenter
 deploy_s3_pv_pvc
 deploy_s3_csi_driver
-fix_s3_csi_node
 deploy_comfyui
 test_comfyui
 end_time=$(date +%s)
 echo "Total time: $((end_time-start_time))s"
-
-# ====== Debug functions ====== #
-uninstall_s3_csi_driver() {
-    echo "==== Start uninstalling S3 CSI Driver ===="
-    eksctl delete addon --name aws-mountpoint-s3-csi-driver --cluster $EKS_CLUSTER_STACK
-    eksctl delete iamserviceaccount --name s3-csi-driver-sa --namespace kube-system --cluster $EKS_CLUSTER_STACK
-    aws eks delete-access-entry --cluster-name $EKS_CLUSTER_STACK --principal-arn $identity
-    echo "==== Finish uninstalling S3 CSI Driver ===="
-}
