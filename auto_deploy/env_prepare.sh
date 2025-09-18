@@ -122,7 +122,7 @@ install_npm() {
 }
 
 install_cdk() {
-    npm install -g aws-cdk@2.1018.1
+    npm install -g aws-cdk@2.1020.2
     cdk version
 }
 
