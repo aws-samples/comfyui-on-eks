@@ -51,12 +51,13 @@ cdk_deploy_lambda() {
 
     if [ -z "$PROJECT_NAME" ]; then
         cluster_name="Comfyui-Cluster"
+        sed -i "s/s3:\/\/comfyui-models-.*%s-%s/s3:\/\/comfyui-models-%s-%s/g" $CDK_DIR/lib/ComfyModelsSyncLambda/model_sync.py
     else
         cluster_name="Comfyui-Cluster-${PROJECT_NAME}"
+        sed -i "s/s3:\/\/comfyui-models-.*%s-%s/s3:\/\/comfyui-models-$project_name-%s-%s/g" $CDK_DIR/lib/ComfyModelsSyncLambda/model_sync.py
     fi
 
     sed -i "s/'Values': \['Comfyui-Cluster.*'\]/'Values': \['$cluster_name'\]/g" $CDK_DIR/lib/ComfyModelsSyncLambda/model_sync.py
-    sed -i "s/s3:\/\/comfyui-models-.*%s-%s/s3:\/\/comfyui-models-$project_name-%s-%s/g" $CDK_DIR/lib/ComfyModelsSyncLambda/model_sync.py
 
     cd $CDK_DIR && cdk deploy $LAMBDA_STACK --require-approval never
     if [ $? -eq 0 ]; then
