@@ -4,6 +4,8 @@ env:
   variables:
     IMAGE_REPO_NAME: comfyui-images
     IMAGE_TAG: latest
+    BASE_IMAGE: nvcr.io/nvidia/cuda:13.0.3-cudnn-runtime-ubuntu24.04
+    BASE_CACHE_REPO: comfyui-base-cache
 
 phases:
   pre_build:
@@ -11,7 +13,19 @@ phases:
       - ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
       - REGION=$AWS_DEFAULT_REGION
       - ECR_URI=${ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com/${IMAGE_REPO_NAME}
+      - BASE_CACHE_URI=${ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com/${BASE_CACHE_REPO}
       - aws ecr get-login-password --region ${REGION} | docker login --username AWS --password-stdin ${ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com
+      - aws ecr describe-repositories --repository-names ${BASE_CACHE_REPO} --region ${REGION} 2>/dev/null || aws ecr create-repository --repository-name ${BASE_CACHE_REPO} --region ${REGION}
+      - |
+        if docker pull ${BASE_CACHE_URI}:latest 2>/dev/null; then
+          echo "Using cached base image from ECR"
+          docker tag ${BASE_CACHE_URI}:latest ${BASE_IMAGE}
+        else
+          echo "Cache miss - pulling from nvcr.io and caching to ECR"
+          docker pull ${BASE_IMAGE}
+          docker tag ${BASE_IMAGE} ${BASE_CACHE_URI}:latest
+          docker push ${BASE_CACHE_URI}:latest
+        fi
   build:
     commands:
       - docker build --platform linux/amd64 -t ${IMAGE_REPO_NAME}:${IMAGE_TAG} .

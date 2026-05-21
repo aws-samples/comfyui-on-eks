@@ -1,4 +1,4 @@
-FROM nvidia/cuda:13.0.3-cudnn-runtime-ubuntu24.04
+FROM nvcr.io/nvidia/cuda:13.0.3-cudnn-runtime-ubuntu24.04
 
 WORKDIR /app
 
