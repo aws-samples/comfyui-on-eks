@@ -13,6 +13,7 @@ import logging
 
 from aiohttp import web
 from server import PromptServer
+import folder_paths
 
 from .model_resolver import ModelResolver
 
@@ -26,6 +27,34 @@ WEB_DIRECTORY = "./web"
 NODE_CLASS_MAPPINGS = {}
 NODE_DISPLAY_NAME_MAPPINGS = {}
 __all__ = ["NODE_CLASS_MAPPINGS", "NODE_DISPLAY_NAME_MAPPINGS", "WEB_DIRECTORY"]
+
+
+# Patch folder_paths.get_filename_list to include catalog entries as virtual files.
+# This allows ComfyUI's server-side combo validation to pass for models that are in
+# our catalog but not yet downloaded — the auto-downloader will fetch them at execution.
+_original_get_filename_list = folder_paths.get_filename_list
+
+def _patched_get_filename_list(folder_name: str) -> list[str]:
+    result = _original_get_filename_list(folder_name)
+    catalog_additions = _get_catalog_filenames(folder_name)
+    if catalog_additions:
+        existing = set(result)
+        for filename in catalog_additions:
+            if filename not in existing:
+                result.append(filename)
+    return result
+
+def _get_catalog_filenames(folder_name: str) -> list[str]:
+    """Return filenames from the catalog that belong to this folder type."""
+    filenames = []
+    prefix = f"{folder_name}/"
+    for key in resolver.catalog:
+        if key.startswith(prefix):
+            filename = key[len(prefix):]
+            filenames.append(filename)
+    return filenames
+
+folder_paths.get_filename_list = _patched_get_filename_list
 
 
 @PromptServer.instance.routes.get("/auto-model-downloader/status")

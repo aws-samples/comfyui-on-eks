@@ -14,6 +14,9 @@ function isModelWidget(widget) {
     if (widget.value && typeof widget.value === "string") {
         return MODEL_EXTENSIONS.some(ext => widget.value.endsWith(ext));
     }
+    if (widget.name && MODEL_EXTENSIONS.some(ext => widget.name.toLowerCase().includes("lora") || widget.name.toLowerCase().includes("ckpt") || widget.name.toLowerCase().includes("model"))) {
+        return true;
+    }
     return false;
 }
 
@@ -25,16 +28,27 @@ function injectMissingModelValues() {
         if (!node.widgets) continue;
         for (const widget of node.widgets) {
             if (!isModelWidget(widget)) continue;
-            if (!widget.value || typeof widget.value !== "string") continue;
 
             const options = widget.options?.values || [];
-            if (options.length === 0 || !options.includes(widget.value)) {
-                if (!options.includes(widget.value)) {
+
+            if (widget.value === null || widget.value === undefined || widget.value === "None") {
+                if (options.length === 0) {
                     if (!widget.options) widget.options = {};
                     if (!widget.options.values) widget.options.values = [];
-                    widget.options.values.push(widget.value);
-                    injected.push({ node: node.id, widget: widget.name, value: widget.value });
+                    widget.options.values.push("None");
+                    widget.value = "None";
+                    injected.push({ node: node.id, widget: widget.name, value: "None" });
                 }
+                continue;
+            }
+
+            if (typeof widget.value !== "string") continue;
+
+            if (options.length === 0 || !options.includes(widget.value)) {
+                if (!widget.options) widget.options = {};
+                if (!widget.options.values) widget.options.values = [];
+                widget.options.values.push(widget.value);
+                injected.push({ node: node.id, widget: widget.name, value: widget.value });
             }
         }
     }
