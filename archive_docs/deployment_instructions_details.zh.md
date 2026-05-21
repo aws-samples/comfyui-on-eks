@@ -1,3 +1,7 @@
+> **已废弃**：此文档已过时，引用了已移除的功能（PROJECT_NAME、本地 Docker 构建、节点上的 S3FullAccess）。当前部署说明请参见 [主 README](../README.zh.md)。自动化部署脚本（`auto_deploy/deploy_infra.sh`）会自动处理以下所有步骤。
+
+---
+
 ### 1. 准备工作
 
 此方案默认你已安装部署好并熟练使用以下工具：

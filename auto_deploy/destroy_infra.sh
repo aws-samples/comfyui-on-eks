@@ -5,11 +5,11 @@ source ./env.sh
 get_stacks_names() {
     echo "==== Start getting CloudFormation Stacks ===="
     all_stacks=$(cd $CDK_DIR && cdk list)
-    export EKS_CLUSTER_STACK=$(echo $all_stacks|grep -o "Comfyui-Cluster[^ ]*")
-    export LAMBDA_STACK=$(echo $all_stacks|grep -o "LambdaModelsSync[^ ]*")
-    export S3_STACK=$(echo $all_stacks|grep -o "S3Storage[^ ]*")
-    export ECR_STACK=$(echo $all_stacks|grep -o "ComfyuiEcrRepo[^ ]*")
-    export CLOUDFRONT_STACK=$(echo $all_stacks|grep -o "CloudFrontEntry[^ ]*")
+    export EKS_CLUSTER_STACK=$(echo $all_stacks|grep -o "ComfyUI-on-EKS-Cluster[^ ]*")
+    export LAMBDA_STACK=$(echo $all_stacks|grep -o "ComfyUI-on-EKS-Models[^ ]*")
+    export S3_STACK=$(echo $all_stacks|grep -o "ComfyUI-on-EKS-S3[^ ]*")
+    export ECR_STACK=$(echo $all_stacks|grep -o "ComfyUI-on-EKS-ECR[^ ]*")
+    export CLOUDFRONT_STACK=$(echo $all_stacks|grep -o "ComfyUI-on-EKS-CloudFront[^ ]*")
     # Print more pretty
     echo "EKS_CLUSTER_STACK : $EKS_CLUSTER_STACK"
     echo "LAMBDA_STACK      : $LAMBDA_STACK"

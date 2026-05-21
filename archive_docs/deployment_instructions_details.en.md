@@ -1,3 +1,7 @@
+> **DEPRECATED**: These instructions are outdated and reference removed features (PROJECT_NAME, local Docker builds, S3FullAccess on nodes). For current deployment instructions, see the [main README](../README.md). The automated deploy script (`auto_deploy/deploy_infra.sh`) handles all steps below automatically.
+
+---
+
 ### 1. Prerequisites
 
 This solution assumes that you have already installed, deployed, and are familiar with the following tools:

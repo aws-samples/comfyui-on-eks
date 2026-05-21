@@ -1,28 +1,23 @@
 import * as cdk from 'aws-cdk-lib';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import { Construct } from 'constructs';
-import { PROJECT_NAME } from '../env'
-
-const project_name = PROJECT_NAME.toLowerCase()
 
 export class S3Storage extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
-    super(scope, id, props);
+    super(scope, id, { ...props, description: 'ComfyUI on EKS - S3 buckets for workflow inputs and image outputs' });
 
-    // Create S3 bucket for outputs
-    const outputs_bucketName = `comfyui-outputs-${project_name}`.replace(/-$/,'') + '-' + this.account + '-' + this.region;
-    const outputs_bucket = new s3.Bucket(this, outputs_bucketName, {
-        bucketName: outputs_bucketName,
-        autoDeleteObjects: true,
-        removalPolicy: cdk.RemovalPolicy.DESTROY,
+    const outputsBucketName = `comfyui-outputs-${this.account}-${this.region}`;
+    new s3.Bucket(this, outputsBucketName, {
+        bucketName: outputsBucketName,
+        removalPolicy: cdk.RemovalPolicy.RETAIN,
+        encryption: s3.BucketEncryption.S3_MANAGED,
     });
 
-    // Create S3 bucket for inputs
-    const inputs_bucketName = `comfyui-inputs-${project_name}`.replace(/-$/,'') + '-' + this.account + '-' + this.region;
-    const inputs_bucket = new s3.Bucket(this, inputs_bucketName, {
-        bucketName: inputs_bucketName,
-        autoDeleteObjects: true,
-        removalPolicy: cdk.RemovalPolicy.DESTROY,
+    const inputsBucketName = `comfyui-inputs-${this.account}-${this.region}`;
+    new s3.Bucket(this, inputsBucketName, {
+        bucketName: inputsBucketName,
+        removalPolicy: cdk.RemovalPolicy.RETAIN,
+        encryption: s3.BucketEncryption.S3_MANAGED,
     });
   }
 }

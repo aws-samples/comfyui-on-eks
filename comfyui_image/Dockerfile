@@ -1,4 +1,4 @@
-FROM nvidia/cuda:12.9.0-cudnn-runtime-ubuntu24.04
+FROM nvidia/cuda:13.0.3-cudnn-runtime-ubuntu24.04
 
 WORKDIR /app
 
@@ -7,11 +7,19 @@ RUN apt-get update && apt-get install -y \
     python3.12 \
     python3-pip
 
-# Python Evn
-RUN pip3 install torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cu128 --break-system-packages
+RUN pip3 install --break-system-packages torch==2.12.0 torchvision==0.27.0 --extra-index-url https://download.pytorch.org/whl/cu130
 RUN git clone https://github.com/comfyanonymous/ComfyUI.git
-RUN cd /app/ComfyUI && git checkout v0.3.40
-RUN pip3 install -r /app/ComfyUI/requirements.txt --break-system-packages
+RUN cd /app/ComfyUI && git checkout v0.21.1
+RUN pip3 install --break-system-packages -r /app/ComfyUI/requirements.txt
+RUN pip3 install --break-system-packages requests
+
+RUN cd /app/ComfyUI/custom_nodes && git clone https://github.com/kijai/ComfyUI-Florence2.git
+RUN pip3 install --break-system-packages -r /app/ComfyUI/custom_nodes/ComfyUI-Florence2/requirements.txt
+
+COPY custom_nodes/comfyui-bedrock /app/ComfyUI/custom_nodes/comfyui-bedrock
+RUN pip3 install --break-system-packages -r /app/ComfyUI/custom_nodes/comfyui-bedrock/requirements.txt
+
+COPY custom_nodes/comfyui-auto-model-downloader /app/ComfyUI/custom_nodes/comfyui-auto-model-downloader
 
 EXPOSE 8848
 CMD ["python3", "-u", "/app/ComfyUI/main.py", "--listen", "0.0.0.0", "--port", "8848"]

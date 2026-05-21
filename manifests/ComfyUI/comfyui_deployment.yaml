@@ -2,6 +2,9 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: comfyui
+  labels:
+    app: comfyui
+    project: comfyui-on-eks
 spec:
   replicas: 1
   selector:
@@ -11,6 +14,7 @@ spec:
     metadata:
       labels:
         app: comfyui
+        project: comfyui-on-eks
     spec:
       volumes:
       - name: stable-diffusion-models
@@ -24,7 +28,7 @@ spec:
           claimName: comfyui-outputs-pvc # Need to apply sd-outputs-s3.yaml first
       containers:
       - name: comfyui
-        image: 123456789012.dkr.ecr.us-west-2.amazonaws.com/comfyui-images:latest
+        image: ACCOUNT_ID.dkr.ecr.REGION.amazonaws.com/comfyui-images:latest
         imagePullPolicy: Always
         ports:
         - containerPort: 8848

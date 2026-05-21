@@ -1,42 +1,36 @@
 [简体中文](./README.zh.md)
 
-> **Notice:** This project is no longer actively maintained. Please try [sample-comfyui-on-hyperpod](https://github.com/aws-samples/sample-comfyui-on-hyperpod) instead.
-
 ## What's this
 
-It's a solution to deploy ComfyUI on Amazon EKS.
+A solution to deploy [ComfyUI](https://github.com/comfyanonymous/ComfyUI) on Amazon EKS with GPU acceleration, auto-scaling, and secure external access via CloudFront.
 
 ## Solution Features
 
-1. **Infrastructure as Code (IaC) Deployment**: We employ a minimalist approach to operations and maintenance. Using [AWS Cloud Development Kit (AWS CDK)](https://aws.amazon.com/cdk/) and [Amazon EKS Blueprints](https://aws-quickstart.github.io/cdk-eks-blueprints/), we manage the [Amazon Elastic Kubernetes Service (Amazon EKS)](https://aws.amazon.com/eks/) clusters that host and run ComfyUI.
-2. **Dynamic Scaling with Karpenter**: Leveraging the capabilities of [Karpenter](https://karpenter.sh/), we customize node scaling strategies to meet business needs.
-3. **Cost Savings with Amazon Spot Instances**: We utilize [Amazon Spot instances](https://aws.amazon.com/ec2/spot/) to reduce the costs of GPU instances.
-4. **Optimized Use of GPU Instance Store**: By fully utilizing the [instance store](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/InstanceStorage.html) of GPU instances, we maximize performance for model loading and switching while minimizing the costs associated with model storage and transfer.
-5. **Direct Image Writing with S3 CSI Driver**: Images generated are directly written to [Amazon S3](https://aws.amazon.com/s3/) using the [S3 CSI driver](https://docs.aws.amazon.com/eks/latest/userguide/s3-csi.html), reducing storage costs.
-6. **Accelerated Dynamic Requests with Amazon CloudFront**: To facilitate the use of the platform by art studios across different regions, we use [Amazon CloudFront](https://aws.amazon.com/cloudfront/) for faster dynamic request processing.
-7. **Serverless Event-Triggered Model Synchronization**: When models are uploaded to or deleted from S3, serverless event triggers activate, syncing the model directory data across worker nodes.
+1. **Infrastructure as Code (IaC) Deployment**: Using [AWS CDK](https://aws.amazon.com/cdk/) and [Amazon EKS Blueprints](https://aws-quickstart.github.io/cdk-eks-blueprints/) to manage the [Amazon EKS](https://aws.amazon.com/eks/) cluster that hosts ComfyUI.
+2. **Dynamic Scaling with Karpenter**: [Karpenter](https://karpenter.sh/) v1.3 provisions GPU nodes on demand, scaling to zero when idle.
+3. **Cost Savings with Amazon Spot Instances**: [Amazon Spot instances](https://aws.amazon.com/ec2/spot/) reduce GPU instance costs (g6.2xlarge / g5.2xlarge).
+4. **Optimized Use of GPU Instance Store**: Models are synced to local [instance store](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/InstanceStorage.html) NVMe for fast loading and switching.
+5. **Direct Image Writing with S3 CSI Driver**: Generated images are written directly to [Amazon S3](https://aws.amazon.com/s3/) using [Mountpoint for S3 CSI driver](https://docs.aws.amazon.com/eks/latest/userguide/s3-csi.html) v2.5.
+6. **Secure Access via CloudFront VPC Origins**: [Amazon CloudFront](https://aws.amazon.com/cloudfront/) connects to the internal ALB via [VPC Origins](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/private-content-vpc-origins.html) — the ALB is never exposed to the internet.
+7. **Serverless Event-Triggered Model Synchronization**: S3 events trigger a Lambda function to sync model files across all GPU nodes via SSM.
+8. **CodeBuild for Builds and Model Downloads**: Container images and model downloads run on [AWS CodeBuild](https://aws.amazon.com/codebuild/) — no local Docker, GPU, disk space, or bandwidth required. Models download at 200+ MiB/s directly from HuggingFace to S3.
+9. **Amazon Bedrock Integration**: Built-in custom nodes for [Amazon Bedrock](https://aws.amazon.com/bedrock/) — text-to-image (Nova Canvas), text-to-video (Nova Reel), upscaling/inpainting (Stability AI), prompt enhancement (Claude, Nova, Qwen3), and image understanding (vision models).
 
 ## Security Considerations
 
-Before proceeding with the deployment, please note the following important security considerations:
-
 1. **Network Access Control**:
-   - The Application Load Balancer (ALB) in this solution is configured for internal access only
-   - Client applications need to establish proper network connectivity to access the service
-   - Appropriate security group configurations are required for successful communication
+   - The ALB is configured as **internal only** and is not reachable from the internet
+   - CloudFront accesses the ALB through VPC Origins (private connectivity)
+   - All resources are deployed in private subnets with NAT gateway egress
 
 2. **Access Security Recommendations**:
-   - It is strongly recommended to implement your own authentication layer in front of the ALB
-   - Consider implementing solutions such as:
-     - AWS Cognito for user authentication
-     - API Gateway with custom authorizers
-     - Your organization's existing authentication system
-   - Implement proper IAM roles and policies for service access
+   - Implement authentication in front of CloudFront (e.g., AWS WAF, Cognito, Lambda@Edge)
+   - Restrict CloudFront access with signed URLs or cookies for production use
+   - All IAM roles follow least-privilege (scoped inline policies, no AdministratorAccess)
 
-3. **Network Requirements**:
-   - Ensure VPC peering or Transit Gateway is configured if accessing from different VPCs
-   - Configure security groups to allow traffic only from trusted sources
-   - Consider using AWS PrivateLink for enhanced security
+3. **Resource Tagging**:
+   - All AWS resources are tagged with `Project: comfyui-on-eks` via CDK global tags
+   - Kubernetes resources use the label `project: comfyui-on-eks`
 
 ## Solution Architecture
 
@@ -52,8 +46,6 @@ The solution's architecture is structured into two distinct phases: the deployme
 4. **Model Sync with Lambda Trigger**: When models are uploaded to or deleted from S3, a Lambda function is triggered to synchronize the models from S3 to the local Instance store on all GPU nodes via SSM commands.
 5. **Output Mapping to S3**: Pods running ComfyUI map the `ComfyUI/output` directory to **S3 for outputs** with PVC (Persistent Volume Claim) methods.
 
-
-
 **User Interaction Phase**
 
 1. **Request Routing**: When a user request reaches the EKS pod through CloudFront --> ALB, the pod first loads the model from the Instance store.
@@ -62,60 +54,297 @@ The solution's architecture is structured into two distinct phases: the deployme
 
 ## Image Generation Demo
 
-Once deployed, you can access and use the ComfyUI frontend directly through a browser by visiting the domain name of CloudFront or the domain name of Kubernetes Ingress.
+Once deployed, you can access and use the ComfyUI frontend directly through a browser by visiting the CloudFront distribution URL.
 
 ![ComfyUI-Web](images/comfyui-web.png)
 
-You can also interact with ComfyUI by saving its workflow as a JSON file that's callable via an API. This method facilitates better integration with your own platforms and systems. For reference on how to make these calls, see the code in `comfyui-on-eks/test/invoke_comfyui_api.py`.
+You can also interact with ComfyUI by saving its workflow as a JSON file that's callable via an API. This method facilitates better integration with your own platforms and systems. For reference on how to make these calls, see the code in `test/invoke_comfyui_api.py`.
 
 ![ComfyUI-API](images/comfyui-api.png)
 
+## Amazon Bedrock Integration
+
+This solution includes custom ComfyUI nodes that connect to [Amazon Bedrock](https://aws.amazon.com/bedrock/) foundation models, enabling cloud-powered image generation, video generation, editing, upscaling, and LLM-based prompt enhancement — all without managing model infrastructure.
+
+The nodes communicate with Bedrock via the GPU node's instance profile. The deploy script automatically attaches an IAM policy granting `bedrock:InvokeModel`, `bedrock:InvokeModelWithResponseStream`, `bedrock:StartAsyncInvoke`, and `bedrock:GetAsyncInvoke` permissions (scoped to the specific model families listed below). No API keys or manual configuration are needed inside ComfyUI.
+
+### Available Nodes
+
+| Node | Category | Description | Use Case |
+|------|----------|-------------|----------|
+| **Bedrock Text (Converse)** | Bedrock | Text generation via Converse API | Prompt enhancement, creative writing |
+| **Bedrock Vision (Converse)** | Bedrock | Image+text understanding via Converse API | Image captioning, scene analysis |
+| **Bedrock Nova Canvas** | Bedrock/Nova Canvas | Image generation and editing | Text-to-image, inpaint, outpaint, background removal, variations |
+| **Bedrock Nova Reel (Video)** | Bedrock/Nova Reel | Text/image-to-video generation | Short video clips with camera motion control |
+| **Bedrock Stability Inpaint** | Bedrock/Stability | Mask-based inpainting | Fill masked regions with generated content |
+| **Bedrock Stability Remove Background** | Bedrock/Stability | Background removal | Extract subjects from images |
+| **Bedrock Stability Upscale** | Bedrock/Stability | Image upscaling (fast/conservative/creative) | Enhance resolution |
+| **Bedrock Stability Control** | Bedrock/Stability | Structure/sketch-guided generation | ControlNet-style depth/edge-guided output |
+| **Bedrock Stability Search & Replace** | Bedrock/Stability | Text-guided object replacement | Replace objects by description |
+| **Bedrock Stability Style Transfer** | Bedrock/Stability | Apply style from reference image | Transfer artistic style |
+
+### Supported Models
+
+**Text/Vision (Converse API)**
+
+| Model ID | Provider | Type |
+|----------|----------|------|
+| `us.amazon.nova-lite-v1:0` | Amazon | Text + Vision |
+| `us.amazon.nova-pro-v1:0` | Amazon | Text + Vision |
+| `anthropic.claude-sonnet-4-6-20250514-v1:0` | Anthropic | Text + Vision |
+| `anthropic.claude-haiku-4-5-20251001-v1:0` | Anthropic | Text + Vision |
+| `qwen.qwen3-235b-a22b-2507-v1:0` | Qwen | Text |
+| `qwen.qwen3-32b-v1:0` | Qwen | Text |
+| `qwen.qwen3-vl-235b-a22b` | Qwen | Vision |
+
+**Image Generation/Editing (InvokeModel API)**
+
+| Model ID | Provider | Capability |
+|----------|----------|------------|
+| `amazon.nova-canvas-v1:0` | Amazon | Text-to-image, inpaint, outpaint, background removal, variations |
+| `stability.stable-image-inpaint-v1:0` | Stability AI | Inpainting |
+| `stability.stable-image-remove-background-v1:0` | Stability AI | Background removal |
+| `stability.stable-image-fast-upscale-v1:0` | Stability AI | Fast upscaling |
+| `stability.stable-image-conservative-upscale-v1:0` | Stability AI | Conservative upscaling |
+| `stability.stable-image-creative-upscale-v1:0` | Stability AI | Creative upscaling |
+| `stability.stable-image-control-structure-v1:0` | Stability AI | Depth/edge-guided generation |
+| `stability.stable-image-control-sketch-v1:0` | Stability AI | Sketch-guided generation |
+| `stability.stable-image-search-and-replace-v1:0` | Stability AI | Object replacement |
+| `stability.stable-image-style-transfer-v1:0` | Stability AI | Style transfer |
+
+**Video Generation (StartAsyncInvoke API)**
+
+| Model ID | Provider | Capability |
+|----------|----------|------------|
+| `amazon.nova-reel-v1:0` | Amazon | Text-to-video, image-to-video (6s clips, 1280x720, 24fps) |
+
+### How Bedrock Access Works
+
+1. The EKS GPU nodes use a Karpenter-managed instance role
+2. During deployment, `deploy_infra.sh` attaches an inline IAM policy (`BedrockInvokeAccess`) to that role:
+   ```json
+   {
+     "Effect": "Allow",
+     "Action": ["bedrock:InvokeModel", "bedrock:InvokeModelWithResponseStream", "bedrock:StartAsyncInvoke", "bedrock:GetAsyncInvoke"],
+     "Resource": [
+       "arn:aws:bedrock:*::foundation-model/qwen.*",
+       "arn:aws:bedrock:*::foundation-model/amazon.nova-*",
+       "arn:aws:bedrock:*::foundation-model/stability.*",
+       "arn:aws:bedrock:*::foundation-model/anthropic.claude-*"
+     ]
+   }
+   ```
+3. ComfyUI pods inherit this permission via the node's instance profile — no credentials or environment variables needed
+4. The custom nodes use `boto3` to call Bedrock APIs directly from within the pod
+
+### Prerequisites
+
+1. Enable the desired model access in the [Bedrock console](https://console.aws.amazon.com/bedrock/home#/modelaccess) (Nova, Stability AI, Claude, and/or Qwen)
+2. For Nova Reel: provide an S3 bucket for video output (the node writes async results to S3)
+3. The deploy script handles all IAM configuration automatically
+
+### Example Workflows
+
+**Prompt Enhancement** — Use the Bedrock Text node with Claude or Nova Lite:
+1. Connect a simple text prompt (e.g., "a cat in a garden")
+2. Set system prompt to "Enhance this prompt for Stable Diffusion with rich visual details"
+3. Connect the output text to the positive prompt of a KSampler node
+
+**Cloud Image Generation** — Use the Nova Canvas node:
+1. Enter a text prompt describing the desired image
+2. Set width/height and cfg_scale
+3. Connect the output IMAGE to a preview or save node
+
+**Upscaling** — Use the Stability Upscale node:
+1. Connect any IMAGE output from your workflow
+2. Select upscale mode (fast, conservative, or creative)
+3. Connect the upscaled IMAGE to a save node
+
+**Video Generation** — Use the Nova Reel node:
+1. Enter a text prompt describing the video scene
+2. Optionally connect an IMAGE as the first frame
+3. Provide an S3 bucket/prefix for the output video
+4. The node returns the S3 URI of the generated .mp4 file (6 seconds, 1280x720, 24fps)
+
 ## Deployment Instructions
 
-You can refer to [detailed instructions](./archive_docs/deployment_instructions_details.en.md) to deploy, or run following automatic deployment scripts on Ubuntu (with larger than 50GB disk space for docker image and models).
+### Prerequisites
 
-### 1. Prerequisites
+- AWS account with sufficient vCPU quota for G instances (at least 8 vCPU for g6.2xlarge/g5.2xlarge)
+- Ubuntu instance with 50GB+ disk space (for automated deployment), or macOS for local CDK operations
+- AWS CLI configured with appropriate permissions
 
-Make sure that you have enough vCPU quota for G instances. (At least 8 vCPU for a g6.2x/g5.2x/g4dn.2x or 4 vCPU for a g6e.x used in this guidance)
-
-```shell
-rm -rf ~/comfyui-on-eks && git clone https://github.com/aws-samples/comfyui-on-eks ~/comfyui-on-eks
-cd ~/comfyui-on-eks && git checkout stable
-region="us-west-2" # Modify the region to your current region
-project="" # [Optional] Default is empty, you can modify the project name to your own
-if [[ x$project == 'x' ]]
-then
-	project_dir="$HOME/comfyui-on-eks"
-else
-	mv $HOME/comfyui-on-eks $HOME/comfyui-on-eks-$project
-	project_dir="$HOME/comfyui-on-eks-$project"
-fi
-sed -i "s/export AWS_DEFAULT_REGION=.*/export AWS_DEFAULT_REGION=$region/g" $project_dir/auto_deploy/env.sh
-sed -i "s/export PROJECT_NAME=.*/export PROJECT_NAME=$project/g" $project_dir/auto_deploy/env.sh
-cd $project_dir
-```
-
-Install needed tools and npm libs by running
+### 1. Clone and prepare
 
 ```shell
-cd $project_dir/auto_deploy/ && bash env_prepare.sh
+git clone https://github.com/aws-samples/comfyui-on-eks ~/comfyui-on-eks
+cd ~/comfyui-on-eks
 ```
 
-### 2. Deploy
+To deploy in a different region, edit `auto_deploy/env.sh`:
+```shell
+export AWS_DEFAULT_REGION="us-west-2"  # Change to your target region
+```
 
-Deploy all resources by running
+To use a non-default AWS profile:
+```shell
+export AWS_PROFILE=your-profile-name
+```
+
+### 2. Install dependencies
 
 ```shell
-source ~/.bashrc && cd $project_dir/auto_deploy/ && bash deploy_infra.sh
+cd ~/comfyui-on-eks/auto_deploy/ && bash env_prepare.sh
 ```
 
-### 3. Delete all resources
+This installs AWS CLI, eksctl, kubectl, Node.js, CDK CLI, and npm packages.
 
-Delete all resources by running
+### 3. Deploy
 
 ```shell
-cd $project_dir/auto_deploy/ && bash destroy_infra.sh
+source ~/.bashrc && cd ~/comfyui-on-eks/auto_deploy/ && bash deploy_infra.sh
 ```
+
+This deploys all stacks in order:
+
+1. EKS cluster
+2. Lambda (model sync)
+3. S3 buckets
+4. ECR + CodeBuild projects
+5. **Tier 1 model download** (blocks until essential models are in S3)
+6. **Full model download** (runs in background via CodeBuild)
+7. Container image build (CodeBuild)
+8. Karpenter node pool
+9. S3 PV/PVC
+10. S3 CSI driver
+11. ComfyUI deployment
+12. CloudFront distribution
+
+### 4. Access
+
+After deployment, access ComfyUI via the CloudFront URL output by the `ComfyUI-on-EKS-CloudFront` stack.
+
+### 5. Delete all resources
+
+```shell
+cd ~/comfyui-on-eks/auto_deploy/ && bash destroy_infra.sh
+```
+
+## Model Management
+
+### How Models Are Loaded
+
+Models are downloaded from HuggingFace and stored in S3 using a dedicated [AWS CodeBuild](https://aws.amazon.com/codebuild/) project (`comfyui-model-download`). This approach has several advantages over downloading locally:
+
+- **Fast**: CodeBuild runs inside AWS with direct network path to both HuggingFace and S3 (200+ MiB/s)
+- **No local resources**: No local disk space or bandwidth required
+- **Reliable**: Built-in retries, up to 4-hour timeout, and skip-if-exists logic
+- **Tiered**: Essential models (Tier 1) download first to unblock deployment; remaining models download in background
+
+### Deployment Flow
+
+```
+deploy_infra.sh
+    |
+    |--> cdk_deploy_ecr()           # Creates CodeBuild projects
+    |--> upload_models_to_s3_tier1() # Triggers CodeBuild (tier1) - BLOCKS
+    |       Downloads: z_image_turbo, qwen_3_4b, ae.safetensors, RealESRGAN
+    |       (~15 GB, takes ~2 minutes)
+    |
+    |--> upload_models_to_s3_all()   # Triggers CodeBuild (all) - BACKGROUND
+    |       Downloads: SD 1.5/XL, Flux, Qwen Image, Wan 2.2, ACE Step, etc.
+    |       (~130 GB, takes ~30 minutes)
+    |
+    |--> deploy_comfyui()            # Pod starts with Tier 1 models ready
+```
+
+### Included Models (~38 files, ~130 GB)
+
+| Category | Models | Used By |
+|----------|--------|---------|
+| **diffusion_models/** | z_image_turbo, flux1-dev-fp8, qwen_image, qwen_image_edit, wan2.2 (i2v high/low noise), acestep_v1.5_turbo, lotus-depth | Templates 01-05, Flux, Qwen, Wan |
+| **text_encoders/** | qwen_3_4b, clip_l, t5xxl_fp16, qwen_2.5_vl_7b, umt5_xxl, qwen_0.6b/4b_ace15 | All workflows |
+| **checkpoints/** | SD 1.5, SDXL base/refiner, DreamShaper 8, SD2 inpainting, SD2.1, SVD, hunyuan_3d_v2.1 | Archived + 3D workflows |
+| **vae/** | ae, vae-ft-mse, qwen_image_vae, wan_2.1_vae, ace_1.5_vae | All workflows |
+| **controlnet/** | scribble, openpose, depth (SD1.5 fp16) | Archived ControlNet workflows |
+| **upscale_models/** | RealESRGAN_x4plus | Image upscale workflows |
+| **loras/** | Qwen Lightning, Wan 2.2 lightx2v, Qwen Edit Lightning | Speed up Qwen/Wan workflows |
+| **model_patches/** | Z-Image-Turbo-Fun-Controlnet-Union | ControlNet for z_image_turbo |
+
+### Adding Custom Models
+
+To add your own models after deployment:
+
+```shell
+# Upload directly to S3 (follows ComfyUI/models directory structure)
+aws s3 cp my-model.safetensors s3://comfyui-models-<ACCOUNT>-<REGION>/checkpoints/
+
+# The Lambda trigger automatically syncs to GPU nodes via SSM
+# Or trigger a manual download via CodeBuild:
+cd test/ && bash download_models_codebuild.sh <region> <profile> all
+```
+
+### Re-running Model Downloads
+
+If you need to re-download models (e.g., after adding new entries to `buildspec_models.yml`):
+
+```shell
+cd ~/comfyui-on-eks/test
+bash download_models_codebuild.sh us-west-2 default all
+```
+
+The CodeBuild job skips models that already exist in S3, so re-runs are safe and only download missing files.
+
+### On-Demand Model Downloads (Auto Model Downloader)
+
+Beyond the pre-loaded models, the solution includes an **auto-download extension** that transparently fetches missing models when a workflow needs them. This means the full catalog of ~90 models is available on demand without pre-loading everything.
+
+**How it works:**
+
+1. User loads any workflow template and clicks "Queue Prompt"
+2. The extension intercepts the prompt, scans for model file references
+3. If models are missing, it shows a download progress notification in the UI
+4. Models are downloaded from S3 (or HuggingFace as fallback) to the local instance store
+5. Dependencies (text encoders, VAEs) are automatically co-downloaded
+6. Once all models are present, the workflow executes automatically
+
+**User experience:** No new nodes to learn, no manual intervention. Workflows that reference models not yet on disk simply take longer on first run, then work instantly on subsequent runs.
+
+**Supported model catalog** (~90 models across 20+ capability groups):
+
+| Group | Capability | Models |
+|-------|-----------|--------|
+| `z_image_turbo` | Fast text-to-image | z_image_turbo + qwen_3_4b + ae VAE |
+| `flux1_dev` | High-quality text-to-image | flux1-dev-fp8 + clip_l + t5xxl |
+| `flux2_dev` | Instruction-based editing | flux2 + mistral_3_small + decoder |
+| `qwen_image` | Qwen text-to-image | qwen_image + qwen_2.5_vl + vae |
+| `qwen_image_edit` | Qwen instruction editing | qwen_image_edit + encoder + vae |
+| `wan22_i2v` | Image-to-video | Wan 2.2 14B i2v (high/low noise) |
+| `wan22_t2v` | Text-to-video | Wan 2.2 14B t2v (high/low noise) |
+| `wan21_vace` | Video inpainting | Wan 2.1 VACE 14B |
+| `ltx23` | LTX video gen + upscale | LTX 2.3 22B + gemma + spatial upscaler |
+| `ltx2_controlnet` | Video ControlNet | LTX 2.0 + canny/depth/pose LoRAs |
+| `ace_step` | Audio generation | ACE Step 1.5 turbo |
+| `capybara` | HunyuanImage | Capybara + qwen_2.5_vl + sigclip |
+| `hunyuan_3d` | 3D model generation | Hunyuan 3D v2.1 |
+| `sd15` | SD 1.5 workflows | SD 1.5 + DreamShaper + MSE VAE |
+| `sdxl` | SDXL workflows | SDXL Base + Refiner |
+
+The catalog is defined in `comfyui_image/custom_nodes/comfyui-auto-model-downloader/model_catalog.json` and can be extended by adding new entries.
+
+## Component Versions
+
+| Component | Version |
+|-----------|---------|
+| Amazon EKS | 1.32 |
+| Karpenter | 1.3.0 |
+| NVIDIA GPU Operator | Latest (driver/toolkit from AMI) |
+| ComfyUI | v0.21.1 |
+| PyTorch | 2.12.0 (CUDA 13.0) |
+| Mountpoint S3 CSI Driver | v2.5.0 |
+| AWS CDK | 2.1109.0 |
+| EKS Blueprints | 1.18.2 |
+| Node AMI | AL2023 GPU (driver 580+) |
 
 ## Cost Analysis
 
@@ -129,47 +358,51 @@ Assuming the following scenario:
 * DTO traffic size is approximately 100GB (96GB + HTTP requests)
 * ComfyUI images of different versions total 20GB
 
-The total cost of deploying this solution in us-west-2 is approximately **$441.878 (using CloudFront for external access) or $442.378 (using ALB for external access)**
+The total cost of deploying this solution in us-west-2 is approximately **$450/month** (varies by instance pricing):
 
-| Service                                | Pricing | Detail                                                       |
-| -------------------------------------- | ------- | ------------------------------------------------------------ |
-| Amazon EKS (Control Plane)             | $73     | Fixed Pricing                                                |
-| Amazon EC2 (ComfyUI-EKS-GPU-Node)      | $193.92 | 1 g5.2xlarge instance (On-Demand)<br />1 x $1.212/h x 8h x 20days/month |
-| Amazon EC2 (Comfyui-EKS-LW-Node)       | $137.68 | 2 t3a.xlarge instance (1yr RI No upfront since it's fixed long running)<br />2 x $68.84/month |
-| Amazon S3 (Standard) for models        | $2.3    | Total models size 100GB x $0.023/GB                          |
-| Amazon S3 (Standard) for output images | $2.208  | 64000 images/month x 1.5MB/image / 1000 x $0.023/GB<br />Rotate all images per month |
-| Amazon ECR                             | $2      | 20GB different versions of images x $0.1/GB                  |
-| AWS ALB                                | $22.27  | 1 ALB $16.43 fixed hourly charges<br />+<br />$0.008/LCU/h x 730h x 1LCU x 1ALB |
-| DTO (use ALB)                          | $9      | 100GB x $0.09/GB                                             |
-| DTO (use CloudFront)                   | $8.5    | 100GB x $0.085/GB                                            |
+| Service | Pricing | Detail |
+| --- | --- | --- |
+| Amazon EKS (Control Plane) | $73 | Fixed Pricing |
+| Amazon EC2 (GPU Node) | $193.92 | 1 g5.2xlarge (On-Demand), 8h/day x 20 days |
+| Amazon EC2 (System Nodes) | $137.68 | 2 t3a.xlarge (1yr RI No Upfront) |
+| Amazon S3 (models) | $2.3 | 100GB x $0.023/GB |
+| Amazon S3 (outputs) | $2.21 | ~96GB/month rotated |
+| Amazon ECR | $2 | 20GB images x $0.1/GB |
+| AWS ALB (internal) | $22.27 | Fixed + LCU charges |
+| Amazon CloudFront | $8.5 | 100GB DTO x $0.085/GB |
+
+## CloudFormation Stacks
+
+| Stack | Description |
+|-------|-------------|
+| `ComfyUI-on-EKS-Cluster` | EKS cluster with GPU nodes and Karpenter autoscaling |
+| `ComfyUI-on-EKS-CloudFront` | CloudFront distribution with VPC origin for secure access |
+| `ComfyUI-on-EKS-Models` | S3 bucket for models and Lambda for sync to GPU nodes |
+| `ComfyUI-on-EKS-S3` | S3 buckets for workflow inputs and image outputs |
+| `ComfyUI-on-EKS-ECR` | ECR repository, CodeBuild for container images, and CodeBuild for model downloads |
 
 ## Change logs
 
+### Major Upgrade -- 2026.05.20
+
+- Upgraded to EKS 1.32 (standard support), Karpenter 1.3.0, PyTorch 2.12.0, ComfyUI v0.21.1
+- Moved container builds to AWS CodeBuild (no local Docker required)
+- Switched to CloudFront VPC Origins (ALB stays internal, never internet-facing)
+- GPU Operator driver/toolkit disabled (pre-installed in AL2023 GPU AMI with NVIDIA 580+)
+- CUDA upgraded from 12.x to 13.0.3
+- S3 CSI driver upgraded to v2.5.0
+- All resources tagged `Project: comfyui-on-eks` via CDK global tags
+- IAM policies scoped to least privilege (removed AdministratorAccess, S3FullAccess on nodes)
+- Removed `PROJECT_NAME` indirection — simplified to single fixed naming convention
+- Added stack descriptions to all CloudFormation stacks
+
 ### Automatic Deployment -- 2024.12.26
 
-Automatic deployment scripts in `comfyui-on-eks/auto_deploy/`, only support Ubuntu now.
+Automatic deployment scripts in `comfyui-on-eks/auto_deploy/`, supports Ubuntu and macOS.
 
-### Flux Support
+### Flux / SD3 / Custom Nodes Support
 
-ComfyUI has already supported Flux, to use Flux with this solution you only need to:
+ComfyUI v0.21.1 supports Flux, Stable Diffusion 3, and custom nodes. To use any model:
 
-1. Build docker image with the latest version of ComfyUI (Already done in [Dockerfile](https://github.com/aws-samples/comfyui-on-eks/blob/main/comfyui_image/Dockerfile))
-2. Download and put Flux models to the corresponding S3 directory. [ComfyUI Flux Examples](https://comfyanonymous.github.io/ComfyUI_examples/flux/)
-
-Use comfyui flux workflow to invoke, just refer to `comfyui-on-eks/test/` folder.
-
-### Custom Nodes Support
-
-Switch to branch [custom_nodes_demo](https://github.com/aws-samples/comfyui-on-eks/tree/custom_nodes_demo) for details.
-
-### Stable Diffusion 3 Support
-
-ComfyUI has already supported Stable Diffusion 3, to use Stable Diffusion 3 with this solution you only need to:
-
-1. Build docker image with the latest version of ComfyUI
-2. Download and put SD3 models to the corresponding S3 directory. [ComfyUI SD3 Examples](https://comfyanonymous.github.io/ComfyUI_examples/sd3/)
-
-Use comfyui sd3 workflow to invoke, just refer to `comfyui-on-eks/test/` folder.
-
-![sd3](images/sd3.png)
-
+1. Upload models to the S3 models bucket following the `ComfyUI/models` directory structure
+2. Use the corresponding workflow JSON via the API (see `test/` folder for examples)

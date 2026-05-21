@@ -1,29 +1,26 @@
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
-import * as iam from 'aws-cdk-lib/aws-iam';
 import * as cloudFront from 'aws-cdk-lib/aws-cloudfront';
 import * as origins from 'aws-cdk-lib/aws-cloudfront-origins';
 import * as elbv2 from 'aws-cdk-lib/aws-elasticloadbalancingv2';
-import * as acm from 'aws-cdk-lib/aws-certificatemanager';
-import * as s3 from 'aws-cdk-lib/aws-s3';
 
 export class CloudFrontEntry extends cdk.Stack {
     constructor(scope: Construct, id: string, props: cdk.StackProps) {
-        super(scope, id, props);
+        super(scope, id, { ...props, description: 'ComfyUI on EKS - CloudFront distribution with VPC origin for secure access' });
 
-        // Get an existing EKS ingress
+        // Get the existing internal ALB created by the EKS ingress controller
         const eksIngress = elbv2.ApplicationLoadBalancer.fromLookup(this, 'eksIngress', {
             loadBalancerTags: {
-                'elbv2.k8s.aws/cluster': 'Comfyui-Cluster',
+                'elbv2.k8s.aws/cluster': 'ComfyUI-on-EKS-Cluster',
                 'ingress.k8s.aws/resource': 'LoadBalancer',
                 'ingress.k8s.aws/stack': 'default/comfyui-ingress',
             }
         })
 
-        // Create a new CloudFront distribution for the EKS ingress
+        // Create a CloudFront distribution using VPC Origin to reach the internal ALB
         const cloudFrontEntry = new cloudFront.Distribution(this, 'cloudFrontEntry', {
             defaultBehavior: {
-                origin: new origins.LoadBalancerV2Origin(eksIngress, {
+                origin: origins.VpcOrigin.withApplicationLoadBalancer(eksIngress, {
                     protocolPolicy: cloudFront.OriginProtocolPolicy.HTTP_ONLY,
                 }),
                 originRequestPolicy: cloudFront.OriginRequestPolicy.ALL_VIEWER,

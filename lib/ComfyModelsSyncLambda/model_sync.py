@@ -39,7 +39,7 @@ def get_all_gpu_instances():
             },
             {
                 'Name': 'tag:aws:eks:cluster-name',
-                'Values': ['Comfyui-Cluster']
+                'Values': ['ComfyUI-on-EKS-Cluster']
             },
             {
                 'Name': 'tag:karpenter.sh/nodepool',
