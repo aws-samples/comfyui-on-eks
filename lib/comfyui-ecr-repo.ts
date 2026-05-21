@@ -40,6 +40,10 @@ export class ComfyuiEcrRepo extends cdk.Stack {
                             actions: ['logs:CreateLogGroup', 'logs:CreateLogStream', 'logs:PutLogEvents'],
                             resources: ['*'],
                         }),
+                        new iam.PolicyStatement({
+                            actions: ['ecr:CreateRepository'],
+                            resources: ['*'],
+                        }),
                     ],
                 }),
             },

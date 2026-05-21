@@ -2,12 +2,56 @@ import { app } from "../../scripts/app.js";
 import { api } from "../../scripts/api.js";
 
 const POLL_INTERVAL = 5000;
+const MODEL_EXTENSIONS = [".safetensors", ".ckpt", ".pt", ".pth", ".bin"];
+const MODEL_WIDGET_TYPES = [
+    "ckpt_name", "unet_name", "clip_name", "clip_name1", "clip_name2", "clip_name3",
+    "vae_name", "lora_name", "control_net_name", "model_name", "style_model_name",
+    "gligen_name", "clip_vision"
+];
+
+function isModelWidget(widget) {
+    if (MODEL_WIDGET_TYPES.includes(widget.name)) return true;
+    if (widget.value && typeof widget.value === "string") {
+        return MODEL_EXTENSIONS.some(ext => widget.value.endsWith(ext));
+    }
+    return false;
+}
+
+function injectMissingModelValues() {
+    const injected = [];
+    const nodes = app.graph._nodes || [];
+
+    for (const node of nodes) {
+        if (!node.widgets) continue;
+        for (const widget of node.widgets) {
+            if (!isModelWidget(widget)) continue;
+            if (!widget.value || typeof widget.value !== "string") continue;
+
+            const options = widget.options?.values || [];
+            if (options.length === 0 || !options.includes(widget.value)) {
+                if (!options.includes(widget.value)) {
+                    if (!widget.options) widget.options = {};
+                    if (!widget.options.values) widget.options.values = [];
+                    widget.options.values.push(widget.value);
+                    injected.push({ node: node.id, widget: widget.name, value: widget.value });
+                }
+            }
+        }
+    }
+    return injected;
+}
 
 app.registerExtension({
     name: "comfyui-auto-model-downloader",
 
     async setup() {
         const originalQueuePrompt = api.queuePrompt.bind(api);
+
+        const originalGraphToPrompt = app.graphToPrompt.bind(app);
+        app.graphToPrompt = async function() {
+            injectMissingModelValues();
+            return originalGraphToPrompt();
+        };
 
         api.queuePrompt = async function(number, { output, workflow }) {
             const result = await checkMissingModels(output);
@@ -31,6 +75,7 @@ app.registerExtension({
                 const ready = await waitForDownloads(result.missing);
                 if (ready) {
                     hideDownloadNotification();
+                    refreshModelWidgets();
                     return originalQueuePrompt(number, { output, workflow });
                 } else {
                     hideDownloadNotification();
@@ -43,6 +88,19 @@ app.registerExtension({
         };
     }
 });
+
+function refreshModelWidgets() {
+    const nodes = app.graph._nodes || [];
+    for (const node of nodes) {
+        if (node.widgets) {
+            for (const widget of node.widgets) {
+                if (isModelWidget(widget) && widget.callback) {
+                    try { widget.callback(widget.value); } catch(e) {}
+                }
+            }
+        }
+    }
+}
 
 async function checkMissingModels(prompt, useBedrock = false, forceDownload = false) {
     try {

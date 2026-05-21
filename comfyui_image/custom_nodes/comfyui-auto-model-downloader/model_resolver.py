@@ -115,6 +115,12 @@ class ModelResolver:
                 return alt_key
         return model_key
 
+    _MODEL_EXTENSIONS = (".safetensors", ".ckpt", ".pt", ".pth", ".bin")
+    _FALLBACK_FOLDERS = [
+        "loras", "checkpoints", "diffusion_models", "text_encoders",
+        "vae", "controlnet", "clip_vision", "upscale_models", "model_patches",
+    ]
+
     def find_missing_models(self, prompt: dict) -> list[str]:
         """Scan a ComfyUI prompt dict for model references and return missing ones."""
         missing = []
@@ -122,9 +128,11 @@ class ModelResolver:
             inputs = node_data.get("inputs", {})
             class_type = node_data.get("class_type", "")
 
+            handled_fields = set()
             for field, folder_type in NODE_INPUT_MODEL_FIELDS.items():
                 if field not in inputs:
                     continue
+                handled_fields.add(field)
                 value = inputs[field]
                 if not isinstance(value, str) or not value:
                     continue
@@ -141,6 +149,19 @@ class ModelResolver:
                         "Workflow may fail if the file is not already on disk.",
                         model_key
                     )
+
+            for field, value in inputs.items():
+                if field in handled_fields:
+                    continue
+                if not isinstance(value, str) or not value:
+                    continue
+                if not any(value.endswith(ext) for ext in self._MODEL_EXTENSIONS):
+                    continue
+                for folder in self._FALLBACK_FOLDERS:
+                    candidate = f"{folder}/{value}"
+                    if candidate in self.catalog and not self.is_model_available(candidate):
+                        missing.append(candidate)
+                        break
 
         return list(set(missing))
 

@@ -251,7 +251,7 @@
     "url": "https://huggingface.co/Comfy-Org/flux2-dev/resolve/main/split_files/diffusion_models/flux2_dev_fp8mixed.safetensors?download=true",
     "size_gb": 24.0,
     "group": "flux2_dev",
-    "requires": ["text_encoders/mistral_3_small_flux2_bf16.safetensors", "vae/full_encoder_small_decoder.safetensors"]
+    "requires": ["text_encoders/mistral_3_small_flux2_bf16.safetensors", "vae/full_encoder_small_decoder.safetensors", "loras/Flux_2-Turbo-LoRA_comfyui.safetensors"]
   },
   "text_encoders/mistral_3_small_flux2_bf16.safetensors": {
     "url": "https://huggingface.co/Comfy-Org/flux2-dev/resolve/main/split_files/text_encoders/mistral_3_small_flux2_bf16.safetensors?download=true",
