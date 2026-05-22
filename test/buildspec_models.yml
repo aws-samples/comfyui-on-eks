@@ -138,6 +138,16 @@ phases:
         download "checkpoints/hunyuan_3d_v2.1.safetensors" \
           "https://huggingface.co/Comfy-Org/hunyuan3D_2.1_repackaged/resolve/main/hunyuan_3d_v2.1.safetensors?download=true"
 
+        echo "=== Flux 2 Dev ==="
+        download "diffusion_models/flux2_dev_fp8mixed.safetensors" \
+          "https://huggingface.co/Comfy-Org/flux2-dev/resolve/main/split_files/diffusion_models/flux2_dev_fp8mixed.safetensors?download=true"
+        download "text_encoders/mistral_3_small_flux2_bf16.safetensors" \
+          "https://huggingface.co/Comfy-Org/flux2-dev/resolve/main/split_files/text_encoders/mistral_3_small_flux2_bf16.safetensors?download=true"
+        download "vae/full_encoder_small_decoder.safetensors" \
+          "https://huggingface.co/black-forest-labs/FLUX.2-small-decoder/resolve/main/full_encoder_small_decoder.safetensors?download=true"
+        download "loras/Flux_2-Turbo-LoRA_comfyui.safetensors" \
+          "https://huggingface.co/ByteZSzn/Flux.2-Turbo-ComfyUI/resolve/main/Flux_2-Turbo-LoRA_comfyui.safetensors?download=true"
+
         echo "=== All downloads complete ==="
 
   post_build:

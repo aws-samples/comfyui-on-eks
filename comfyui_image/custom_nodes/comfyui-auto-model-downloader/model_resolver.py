@@ -120,6 +120,7 @@ class ModelResolver:
         "loras", "checkpoints", "diffusion_models", "text_encoders",
         "vae", "controlnet", "clip_vision", "upscale_models", "model_patches",
     ]
+    _BUILTIN_SENTINELS = {"pixel_space", "put_here"}
 
     def find_missing_models(self, prompt: dict) -> list[str]:
         """Scan a ComfyUI prompt dict for model references and return missing ones."""
@@ -136,7 +137,7 @@ class ModelResolver:
                 value = inputs[field]
                 if not isinstance(value, str) or not value:
                     continue
-                if value == "put_here" or value.startswith("["):
+                if value in self._BUILTIN_SENTINELS or value.startswith("["):
                     continue
 
                 model_key = f"{folder_type}/{value}"
