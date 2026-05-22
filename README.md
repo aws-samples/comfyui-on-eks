@@ -87,17 +87,19 @@ The nodes communicate with Bedrock via the GPU node's instance profile. The depl
 
 ### Supported Models
 
-**Text/Vision (Converse API)**
+> For a complete list of all Bedrock nodes, models, and parameters, see the [Bedrock Nodes README](comfyui_image/custom_nodes/comfyui-bedrock/README.md).
 
-| Model ID | Provider | Type |
+**Text/Vision (Converse API)** — accessible via the "Bedrock Text (Converse)" and "Bedrock Vision (Converse)" nodes:
+
+| Provider | Model ID | Type |
 |----------|----------|------|
-| `us.amazon.nova-lite-v1:0` | Amazon | Text + Vision |
-| `us.amazon.nova-pro-v1:0` | Amazon | Text + Vision |
-| `anthropic.claude-sonnet-4-6-20250514-v1:0` | Anthropic | Text + Vision |
-| `anthropic.claude-haiku-4-5-20251001-v1:0` | Anthropic | Text + Vision |
-| `qwen.qwen3-235b-a22b-2507-v1:0` | Qwen | Text |
-| `qwen.qwen3-32b-v1:0` | Qwen | Text |
-| `qwen.qwen3-vl-235b-a22b` | Qwen | Vision |
+| Amazon | `us.amazon.nova-lite-v1:0`, `us.amazon.nova-pro-v1:0`, `us.amazon.nova-micro-v1:0` | Text + Vision |
+| Anthropic | `us.anthropic.claude-opus-4-7`, `us.anthropic.claude-sonnet-4-6`, `us.anthropic.claude-haiku-4-5-20251001-v1:0` | Text + Vision |
+| DeepSeek | `us.deepseek.r1-v1:0` | Text |
+| Meta | `us.meta.llama4-scout-17b-instruct-v1:0`, `us.meta.llama4-maverick-17b-instruct-v1:0`, `us.meta.llama3-3-70b-instruct-v1:0` | Text + Vision |
+| Mistral | `mistral.mistral-large-3-675b-instruct`, `us.mistral.pixtral-large-2502-v1:0` | Text + Vision |
+| Google | `google.gemma-3-27b-it`, `google.gemma-3-12b-it` | Vision |
+| Qwen | `qwen.qwen3-235b-a22b-2507-v1:0`, `qwen.qwen3-32b-v1:0`, `qwen.qwen3-vl-235b-a22b` | Text + Vision |
 
 **Image Generation/Editing (InvokeModel API)**
 
