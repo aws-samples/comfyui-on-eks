@@ -75,4 +75,8 @@ spec:
     aws s3 cp ${bucket}/vae/ae.safetensors /comfyui-models/vae/ &
     aws s3 cp ${bucket}/upscale_models/RealESRGAN_x4plus.safetensors /comfyui-models/upscale_models/ &
     aws s3 cp ${bucket}/checkpoints/DreamShaper_8_pruned.safetensors /comfyui-models/checkpoints/ &
+    aws s3 cp ${bucket}/diffusion_models/flux2_dev_fp8mixed.safetensors /comfyui-models/diffusion_models/ &
+    aws s3 cp ${bucket}/text_encoders/mistral_3_small_flux2_bf16.safetensors /comfyui-models/text_encoders/ &
+    aws s3 cp ${bucket}/vae/full_encoder_small_decoder.safetensors /comfyui-models/vae/ &
+    aws s3 cp ${bucket}/loras/Flux_2-Turbo-LoRA_comfyui.safetensors /comfyui-models/loras/ &
     wait

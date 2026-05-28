@@ -20,6 +20,237 @@ function isModelWidget(widget) {
     return false;
 }
 
+function fixSubgraphModelDefaults(node) {
+    if (!node.widgets) return;
+
+    const subgraph = node.subgraph;
+    const proxyWidgets = node.properties?.proxyWidgets;
+    if (!subgraph && !proxyWidgets) return;
+
+    for (let i = 0; i < node.widgets.length; i++) {
+        const widget = node.widgets[i];
+
+        let innerNodeId = null;
+        let innerWidgetName = null;
+
+        if (widget.sourceNodeId && widget.sourceWidgetName) {
+            innerNodeId = widget.sourceNodeId;
+            innerWidgetName = widget.sourceWidgetName;
+        } else if (proxyWidgets && i < proxyWidgets.length) {
+            [innerNodeId, innerWidgetName] = proxyWidgets[i];
+        }
+
+        if (!innerNodeId || !innerWidgetName) continue;
+        if (!MODEL_WIDGET_TYPES.includes(innerWidgetName)) continue;
+
+        let innerValue = null;
+
+        if (subgraph) {
+            const nodesById = subgraph._nodes_by_id || {};
+            const innerNode = nodesById[innerNodeId] || nodesById[String(innerNodeId)];
+            if (innerNode?.widgets) {
+                const innerWidget = innerNode.widgets.find(w => w.name === innerWidgetName);
+                if (innerWidget && typeof innerWidget.value === "string") {
+                    innerValue = innerWidget.value;
+                }
+            }
+        }
+
+        if (!innerValue) {
+            const defs = app.graph?.extra?.definitions?.subgraphs
+                || app.graph?._extra_data?.definitions?.subgraphs || [];
+            const sgDef = defs.find(sg => sg.id === node.type);
+            if (sgDef) {
+                const innerNodeDef = sgDef.nodes?.find(
+                    n => String(n.id) === String(innerNodeId)
+                );
+                if (innerNodeDef?.widgets_values) {
+                    const widgetIdx = getWidgetValueIndex(innerNodeDef.type, innerWidgetName);
+                    const val = innerNodeDef.widgets_values[widgetIdx];
+                    if (val && typeof val === "string") {
+                        innerValue = val;
+                    }
+                }
+            }
+        }
+
+        if (!innerValue || typeof innerValue !== "string") continue;
+        if (!MODEL_EXTENSIONS.some(ext => innerValue.endsWith(ext))) continue;
+        if (widget.value === innerValue) continue;
+
+        if (!widget.options) widget.options = {};
+        if (!widget.options.values) widget.options.values = [];
+        if (!widget.options.values.includes(innerValue)) {
+            widget.options.values.push(innerValue);
+        }
+        widget.value = innerValue;
+    }
+}
+
+function getWidgetValueIndex(nodeType, widgetName) {
+    const widgetOrder = {
+        "UNETLoader": ["unet_name", "weight_dtype"],
+        "CLIPLoader": ["clip_name", "type", "device"],
+        "DualCLIPLoader": ["clip_name1", "clip_name2", "type"],
+        "VAELoader": ["vae_name"],
+        "LoraLoader": ["lora_name", "strength_model", "strength_clip"],
+        "LoraLoaderModelOnly": ["lora_name", "strength_model"],
+        "CheckpointLoaderSimple": ["ckpt_name"],
+    };
+    const order = widgetOrder[nodeType];
+    if (order) return order.indexOf(widgetName);
+    return 0;
+}
+
+function fixExpandedPromptFromSubgraphNodes(output) {
+    const nodes = app.graph?._nodes || [];
+    const subgraphNodes = nodes.filter(n => n.isSubgraphNode?.() && n.subgraph);
+    if (subgraphNodes.length === 0) {
+        console.log("[AMD] No subgraph nodes with live subgraphs found");
+        return;
+    }
+
+    const widgetOrder = {
+        "UNETLoader": ["unet_name", "weight_dtype"],
+        "CLIPLoader": ["clip_name", "type", "device"],
+        "DualCLIPLoader": ["clip_name1", "clip_name2", "type"],
+        "VAELoader": ["vae_name"],
+        "LoraLoader": ["lora_name", "strength_model", "strength_clip"],
+        "LoraLoaderModelOnly": ["lora_name", "strength_model"],
+        "CheckpointLoaderSimple": ["ckpt_name"],
+    };
+
+    let fixed = 0;
+    for (const sgNode of subgraphNodes) {
+        const sgId = String(sgNode.id);
+        const innerNodes = sgNode.subgraph._nodes || [];
+
+        for (const innerNode of innerNodes) {
+            const classType = innerNode.type;
+            const order = widgetOrder[classType];
+            if (!order) continue;
+
+            // The expanded prompt node ID is "sgId:innerNodeId"
+            const expandedId = `${sgId}:${innerNode.id}`;
+            const nodeData = output[expandedId];
+            if (!nodeData) continue;
+
+            const inputs = nodeData.inputs || {};
+            const innerWidgets = innerNode.widgets || [];
+
+            for (let i = 0; i < order.length; i++) {
+                const fieldName = order[i];
+                if (!MODEL_WIDGET_TYPES.includes(fieldName)) continue;
+
+                // Get the inner widget's actual value
+                const innerWidget = innerWidgets.find(w => w.name === fieldName);
+                if (!innerWidget) continue;
+                const intendedValue = innerWidget.value;
+                if (!intendedValue || typeof intendedValue !== "string") continue;
+                if (!MODEL_EXTENSIONS.some(ext => intendedValue.endsWith(ext))) continue;
+
+                const currentValue = inputs[fieldName];
+                if (currentValue === intendedValue) continue;
+
+                console.log(`[AMD] Fixing ${classType} node ${expandedId}: ${fieldName} "${currentValue}" -> "${intendedValue}"`);
+                inputs[fieldName] = intendedValue;
+                fixed++;
+            }
+        }
+    }
+    console.log(`[AMD] fixExpandedPromptFromSubgraphNodes: fixed ${fixed} fields`);
+}
+
+function fixExpandedPromptFromDefinitions(output, workflow, liveDefs) {
+    const defs = liveDefs && liveDefs.length > 0
+        ? liveDefs
+        : (workflow?.extra?.definitions?.subgraphs || []);
+    console.log("[AMD] fixExpandedPrompt: defs count =", defs.length);
+
+    if (defs.length === 0) {
+        fixExpandedPromptByClassType(output);
+        return;
+    }
+
+    const defNodeMap = new Map();
+    for (const sg of defs) {
+        for (const n of sg.nodes || []) {
+            defNodeMap.set(String(n.id), n);
+        }
+    }
+
+    const widgetOrder = {
+        "UNETLoader": ["unet_name", "weight_dtype"],
+        "CLIPLoader": ["clip_name", "type", "device"],
+        "DualCLIPLoader": ["clip_name1", "clip_name2", "type"],
+        "VAELoader": ["vae_name"],
+        "LoraLoader": ["lora_name", "strength_model", "strength_clip"],
+        "LoraLoaderModelOnly": ["lora_name", "strength_model"],
+        "CheckpointLoaderSimple": ["ckpt_name"],
+    };
+
+    let fixed = 0;
+    for (const [nodeId, nodeData] of Object.entries(output)) {
+        const classType = nodeData.class_type;
+        if (!classType) continue;
+        const order = widgetOrder[classType];
+        if (!order) continue;
+
+        // Try matching nodeId directly, or strip prefix (e.g. "139:129" -> "129")
+        let defNode = defNodeMap.get(nodeId);
+        if (!defNode) {
+            const colonIdx = nodeId.lastIndexOf(":");
+            if (colonIdx >= 0) {
+                defNode = defNodeMap.get(nodeId.substring(colonIdx + 1));
+            }
+        }
+        if (!defNode || !defNode.widgets_values) continue;
+        if (defNode.type !== classType) continue;
+
+        const inputs = nodeData.inputs || {};
+        for (let i = 0; i < order.length; i++) {
+            const fieldName = order[i];
+            if (!MODEL_WIDGET_TYPES.includes(fieldName)) continue;
+            if (i >= defNode.widgets_values.length) continue;
+
+            const intendedValue = defNode.widgets_values[i];
+            if (!intendedValue || typeof intendedValue !== "string") continue;
+            if (!MODEL_EXTENSIONS.some(ext => intendedValue.endsWith(ext))) continue;
+
+            const currentValue = inputs[fieldName];
+            if (currentValue === intendedValue) continue;
+            if (typeof currentValue === "string") {
+                console.log(`[AMD] Fixing ${classType} node ${nodeId}: ${fieldName} "${currentValue}" -> "${intendedValue}"`);
+                inputs[fieldName] = intendedValue;
+                fixed++;
+            }
+        }
+    }
+    console.log("[AMD] fixExpandedPrompt: fixed", fixed, "fields");
+}
+
+function fixExpandedPromptByClassType(output) {
+    const modelLoaderNodes = {};
+    for (const [nodeId, nodeData] of Object.entries(output)) {
+        const ct = nodeData.class_type;
+        if (ct === "UNETLoader" || ct === "CLIPLoader" || ct === "VAELoader" ||
+            ct === "DualCLIPLoader" || ct === "LoraLoaderModelOnly" || ct === "CheckpointLoaderSimple") {
+            if (!modelLoaderNodes[ct]) modelLoaderNodes[ct] = [];
+            modelLoaderNodes[ct].push({ nodeId, inputs: nodeData.inputs || {} });
+        }
+    }
+    console.log("[AMD] Model loader nodes found:", Object.keys(modelLoaderNodes).map(k => `${k}:${modelLoaderNodes[k].length}`));
+}
+
+function fixAllSubgraphModelDefaults() {
+    const nodes = app.graph?._nodes || [];
+    for (const node of nodes) {
+        if (node.isSubgraphNode?.()) {
+            fixSubgraphModelDefaults(node);
+        }
+    }
+}
+
 function injectMissingModelValues() {
     const injected = [];
     const nodes = app.graph._nodes || [];
@@ -58,16 +289,36 @@ function injectMissingModelValues() {
 app.registerExtension({
     name: "comfyui-auto-model-downloader",
 
+    afterConfigureGraph() {
+        fixAllSubgraphModelDefaults();
+    },
+
+    nodeCreated(node) {
+        if (node.isSubgraphNode?.()) {
+            setTimeout(() => fixSubgraphModelDefaults(node), 0);
+        }
+    },
+
     async setup() {
         const originalQueuePrompt = api.queuePrompt.bind(api);
 
         const originalGraphToPrompt = app.graphToPrompt.bind(app);
         app.graphToPrompt = async function() {
+            fixAllSubgraphModelDefaults();
             injectMissingModelValues();
-            return originalGraphToPrompt();
+            const result = await originalGraphToPrompt();
+            const defs = app.graph?.extra?.definitions;
+            if (defs && result.workflow) {
+                if (!result.workflow.extra) result.workflow.extra = {};
+                if (!result.workflow.extra.definitions) {
+                    result.workflow.extra.definitions = defs;
+                }
+            }
+            return result;
         };
 
         api.queuePrompt = async function(number, { output, workflow }) {
+            fixExpandedPromptFromSubgraphNodes(output);
             const result = await checkMissingModels(output);
 
             if (result.status === "ready") {
@@ -102,6 +353,7 @@ app.registerExtension({
         };
     }
 });
+
 
 function refreshModelWidgets() {
     const nodes = app.graph._nodes || [];

@@ -21,5 +21,7 @@ RUN pip3 install --break-system-packages -r /app/ComfyUI/custom_nodes/comfyui-be
 
 COPY custom_nodes/comfyui-auto-model-downloader /app/ComfyUI/custom_nodes/comfyui-auto-model-downloader
 
+RUN mkdir -p /app/ComfyUI/output/video
+
 EXPOSE 8848
 CMD ["python3", "-u", "/app/ComfyUI/main.py", "--listen", "0.0.0.0", "--port", "8848"]
