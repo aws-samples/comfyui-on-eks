@@ -21,7 +21,10 @@ export class CloudFrontEntry extends cdk.Stack {
         const cloudFrontEntry = new cloudFront.Distribution(this, 'cloudFrontEntry', {
             defaultBehavior: {
                 origin: origins.VpcOrigin.withApplicationLoadBalancer(eksIngress, {
-                    protocolPolicy: cloudFront.OriginProtocolPolicy.HTTPS_ONLY,
+                    // HTTP_ONLY is acceptable here: VPC Origins use AWS PrivateLink,
+                    // so traffic between CloudFront and the ALB never traverses the
+                    // public internet. HTTPS would require ACM Private CA ($400/month).
+                    protocolPolicy: cloudFront.OriginProtocolPolicy.HTTP_ONLY,
                 }),
                 originRequestPolicy: cloudFront.OriginRequestPolicy.ALL_VIEWER,
                 cachePolicy: cloudFront.CachePolicy.CACHING_DISABLED,
