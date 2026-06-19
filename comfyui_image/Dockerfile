@@ -15,7 +15,7 @@ RUN apt-get update && \
     python3-pip \
     && rm -rf /var/lib/apt/lists/*
 
-RUN pip3 install --break-system-packages --upgrade pip setuptools wheel
+RUN pip3 install --break-system-packages --upgrade --force-reinstall pip setuptools wheel
 RUN pip3 install --break-system-packages torch==2.12.0 torchvision==0.27.0 --extra-index-url https://download.pytorch.org/whl/cu130
 RUN git clone https://github.com/comfyanonymous/ComfyUI.git
 RUN cd /app/ComfyUI && git checkout v0.21.1
