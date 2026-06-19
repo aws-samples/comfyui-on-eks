@@ -43,7 +43,7 @@ spec:
   blockDeviceMappings:
   - deviceName: /dev/xvda
     ebs:
-      volumeSize: 100Gi
+      volumeSize: 200Gi
       volumeType: gp3
   role: ComfyUI-on-EKS-Cluster-ComfyUIonEKSClusterkarpenter-sc64ccixfE9m
   securityGroupSelectorTerms:
