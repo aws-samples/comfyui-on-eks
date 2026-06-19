@@ -74,6 +74,47 @@ prepare_eks_env() {
     echo "==== Finish preparing EKS environment ===="
 }
 
+upgrade_nodegroup_version() {
+    echo "==== Start upgrading managed node group ===="
+    CONTROL_PLANE_VERSION=$(aws eks describe-cluster --name $EKS_CLUSTER_STACK --query 'cluster.version' --output text)
+    NODEGROUP_VERSION=$(aws eks describe-nodegroup --cluster-name $EKS_CLUSTER_STACK --nodegroup-name comfyui-on-eks-mng-lw --query 'nodegroup.version' --output text)
+
+    echo "Control plane version: $CONTROL_PLANE_VERSION"
+    echo "Node group version:    $NODEGROUP_VERSION"
+
+    # Step through each minor version until node group matches control plane
+    while [ "$NODEGROUP_VERSION" != "$CONTROL_PLANE_VERSION" ]; do
+        MAJOR=$(echo $NODEGROUP_VERSION | cut -d. -f1)
+        MINOR=$(echo $NODEGROUP_VERSION | cut -d. -f2)
+        NEXT_MINOR=$((MINOR + 1))
+        TARGET_VERSION="${MAJOR}.${NEXT_MINOR}"
+
+        # Don't overshoot the control plane
+        if [ "$NEXT_MINOR" -gt "$(echo $CONTROL_PLANE_VERSION | cut -d. -f2)" ]; then
+            break
+        fi
+
+        echo "Upgrading node group: $NODEGROUP_VERSION -> $TARGET_VERSION"
+        aws eks update-nodegroup-version \
+            --cluster-name $EKS_CLUSTER_STACK \
+            --nodegroup-name comfyui-on-eks-mng-lw \
+            --kubernetes-version $TARGET_VERSION
+
+        echo "  Waiting for node group upgrade to complete (this takes ~10-15 min)..."
+        aws eks wait nodegroup-active --cluster-name $EKS_CLUSTER_STACK --nodegroup-name comfyui-on-eks-mng-lw
+        if [ $? -ne 0 ]; then
+            echo "Node group upgrade to $TARGET_VERSION failed"
+            exit 1
+        fi
+
+        NODEGROUP_VERSION=$(aws eks describe-nodegroup --cluster-name $EKS_CLUSTER_STACK --nodegroup-name comfyui-on-eks-mng-lw --query 'nodegroup.version' --output text)
+        echo "  Node group now at: $NODEGROUP_VERSION"
+    done
+
+    echo "Node group is at $NODEGROUP_VERSION (matches control plane)"
+    echo "==== Finish upgrading managed node group ===="
+}
+
 cdk_deploy_lambda() {
     echo "==== Start deploying Models (Lambda + S3) ===="
     cd $CDK_DIR && cdk deploy $LAMBDA_STACK --require-approval never
@@ -306,6 +347,7 @@ start_time=$(date +%s)
 get_stacks_names
 cdk_deploy_eks_cluster
 prepare_eks_env
+upgrade_nodegroup_version
 cdk_deploy_lambda
 cdk_deploy_s3
 cdk_deploy_ecr
