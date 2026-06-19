@@ -240,6 +240,13 @@ deploy_s3_pv_pvc() {
 }
 
 
+deploy_security_policies() {
+    echo "==== Start deploying security policies ===="
+    kubectl apply -f $CDK_DIR/manifests/PodSecurity/
+    kubectl apply -f $CDK_DIR/manifests/NetworkPolicy/
+    echo "==== Finish deploying security policies ===="
+}
+
 deploy_comfyui() {
     echo "==== Start deploying ComfyUI ===="
     kubectl delete -f $CDK_DIR/manifests/ComfyUI/ --ignore-not-found
@@ -308,6 +315,7 @@ build_and_push_comfyui_image
 deploy_karpenter
 deploy_pod_identity
 deploy_s3_pv_pvc
+deploy_security_policies
 deploy_comfyui
 wait_for_comfyui_ready
 cdk_deploy_cloudfront
