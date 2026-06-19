@@ -42,10 +42,12 @@ export class LambdaModelsSync extends cdk.Stack {
                     }),
                     new iam.PolicyStatement({
                         actions: ['ssm:GetCommandInvocation'],
+                        // ssm:GetCommandInvocation does not support resource-level permissions
                         resources: ['*'],
                     }),
                     new iam.PolicyStatement({
                         actions: ['ec2:DescribeInstances'],
+                        // ec2:DescribeInstances does not support resource-level permissions
                         resources: ['*'],
                     }),
                     new iam.PolicyStatement({

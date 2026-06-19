@@ -64,12 +64,13 @@ def get_all_gpu_instances():
     return instance_ids
 
 # Sync models to all GPU instances
+# S3 bucket is created by the same CDK stack — not user-provided, mitigating bucket squatting
 def sync_models_to_gpu_instances(instance_ids):
     ssm = boto3.client('ssm')
     response = ssm.send_command(
         InstanceIds=instance_ids,
         DocumentName="AWS-RunShellScript",
-        Parameters={'commands': ['aws s3 sync %s/* %s' % (S3_BUCKET, NODE_DIR)]}
+        Parameters={'commands': ['aws s3 sync --checksum-mode ENABLED %s/* %s' % (S3_BUCKET, NODE_DIR)]}
     )
     return response
 
@@ -79,7 +80,7 @@ def sync_single_model_to_gpu_instances(instance_ids, model_key):
     response = ssm.send_command(
         InstanceIds=instance_ids,
         DocumentName="AWS-RunShellScript",
-        Parameters={'commands': ['aws s3 cp %s/%s %s/%s' % (S3_BUCKET, model_key, NODE_DIR, model_key)]}
+        Parameters={'commands': ['aws s3 cp --checksum-mode ENABLED %s/%s %s/%s' % (S3_BUCKET, model_key, NODE_DIR, model_key)]}
     )
     return response
 

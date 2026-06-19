@@ -21,7 +21,7 @@ export class CloudFrontEntry extends cdk.Stack {
         const cloudFrontEntry = new cloudFront.Distribution(this, 'cloudFrontEntry', {
             defaultBehavior: {
                 origin: origins.VpcOrigin.withApplicationLoadBalancer(eksIngress, {
-                    protocolPolicy: cloudFront.OriginProtocolPolicy.HTTP_ONLY,
+                    protocolPolicy: cloudFront.OriginProtocolPolicy.HTTPS_ONLY,
                 }),
                 originRequestPolicy: cloudFront.OriginRequestPolicy.ALL_VIEWER,
                 cachePolicy: cloudFront.CachePolicy.CACHING_DISABLED,

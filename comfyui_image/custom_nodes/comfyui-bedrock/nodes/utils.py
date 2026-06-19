@@ -3,7 +3,6 @@ import base64
 import numpy as np
 from PIL import Image
 import boto3
-import requests
 import torch
 
 
@@ -12,19 +11,8 @@ def get_bedrock_client(region=None):
     if not region:
         region = os.environ.get("AWS_DEFAULT_REGION") or os.environ.get("AWS_REGION")
     if not region:
-        try:
-            token = requests.put(
-                "http://169.254.169.254/latest/api/token",
-                headers={"X-aws-ec2-metadata-token-ttl-seconds": "21600"},
-                timeout=2,
-            ).text
-            region = requests.get(
-                "http://169.254.169.254/latest/meta-data/placement/region",
-                headers={"X-aws-ec2-metadata-token": token},
-                timeout=2,
-            ).text
-        except Exception:
-            region = "us-west-2"
+        session = boto3.session.Session()
+        region = session.region_name or "us-west-2"
     return boto3.client("bedrock-runtime", region_name=region)
 
 

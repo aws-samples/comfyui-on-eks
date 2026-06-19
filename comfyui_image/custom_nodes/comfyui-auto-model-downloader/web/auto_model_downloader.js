@@ -396,12 +396,6 @@ function showBedrockChoiceDialog(result) {
         `;
 
         const alternatives = result.bedrock_alternatives || {};
-        const altList = Object.entries(alternatives).map(([model, info]) =>
-            `<div style="margin: 4px 0; padding: 8px; background: #2a2a4a; border-radius: 4px; font-size: 12px;">
-                <span style="color: #4CAF50; font-weight: bold;">${info.node}</span>
-                <span style="color: #888; margin-left: 8px;">${info.description}</span>
-            </div>`
-        ).join("");
 
         const dialog = document.createElement("div");
         dialog.style.cssText = `
@@ -410,30 +404,52 @@ function showBedrockChoiceDialog(result) {
             box-shadow: 0 8px 24px rgba(0,0,0,0.8);
             max-width: 500px; width: 90%; font-family: sans-serif;
         `;
-        dialog.innerHTML = `
-            <div style="font-size: 16px; font-weight: bold; margin-bottom: 12px;">
-                Bedrock Alternatives Available
-            </div>
-            <div style="font-size: 13px; color: #aaa; margin-bottom: 16px;">
-                ${Object.keys(alternatives).length} missing model(s) can be replaced with Amazon Bedrock — instant access, no download required.
-            </div>
-            <div style="max-height: 200px; overflow-y: auto; margin-bottom: 16px;">
-                ${altList}
-            </div>
-            <div style="display: flex; gap: 12px; justify-content: flex-end;">
-                <button id="amd-btn-download" style="
-                    padding: 8px 16px; border-radius: 6px; border: 1px solid #555;
-                    background: #333; color: #e0e0e0; cursor: pointer; font-size: 13px;
-                ">Download Models Instead</button>
-                <button id="amd-btn-bedrock" style="
-                    padding: 8px 16px; border-radius: 6px; border: none;
-                    background: #4CAF50; color: white; cursor: pointer; font-size: 13px; font-weight: bold;
-                ">Use Bedrock (Instant)</button>
-            </div>
-            <div style="margin-top: 12px; font-size: 11px; color: #666;">
-                Tip: Add Bedrock nodes to your workflow for cloud-powered inference without local GPU models.
-            </div>
-        `;
+
+        const title = document.createElement("div");
+        title.style.cssText = "font-size: 16px; font-weight: bold; margin-bottom: 12px;";
+        title.textContent = "Bedrock Alternatives Available";
+        dialog.appendChild(title);
+
+        const subtitle = document.createElement("div");
+        subtitle.style.cssText = "font-size: 13px; color: #aaa; margin-bottom: 16px;";
+        subtitle.textContent = `${Object.keys(alternatives).length} missing model(s) can be replaced with Amazon Bedrock — instant access, no download required.`;
+        dialog.appendChild(subtitle);
+
+        const altContainer = document.createElement("div");
+        altContainer.style.cssText = "max-height: 200px; overflow-y: auto; margin-bottom: 16px;";
+        Object.entries(alternatives).forEach(([model, info]) => {
+            const row = document.createElement("div");
+            row.style.cssText = "margin: 4px 0; padding: 8px; background: #2a2a4a; border-radius: 4px; font-size: 12px;";
+            const nodeName = document.createElement("span");
+            nodeName.style.cssText = "color: #4CAF50; font-weight: bold;";
+            nodeName.textContent = info.node;
+            const desc = document.createElement("span");
+            desc.style.cssText = "color: #888; margin-left: 8px;";
+            desc.textContent = info.description;
+            row.appendChild(nodeName);
+            row.appendChild(desc);
+            altContainer.appendChild(row);
+        });
+        dialog.appendChild(altContainer);
+
+        const btnContainer = document.createElement("div");
+        btnContainer.style.cssText = "display: flex; gap: 12px; justify-content: flex-end;";
+        const downloadBtn = document.createElement("button");
+        downloadBtn.id = "amd-btn-download";
+        downloadBtn.style.cssText = "padding: 8px 16px; border-radius: 6px; border: 1px solid #555; background: #333; color: #e0e0e0; cursor: pointer; font-size: 13px;";
+        downloadBtn.textContent = "Download Models Instead";
+        const bedrockBtn = document.createElement("button");
+        bedrockBtn.id = "amd-btn-bedrock";
+        bedrockBtn.style.cssText = "padding: 8px 16px; border-radius: 6px; border: none; background: #4CAF50; color: white; cursor: pointer; font-size: 13px; font-weight: bold;";
+        bedrockBtn.textContent = "Use Bedrock (Instant)";
+        btnContainer.appendChild(downloadBtn);
+        btnContainer.appendChild(bedrockBtn);
+        dialog.appendChild(btnContainer);
+
+        const tip = document.createElement("div");
+        tip.style.cssText = "margin-top: 12px; font-size: 11px; color: #666;";
+        tip.textContent = "Tip: Add Bedrock nodes to your workflow for cloud-powered inference without local GPU models.";
+        dialog.appendChild(tip);
 
         overlay.appendChild(dialog);
         document.body.appendChild(overlay);
@@ -511,16 +527,28 @@ function showDownloadNotification(models) {
         min-width: 300px;
         text-align: center;
     `;
-    notificationEl.innerHTML = `
-        <div style="font-weight: bold; margin-bottom: 8px;">Downloading Missing Models</div>
-        <div class="download-status">${models.length} model(s) downloading...</div>
-        <div style="margin-top: 8px; font-size: 12px; color: #888;">
-            Workflow will execute automatically when ready
-        </div>
-        <div style="margin-top: 12px; height: 4px; background: #333; border-radius: 2px; overflow: hidden;">
-            <div class="download-progress" style="height: 100%; background: #4CAF50; width: 0%; transition: width 0.5s;"></div>
-        </div>
-    `;
+    const ntTitle = document.createElement("div");
+    ntTitle.style.cssText = "font-weight: bold; margin-bottom: 8px;";
+    ntTitle.textContent = "Downloading Missing Models";
+    notificationEl.appendChild(ntTitle);
+
+    const ntStatus = document.createElement("div");
+    ntStatus.className = "download-status";
+    ntStatus.textContent = `${models.length} model(s) downloading...`;
+    notificationEl.appendChild(ntStatus);
+
+    const ntHint = document.createElement("div");
+    ntHint.style.cssText = "margin-top: 8px; font-size: 12px; color: #888;";
+    ntHint.textContent = "Workflow will execute automatically when ready";
+    notificationEl.appendChild(ntHint);
+
+    const ntProgressWrap = document.createElement("div");
+    ntProgressWrap.style.cssText = "margin-top: 12px; height: 4px; background: #333; border-radius: 2px; overflow: hidden;";
+    const ntProgressBar = document.createElement("div");
+    ntProgressBar.className = "download-progress";
+    ntProgressBar.style.cssText = "height: 100%; background: #4CAF50; width: 0%; transition: width 0.5s;";
+    ntProgressWrap.appendChild(ntProgressBar);
+    notificationEl.appendChild(ntProgressWrap);
     document.body.appendChild(notificationEl);
 }
 

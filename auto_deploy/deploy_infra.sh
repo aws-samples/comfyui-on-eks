@@ -229,17 +229,17 @@ deploy_pod_identity() {
         }]
     }' 2>/dev/null || true
 
-    aws iam put-role-policy --role-name $BEDROCK_ROLE_NAME --policy-name BedrockInvokeAccess --policy-document '{
-        "Version": "2012-10-17",
-        "Statement": [{
-            "Effect": "Allow",
-            "Action": ["bedrock:InvokeModel", "bedrock:InvokeModelWithResponseStream", "bedrock:StartAsyncInvoke", "bedrock:GetAsyncInvoke"],
-            "Resource": [
-                "arn:aws:bedrock:*::foundation-model/*",
-                "arn:aws:bedrock:*:*:inference-profile/*"
+    aws iam put-role-policy --role-name $BEDROCK_ROLE_NAME --policy-name BedrockInvokeAccess --policy-document "{
+        \"Version\": \"2012-10-17\",
+        \"Statement\": [{
+            \"Effect\": \"Allow\",
+            \"Action\": [\"bedrock:InvokeModel\", \"bedrock:InvokeModelWithResponseStream\", \"bedrock:StartAsyncInvoke\", \"bedrock:GetAsyncInvoke\"],
+            \"Resource\": [
+                \"arn:aws:bedrock:${AWS_DEFAULT_REGION}::foundation-model/*\",
+                \"arn:aws:bedrock:${AWS_DEFAULT_REGION}:${ACCOUNT_ID}:inference-profile/*\"
             ]
         }]
-    }'
+    }"
 
     # Create service account
     kubectl create serviceaccount comfyui-sa -n default 2>/dev/null || true

@@ -40,11 +40,11 @@ export class ComfyuiEcrRepo extends cdk.Stack {
                         }),
                         new iam.PolicyStatement({
                             actions: ['logs:CreateLogGroup', 'logs:CreateLogStream', 'logs:PutLogEvents'],
-                            resources: ['*'],
+                            resources: [`arn:aws:logs:${this.region}:${this.account}:log-group:/aws/codebuild/comfyui-*`],
                         }),
                         new iam.PolicyStatement({
                             actions: ['ecr:CreateRepository'],
-                            resources: ['*'],
+                            resources: [`arn:aws:ecr:${this.region}:${this.account}:repository/comfyui-*`],
                         }),
                     ],
                 }),
@@ -90,7 +90,7 @@ export class ComfyuiEcrRepo extends cdk.Stack {
                         }),
                         new iam.PolicyStatement({
                             actions: ['logs:CreateLogGroup', 'logs:CreateLogStream', 'logs:PutLogEvents'],
-                            resources: ['*'],
+                            resources: [`arn:aws:logs:${this.region}:${this.account}:log-group:/aws/codebuild/comfyui-*`],
                         }),
                     ],
                 }),
