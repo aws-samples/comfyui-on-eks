@@ -1,5 +1,3 @@
-[简体中文](./README.zh.md)
-
 ## What's this
 
 A solution to deploy [ComfyUI](https://github.com/comfyanonymous/ComfyUI) on Amazon EKS with GPU acceleration, auto-scaling, and secure external access via CloudFront.
@@ -20,15 +18,29 @@ A solution to deploy [ComfyUI](https://github.com/comfyanonymous/ComfyUI) on Ama
 
 1. **Network Access Control**:
    - The ALB is configured as **internal only** and is not reachable from the internet
-   - CloudFront accesses the ALB through VPC Origins (private connectivity)
+   - CloudFront accesses the ALB through VPC Origins (AWS PrivateLink — traffic never traverses the public internet)
    - All resources are deployed in private subnets with NAT gateway egress
+   - Kubernetes NetworkPolicy restricts pod ingress to ALB subnets only (port 8848) and limits egress to DNS + HTTPS
 
-2. **Access Security Recommendations**:
+2. **IAM and Least Privilege**:
+   - All IAM roles use scoped inline policies with specific resource ARN patterns (no wildcards except where AWS APIs require them)
+   - Bedrock access is scoped to the deployment region only
+   - S3 model sync uses checksum verification (`--checksum-mode ENABLED`)
+   - Node IMDSv2 enforced with hop limit of 1 (containers cannot reach node metadata)
+
+3. **Supply Chain Security**:
+   - All npm dependencies pinned to exact versions with vulnerability overrides
+   - Dockerfile pins ComfyUI and Florence2 to immutable commit SHAs
+   - External tool downloads (eksctl, kubectl) use SHA256 checksum verification
+   - Container images scanned on push via ECR image scanning
+   - Weekly automated image rebuilds pick up OS security patches
+
+4. **Access Security Recommendations** (not included by default — add for production):
    - Implement authentication in front of CloudFront (e.g., AWS WAF, Cognito, Lambda@Edge)
-   - Restrict CloudFront access with signed URLs or cookies for production use
-   - All IAM roles follow least-privilege (scoped inline policies, no AdministratorAccess)
+   - Restrict CloudFront access with signed URLs or cookies
+   - For end-to-end TLS (CloudFront → ALB), add ACM Private CA and HTTPS listener on the ALB
 
-3. **Resource Tagging**:
+5. **Resource Tagging**:
    - All AWS resources are tagged with `Project: comfyui-on-eks` via CDK global tags
    - Kubernetes resources use the label `project: comfyui-on-eks`
 
@@ -68,7 +80,7 @@ You can also interact with ComfyUI by saving its workflow as a JSON file that's 
 
 This solution includes custom ComfyUI nodes that connect to [Amazon Bedrock](https://aws.amazon.com/bedrock/) foundation models, enabling cloud-powered image generation, video generation, editing, upscaling, and LLM-based prompt enhancement — all without managing model infrastructure.
 
-The nodes communicate with Bedrock via the GPU node's instance profile. The deploy script automatically attaches an IAM policy granting `bedrock:InvokeModel`, `bedrock:InvokeModelWithResponseStream`, `bedrock:StartAsyncInvoke`, and `bedrock:GetAsyncInvoke` permissions (scoped to the specific model families listed below). No API keys or manual configuration are needed inside ComfyUI.
+The nodes communicate with Bedrock via EKS Pod Identity. The deploy script automatically creates a role with an IAM policy granting `bedrock:InvokeModel`, `bedrock:InvokeModelWithResponseStream`, `bedrock:StartAsyncInvoke`, and `bedrock:GetAsyncInvoke` permissions (scoped to the deployment region). No API keys or manual configuration are needed inside ComfyUI.
 
 ### Available Nodes
 
@@ -124,21 +136,19 @@ The nodes communicate with Bedrock via the GPU node's instance profile. The depl
 
 ### How Bedrock Access Works
 
-1. The EKS GPU nodes use a Karpenter-managed instance role
-2. During deployment, `deploy_infra.sh` attaches an inline IAM policy (`BedrockInvokeAccess`) to that role:
+1. During deployment, `deploy_infra.sh` creates an IAM role with an inline policy (`BedrockInvokeAccess`) scoped to the deployment region:
    ```json
    {
      "Effect": "Allow",
      "Action": ["bedrock:InvokeModel", "bedrock:InvokeModelWithResponseStream", "bedrock:StartAsyncInvoke", "bedrock:GetAsyncInvoke"],
      "Resource": [
-       "arn:aws:bedrock:*::foundation-model/qwen.*",
-       "arn:aws:bedrock:*::foundation-model/amazon.nova-*",
-       "arn:aws:bedrock:*::foundation-model/stability.*",
-       "arn:aws:bedrock:*::foundation-model/anthropic.claude-*"
+       "arn:aws:bedrock:<REGION>::foundation-model/*",
+       "arn:aws:bedrock:<REGION>:<ACCOUNT>:inference-profile/*"
      ]
    }
    ```
-3. ComfyUI pods inherit this permission via the node's instance profile — no credentials or environment variables needed
+2. The role is associated with the ComfyUI service account via EKS Pod Identity
+3. ComfyUI pods inherit this permission automatically — no credentials or environment variables needed
 4. The custom nodes use `boto3` to call Bedrock APIs directly from within the pod
 
 ### Prerequisites
@@ -280,7 +290,8 @@ deploy_infra.sh
 To add your own models after deployment:
 
 ```shell
-# Upload directly to S3 (follows ComfyUI/models directory structure)
+# The S3 models bucket (comfyui-models-<ACCOUNT>-<REGION>) is created automatically
+# by the CDK deployment. Upload follows ComfyUI/models directory structure:
 aws s3 cp my-model.safetensors s3://comfyui-models-<ACCOUNT>-<REGION>/checkpoints/
 
 # The Lambda trigger automatically syncs to GPU nodes via SSM
@@ -340,17 +351,19 @@ The catalog is defined in `comfyui_image/custom_nodes/comfyui-auto-model-downloa
 
 | Component | Version |
 |-----------|---------|
-| Amazon EKS | 1.32 |
-| Karpenter | 1.3.0 |
-| NVIDIA GPU Operator | Latest (driver/toolkit from AMI) |
+| Amazon EKS | 1.35 |
+| Karpenter | 1.9.0 |
+| NVIDIA GPU Operator | v26.3.2 (driver/toolkit from AMI) |
 | ComfyUI | v0.21.1 |
 | PyTorch | 2.12.0 (CUDA 13.0) |
 | Mountpoint S3 CSI Driver | v2.5.0 |
-| AWS CDK | 2.1109.0 |
+| AWS CDK | 2.260.0 (CLI 2.1128.0) |
 | EKS Blueprints | 1.18.2 |
 | Node AMI | AL2023 GPU (driver 580+) |
 
 ## Cost Analysis
+
+> Cost estimates based on AWS on-demand pricing in us-west-2 as of June 2026. See [EC2 pricing](https://aws.amazon.com/ec2/pricing/on-demand/) and [EKS pricing](https://aws.amazon.com/eks/pricing/) for current rates.
 
 Assuming the following scenario:
 
@@ -386,6 +399,21 @@ The total cost of deploying this solution in us-west-2 is approximately **$450/m
 | `ComfyUI-on-EKS-ECR` | ECR repository, CodeBuild for container images, and CodeBuild for model downloads |
 
 ## Change logs
+
+### Security Hardening -- 2026.06.19
+
+- Upgraded to EKS 1.35, Karpenter 1.9.0, NVIDIA GPU Operator v26.3.2
+- Fixed all HIGH/MEDIUM findings from Holmes security assessment (CSR rubric)
+- Scoped IAM policies to specific resource ARN patterns (removed all unnecessary wildcards)
+- Added S3 checksum verification for model sync operations
+- Replaced innerHTML with DOM API to eliminate XSS vectors
+- Added path validation to test utilities
+- Pinned all dependencies (npm exact versions + overrides, pip pins, git commit SHAs)
+- Added SHA256 verification for eksctl/kubectl downloads
+- Scoped NetworkPolicy ingress to ALB subnet CIDRs, restricted egress to DNS + HTTPS
+- Added S3 server access logging for the models bucket
+- Eliminated all npm audit vulnerabilities via dependency overrides
+- Rebuilt container images with explicit OS security package upgrades
 
 ### Major Upgrade -- 2026.05.20
 
