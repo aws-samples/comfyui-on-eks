@@ -541,6 +541,9 @@ def _try_download_from_huggingface(model_path: str) -> bool:
     os.makedirs(os.path.dirname(local_path), exist_ok=True)
     temp_path = local_path + ".downloading"
     url = entry["url"]
+    if not url.startswith("https://"):
+        logger.error(f"Refusing non-HTTPS download URL for {model_path}: {url}")
+        return False
 
     try:
         logger.info(f"Downloading from HuggingFace: {model_path}")

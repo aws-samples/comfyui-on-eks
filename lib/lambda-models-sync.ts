@@ -10,9 +10,16 @@ export class LambdaModelsSync extends cdk.Stack {
     super(scope, id, { ...props, description: 'ComfyUI on EKS - Models S3 bucket and Lambda for sync to GPU nodes' });
 
     const bucketName = `comfyui-models-${this.account}-${this.region}`;
+    const accessLogsBucket = new s3.Bucket(this, 'ModelsAccessLogs', {
+        bucketName: `comfyui-models-access-logs-${this.account}-${this.region}`,
+        removalPolicy: cdk.RemovalPolicy.RETAIN,
+        lifecycleRules: [{ expiration: cdk.Duration.days(90) }],
+    });
     const models_bucket = new s3.Bucket(this, bucketName, {
         bucketName: bucketName,
         removalPolicy: cdk.RemovalPolicy.RETAIN,
+        serverAccessLogsBucket: accessLogsBucket,
+        serverAccessLogsPrefix: 'models-bucket/',
     });
 
     const lambdaRole = new iam.Role(this, 'ComfyModelsSyncLambdaRole', {

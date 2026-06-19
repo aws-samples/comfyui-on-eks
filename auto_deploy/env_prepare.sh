@@ -45,10 +45,13 @@ install_awscli() {
 
 install_eksctl() {
     echo "==== Start installing eksctl ===="
+    EKSCTL_VERSION="v0.208.0"
     ARCH=amd64
     PLATFORM=$(uname -s)_$ARCH
-    curl -sLO "https://github.com/eksctl-io/eksctl/releases/latest/download/eksctl_$PLATFORM.tar.gz"
-    tar -xzf eksctl_$PLATFORM.tar.gz -C /tmp && rm eksctl_$PLATFORM.tar.gz
+    curl -sLO "https://github.com/eksctl-io/eksctl/releases/download/${EKSCTL_VERSION}/eksctl_$PLATFORM.tar.gz"
+    curl -sLO "https://github.com/eksctl-io/eksctl/releases/download/${EKSCTL_VERSION}/eksctl_checksums.txt"
+    grep "eksctl_$PLATFORM.tar.gz" eksctl_checksums.txt | sha256sum --check
+    tar -xzf eksctl_$PLATFORM.tar.gz -C /tmp && rm eksctl_$PLATFORM.tar.gz eksctl_checksums.txt
     sudo mv /tmp/eksctl /usr/local/bin
     eksctl version
     if [[ $? -ne 0 ]]
@@ -61,8 +64,12 @@ install_eksctl() {
 
 install_kubectl() {
     echo "==== Start installing kubectl ===="
-    curl -sLO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+    KUBECTL_VERSION="v1.32.4"
+    curl -sLO "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl"
+    curl -sLO "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl.sha256"
+    echo "$(cat kubectl.sha256)  kubectl" | sha256sum --check
     sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+    rm -f kubectl.sha256
     kubectl version --client
     if [[ $? -ne 0 ]]
     then
