@@ -14,3 +14,11 @@ cdk.context.json
 .DS_Store
 __pycache__/
 *.pyc
+
+# AI tooling
+.claude/
+.kiro/
+.holmes/
+
+# Scan results
+holmes-report*.json
