@@ -1,7 +1,17 @@
 # Python lambda
 
 import json
+import re
 import boto3
+
+VALID_MODEL_KEY = re.compile(r'^[a-zA-Z0-9/_.\-]+$')
+
+def validate_model_key(key):
+    if not key or len(key) > 512 or not VALID_MODEL_KEY.match(key):
+        raise ValueError(f"Invalid model key rejected: {key!r}")
+    if '..' in key:
+        raise ValueError(f"Path traversal rejected: {key!r}")
+    return key
 
 account_id = boto3.client('sts').get_caller_identity().get('Account')
 region = boto3.session.Session().region_name
@@ -78,6 +88,11 @@ def lambda_handler(event, context):
     instance_ids = get_all_gpu_instances()
     print("Following instances will be synced:", instance_ids)
     for model_key in model_keys:
+        try:
+            validate_model_key(model_key)
+        except ValueError as e:
+            print(f"Skipping invalid model key: {e}")
+            continue
         response = sync_single_model_to_gpu_instances(instance_ids, model_key)
         # print command and status
         print(response['Command']['Parameters']['commands'], response['Command']['Status'])

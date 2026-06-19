@@ -54,7 +54,7 @@ spec:
       Name: ComfyUI-on-EKS-Cluster/ComfyuiVPC/private*
   metadataOptions:
     httpEndpoint: enabled
-    httpPutResponseHopLimit: 2
+    httpPutResponseHopLimit: 1
     httpTokens: required
   tags:
     Project: comfyui-on-eks

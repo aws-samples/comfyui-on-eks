@@ -13,7 +13,10 @@ spec:
   - Ingress
   - Egress
   ingress:
-  - ports:
+  - from:
+    - ipBlock:
+        cidr: 10.2.0.0/16
+    ports:
     - port: 8848
   egress:
   - {}

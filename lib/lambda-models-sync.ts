@@ -24,7 +24,24 @@ export class LambdaModelsSync extends cdk.Stack {
             modelSync: new iam.PolicyDocument({
                 statements: [
                     new iam.PolicyStatement({
-                        actions: ['ssm:SendCommand', 'ssm:GetCommandInvocation'],
+                        actions: ['ssm:SendCommand'],
+                        resources: [
+                            `arn:aws:ec2:${this.region}:${this.account}:instance/*`,
+                        ],
+                        conditions: {
+                            StringEquals: {
+                                'ssm:resourceTag/aws:eks:cluster-name': 'ComfyUI-on-EKS-Cluster',
+                            },
+                        },
+                    }),
+                    new iam.PolicyStatement({
+                        actions: ['ssm:SendCommand'],
+                        resources: [
+                            `arn:aws:ssm:${this.region}::document/AWS-RunShellScript`,
+                        ],
+                    }),
+                    new iam.PolicyStatement({
+                        actions: ['ssm:GetCommandInvocation'],
                         resources: ['*'],
                     }),
                     new iam.PolicyStatement({
