@@ -11,7 +11,7 @@ spec:
   template:
     metadata: {}
     spec:
-      expireAfter: Never
+      expireAfter: 720h
       nodeClassRef:
         group: karpenter.k8s.aws
         kind: EC2NodeClass
@@ -39,7 +39,7 @@ metadata:
 spec:
   amiFamily: AL2023
   amiSelectorTerms:
-    - alias: al2023@v20260512
+    - alias: al2023@latest
   blockDeviceMappings:
   - deviceName: /dev/xvda
     ebs:

@@ -2,10 +2,11 @@ FROM nvcr.io/nvidia/cuda:13.0.3-cudnn-runtime-ubuntu24.04
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get upgrade -y && apt-get install -y \
     git \
     python3.12 \
-    python3-pip
+    python3-pip \
+    && rm -rf /var/lib/apt/lists/*
 
 RUN pip3 install --break-system-packages torch==2.12.0 torchvision==0.27.0 --extra-index-url https://download.pytorch.org/whl/cu130
 RUN git clone https://github.com/comfyanonymous/ComfyUI.git

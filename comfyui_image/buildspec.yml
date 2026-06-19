@@ -27,9 +27,12 @@ phases:
         fi
   build:
     commands:
-      - docker build --platform linux/amd64 -t ${IMAGE_REPO_NAME}:${IMAGE_TAG} .
+      - docker build --no-cache --platform linux/amd64 -t ${IMAGE_REPO_NAME}:${IMAGE_TAG} .
       - docker tag ${IMAGE_REPO_NAME}:${IMAGE_TAG} ${ECR_URI}:${IMAGE_TAG}
   post_build:
     commands:
+      - IMAGE_DATE=$(date +%Y%m%d)
+      - docker tag ${IMAGE_REPO_NAME}:${IMAGE_TAG} ${ECR_URI}:${IMAGE_DATE}
       - docker push ${ECR_URI}:${IMAGE_TAG}
-      - echo "Image pushed to ${ECR_URI}:${IMAGE_TAG}"
+      - docker push ${ECR_URI}:${IMAGE_DATE}
+      - echo "Image pushed as ${ECR_URI}:${IMAGE_TAG} and ${ECR_URI}:${IMAGE_DATE}"

@@ -160,8 +160,35 @@ deploy_karpenter() {
     fi
 
     kubectl apply -f $CDK_DIR/manifests/Karpenter/karpenter_v1.yaml
-    aws iam attach-role-policy --policy-arn arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess --role-name $KarpenterInstanceNodeRole
-    aws iam put-role-policy --role-name $KarpenterInstanceNodeRole --policy-name BedrockInvokeAccess --policy-document '{
+    aws iam put-role-policy --role-name $KarpenterInstanceNodeRole --policy-name S3ModelsReadAccess --policy-document '{
+        "Version": "2012-10-17",
+        "Statement": [{
+            "Effect": "Allow",
+            "Action": ["s3:GetObject", "s3:ListBucket"],
+            "Resource": [
+                "arn:aws:s3:::comfyui-models-'$ACCOUNT_ID'-'$AWS_DEFAULT_REGION'",
+                "arn:aws:s3:::comfyui-models-'$ACCOUNT_ID'-'$AWS_DEFAULT_REGION'/*"
+            ]
+        }]
+    }'
+    echo "==== Finish deploying Karpenter ===="
+}
+
+deploy_pod_identity() {
+    echo "==== Start deploying Pod Identity for ComfyUI ===="
+    BEDROCK_ROLE_NAME=ComfyUI-Bedrock-PodIdentity-${ACCOUNT_ID}-${AWS_DEFAULT_REGION}
+
+    # Create IAM role with Pod Identity trust policy
+    aws iam create-role --role-name $BEDROCK_ROLE_NAME --assume-role-policy-document '{
+        "Version": "2012-10-17",
+        "Statement": [{
+            "Effect": "Allow",
+            "Principal": { "Service": "pods.eks.amazonaws.com" },
+            "Action": ["sts:AssumeRole", "sts:TagSession"]
+        }]
+    }' 2>/dev/null || true
+
+    aws iam put-role-policy --role-name $BEDROCK_ROLE_NAME --policy-name BedrockInvokeAccess --policy-document '{
         "Version": "2012-10-17",
         "Statement": [{
             "Effect": "Allow",
@@ -172,7 +199,19 @@ deploy_karpenter() {
             ]
         }]
     }'
-    echo "==== Finish deploying Karpenter ===="
+
+    # Create service account
+    kubectl create serviceaccount comfyui-sa -n default 2>/dev/null || true
+
+    # Create Pod Identity association
+    BEDROCK_ROLE_ARN="arn:aws:iam::${ACCOUNT_ID}:role/${BEDROCK_ROLE_NAME}"
+    aws eks create-pod-identity-association \
+        --cluster-name $EKS_CLUSTER_STACK \
+        --namespace default \
+        --service-account comfyui-sa \
+        --role-arn $BEDROCK_ROLE_ARN 2>/dev/null || true
+
+    echo "==== Finish deploying Pod Identity for ComfyUI ===="
 }
 
 deploy_s3_pv_pvc() {
@@ -200,26 +239,6 @@ deploy_s3_pv_pvc() {
     echo "==== Finish deploying S3 PV/PVC ===="
 }
 
-deploy_s3_csi_driver() {
-    echo "==== Start deploying S3 CSI Driver ===="
-    ROLE_NAME=EKS-S3-CSI-DriverRole-$ACCOUNT_ID-$AWS_DEFAULT_REGION
-    POLICY_ARN=arn:aws:iam::aws:policy/AmazonS3FullAccess
-    eksctl create iamserviceaccount \
-        --name s3-csi-driver-sa \
-        --namespace kube-system \
-        --cluster $EKS_CLUSTER_STACK \
-        --attach-policy-arn $POLICY_ARN \
-        --approve \
-        --role-name $ROLE_NAME \
-        --region $AWS_DEFAULT_REGION \
-        --override-existing-serviceaccounts
-    eksctl create addon --name aws-mountpoint-s3-csi-driver --version v2.5.0-eksbuild.1 --cluster $EKS_CLUSTER_STACK --service-account-role-arn "arn:aws:iam::${ACCOUNT_ID}:role/EKS-S3-CSI-DriverRole-${ACCOUNT_ID}-${AWS_DEFAULT_REGION}" --force
-    if [ $? -ne 0 ]; then
-        echo "S3 CSI Driver deploy failed"
-        exit 1
-    fi
-    echo "==== Finish deploying S3 CSI Driver ===="
-}
 
 deploy_comfyui() {
     echo "==== Start deploying ComfyUI ===="
@@ -287,8 +306,8 @@ upload_models_to_s3_tier1
 upload_models_to_s3_all
 build_and_push_comfyui_image
 deploy_karpenter
+deploy_pod_identity
 deploy_s3_pv_pvc
-deploy_s3_csi_driver
 deploy_comfyui
 wait_for_comfyui_ready
 cdk_deploy_cloudfront

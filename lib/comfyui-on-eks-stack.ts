@@ -45,18 +45,24 @@ export default class BlueprintConstruct {
             iam.ManagedPolicy.fromAwsManagedPolicyName("AmazonEKSWorkerNodePolicy"),
             iam.ManagedPolicy.fromAwsManagedPolicyName("AmazonEC2ContainerRegistryReadOnly"),
             iam.ManagedPolicy.fromAwsManagedPolicyName("AmazonSSMManagedInstanceCore"),
-            iam.ManagedPolicy.fromAwsManagedPolicyName("AmazonS3ReadOnlyAccess"),
         ]);
 
         // Add-ons
         const karpenterAddOn = new blueprints.addons.KarpenterAddOn({
-            version: '1.3.0',
+            version: '1.4.0',
             values: {replicas: 1}
         });
         const addOns: Array<blueprints.ClusterAddOn> = [
             new blueprints.addons.AwsLoadBalancerControllerAddOn(),
             new blueprints.addons.SSMAgentAddOn(),
+            new blueprints.addons.EksPodIdentityAgentAddOn(),
             karpenterAddOn,
+            new blueprints.addons.S3CSIDriverAddOn({
+                bucketNames: [
+                    `comfyui-inputs-${cdk.Aws.ACCOUNT_ID}-${cdk.Aws.REGION}`,
+                    `comfyui-outputs-${cdk.Aws.ACCOUNT_ID}-${cdk.Aws.REGION}`,
+                ],
+            }),
             new blueprints.GpuOperatorAddon({
                 values:{
                     driver: {
@@ -87,7 +93,7 @@ export default class BlueprintConstruct {
         ];
 
         const clusterProvider = new blueprints.GenericClusterProvider({
-            version: KubernetesVersion.V1_33,
+            version: KubernetesVersion.V1_35,
             tags: {
                 "Name": "comfyui-on-eks-cluster",
                 "Type": "generic-cluster"

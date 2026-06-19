@@ -2,6 +2,8 @@ import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import * as ecr from 'aws-cdk-lib/aws-ecr';
 import * as codebuild from 'aws-cdk-lib/aws-codebuild';
+import * as events from 'aws-cdk-lib/aws-events';
+import * as targets from 'aws-cdk-lib/aws-events-targets';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 
@@ -49,7 +51,7 @@ export class ComfyuiEcrRepo extends cdk.Stack {
             },
         });
 
-        new codebuild.Project(this, 'ComfyuiImageBuild', {
+        const imageProject = new codebuild.Project(this, 'ComfyuiImageBuild', {
             projectName: 'comfyui-image-build',
             environment: {
                 buildImage: codebuild.LinuxBuildImage.STANDARD_7_0,
@@ -68,6 +70,13 @@ export class ComfyuiEcrRepo extends cdk.Stack {
             }),
             role: codebuildRole,
             timeout: cdk.Duration.minutes(60),
+        });
+
+        new events.Rule(this, 'WeeklyImageRebuild', {
+            ruleName: 'comfyui-weekly-image-rebuild',
+            description: 'Rebuild ComfyUI image weekly to pick up OS security patches',
+            schedule: events.Schedule.cron({ weekDay: 'MON', hour: '3', minute: '0' }),
+            targets: [new targets.CodeBuildProject(imageProject)],
         });
 
         const modelDownloadRole = new iam.Role(this, 'ModelDownloadRole', {

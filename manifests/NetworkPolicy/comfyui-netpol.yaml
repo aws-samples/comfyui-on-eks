@@ -1,0 +1,19 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: comfyui-allow-ingress
+  namespace: default
+  labels:
+    project: comfyui-on-eks
+spec:
+  podSelector:
+    matchLabels:
+      app: comfyui
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - ports:
+    - port: 8848
+  egress:
+  - {}
