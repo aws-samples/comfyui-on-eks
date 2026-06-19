@@ -133,13 +133,13 @@ install_npm() {
 }
 
 install_cdk() {
-    npm install -g aws-cdk@2.1128.0
+    npm install -g aws-cdk@2.1109.0
     cdk version
 }
 
 prepare_code_dependency() {
     echo "==== Start preparing code ===="
-    cd $CDK_DIR && npm install --legacy-peer-deps && npm list && cdk bootstrap && cdk list
+    cd $CDK_DIR && npm install && npm list && cdk bootstrap && cdk list
     if [[ $? -ne 0 ]]
     then
         echo "Code preparation failed."

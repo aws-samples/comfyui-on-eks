@@ -18,7 +18,7 @@ RUN apt-get update && \
 
 RUN pip3 install --break-system-packages torch==2.12.0 torchvision==0.27.0 --extra-index-url https://download.pytorch.org/whl/cu130
 RUN git clone https://github.com/comfyanonymous/ComfyUI.git
-RUN cd /app/ComfyUI && git checkout v0.21.1
+RUN cd /app/ComfyUI && git checkout 26515acd23fa291a8f5ab53c5997258598de0701
 RUN pip3 install --break-system-packages -r /app/ComfyUI/requirements.txt
 RUN pip3 install --break-system-packages requests==2.32.3
 

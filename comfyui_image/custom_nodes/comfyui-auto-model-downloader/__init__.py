@@ -553,6 +553,18 @@ def _try_download_from_huggingface(model_path: str) -> bool:
             capture_output=True, timeout=3600,
         )
         if result.returncode == 0 and os.path.exists(temp_path) and os.path.getsize(temp_path) > 1000:
+            expected_sha256 = entry.get("sha256")
+            if expected_sha256:
+                import hashlib
+                h = hashlib.sha256()
+                with open(temp_path, "rb") as f:
+                    for chunk in iter(lambda: f.read(65536), b""):
+                        h.update(chunk)
+                if h.hexdigest() != expected_sha256:
+                    logger.error(f"Checksum mismatch for {model_path}: expected {expected_sha256}, got {h.hexdigest()}")
+                    os.remove(temp_path)
+                    return False
+                logger.info(f"Checksum verified for {model_path}")
             os.rename(temp_path, local_path)
             return True
         if os.path.exists(temp_path):

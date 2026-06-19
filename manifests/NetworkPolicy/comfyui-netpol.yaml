@@ -15,9 +15,25 @@ spec:
   ingress:
   - from:
     - ipBlock:
-        # VPC CIDR — in production, scope to ALB subnet CIDRs for least-privilege
-        cidr: 10.2.0.0/16
+        cidr: 10.2.0.0/20
+    - ipBlock:
+        cidr: 10.2.16.0/20
+    - ipBlock:
+        cidr: 10.2.32.0/20
     ports:
     - port: 8848
   egress:
-  - {}
+  - to:
+    - ipBlock:
+        cidr: 10.2.0.0/16
+    ports:
+    - port: 53
+      protocol: UDP
+    - port: 53
+      protocol: TCP
+  - to:
+    - ipBlock:
+        cidr: 0.0.0.0/0
+    ports:
+    - port: 443
+      protocol: TCP
