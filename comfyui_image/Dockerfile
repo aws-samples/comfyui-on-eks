@@ -22,7 +22,8 @@ RUN cd /app/ComfyUI && git checkout v0.21.1
 RUN pip3 install --break-system-packages -r /app/ComfyUI/requirements.txt
 RUN pip3 install --break-system-packages requests==2.32.3
 
-RUN cd /app/ComfyUI/custom_nodes && git clone --depth 1 https://github.com/kijai/ComfyUI-Florence2.git
+RUN cd /app/ComfyUI/custom_nodes && git clone https://github.com/kijai/ComfyUI-Florence2.git && \
+    cd ComfyUI-Florence2 && git checkout 9ece3de914214c5f581d725167bc9d0eeb0d1120
 RUN pip3 install --break-system-packages -r /app/ComfyUI/custom_nodes/ComfyUI-Florence2/requirements.txt
 
 COPY custom_nodes/comfyui-bedrock /app/ComfyUI/custom_nodes/comfyui-bedrock

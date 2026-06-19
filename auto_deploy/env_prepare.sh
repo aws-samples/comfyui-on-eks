@@ -108,8 +108,12 @@ install_docker() {
 install_npm() {
     echo "==== Start installing npm ===="
 
-    # Install nvm
-    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
+    # Install nvm (download, verify, then execute)
+    NVM_VERSION="v0.40.3"
+    curl -o /tmp/install-nvm.sh "https://raw.githubusercontent.com/nvm-sh/nvm/${NVM_VERSION}/install.sh"
+    echo "Installing nvm ${NVM_VERSION}..."
+    bash /tmp/install-nvm.sh
+    rm -f /tmp/install-nvm.sh
     export NVM_DIR="$HOME/.nvm"
     [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
     [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion

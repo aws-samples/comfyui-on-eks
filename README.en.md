@@ -276,7 +276,8 @@ deploy_infra.sh
 To add your own models after deployment:
 
 ```shell
-# Upload directly to S3 (follows ComfyUI/models directory structure)
+# The S3 models bucket (comfyui-models-<ACCOUNT>-<REGION>) is created automatically
+# by the CDK deployment. Upload follows ComfyUI/models directory structure:
 aws s3 cp my-model.safetensors s3://comfyui-models-<ACCOUNT>-<REGION>/checkpoints/
 
 # The Lambda trigger automatically syncs to GPU nodes via SSM
@@ -347,6 +348,8 @@ The catalog is defined in `comfyui_image/custom_nodes/comfyui-auto-model-downloa
 | Node AMI | AL2023 GPU (driver 580+) |
 
 ## Cost Analysis
+
+> Cost estimates based on AWS on-demand pricing in us-west-2 as of June 2026. See [EC2 pricing](https://aws.amazon.com/ec2/pricing/on-demand/) and [EKS pricing](https://aws.amazon.com/eks/pricing/) for current rates.
 
 Assuming the following scenario:
 
