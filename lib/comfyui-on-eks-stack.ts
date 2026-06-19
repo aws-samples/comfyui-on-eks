@@ -48,8 +48,8 @@ export default class BlueprintConstruct {
         ]);
 
         // Add-ons
-        const karpenterAddOn = new blueprints.addons.KarpenterAddOn({
-            version: '1.4.0',
+        const karpenterAddOn = new blueprints.addons.KarpenterV1AddOn({
+            version: '1.9.0',
             values: {replicas: 1}
         });
         const addOns: Array<blueprints.ClusterAddOn> = [
