@@ -8,14 +8,14 @@ RUN apt-get update && \
     liblzma5 libsqlite3-0 libpam0g libpam-runtime libpam-modules libpam-modules-bin \
     libgcrypt20 libgnutls30t64 libssl3t64 openssl ca-certificates \
     libsmartcols1 libmount1 libblkid1 libuuid1 util-linux \
-    libudev1 libsystemd0 libcap2 libtasn1-6 sed gnupg gnupg2 xz-utils && \
+    libudev1 libsystemd0 libcap2 libtasn1-6 sed gnupg gnupg2 xz-utils \
+    python3-pip python3-wheel python3-setuptools && \
     apt-get install -y \
     git \
     python3.12 \
     python3-pip \
     && rm -rf /var/lib/apt/lists/*
 
-RUN pip3 install --break-system-packages --upgrade --force-reinstall pip setuptools wheel
 RUN pip3 install --break-system-packages torch==2.12.0 torchvision==0.27.0 --extra-index-url https://download.pytorch.org/whl/cu130
 RUN git clone https://github.com/comfyanonymous/ComfyUI.git
 RUN cd /app/ComfyUI && git checkout v0.21.1
