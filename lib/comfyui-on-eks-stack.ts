@@ -64,6 +64,7 @@ export default class BlueprintConstruct {
                 ],
             }),
             new blueprints.GpuOperatorAddon({
+                version: 'v26.3.2',
                 values:{
                     driver: {
                       enabled: false
