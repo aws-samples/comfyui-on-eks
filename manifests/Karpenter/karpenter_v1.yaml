@@ -47,7 +47,7 @@ spec:
     ebs:
       volumeSize: 200Gi
       volumeType: gp3
-  role: ComfyUI-on-EKS-Cluster-ComfyUIonEKSClusterkarpenter-sc64ccixfE9m
+  role: ComfyUI-on-EKS-Cluster-ComfyUIonEKSClusterkarpenter-2vCCUNxfToLf
   securityGroupSelectorTerms:
   - tags:
       Name: eks-cluster-sg-ComfyUI-on-EKS-Cluster*
