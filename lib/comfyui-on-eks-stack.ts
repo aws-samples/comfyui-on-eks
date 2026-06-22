@@ -129,6 +129,7 @@ function addLightWeightNodeGroup(): blueprints.ManagedNodeGroup {
         minSize: 1,
         desiredSize: 2,
         maxSize: 5,
+        forceUpdate: true,
         nodeGroupSubnets: { subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS },
         launchTemplate: {
             tags: {

@@ -1,0 +1,12 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: comfyui-pdb
+  labels:
+    app: comfyui
+    project: comfyui-on-eks
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: comfyui
