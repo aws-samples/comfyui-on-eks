@@ -171,6 +171,30 @@ build_and_push_comfyui_image() {
     echo "==== Finish building and pushing ComfyUI image ===="
 }
 
+verify_image_freshness() {
+    echo "==== Verifying container image is fresh ===="
+    MAX_AGE_HOURS=24
+    IMAGE_PUSHED=$(aws ecr describe-images --repository-name comfyui-images --image-ids imageTag=latest \
+        --query 'imageDetails[0].imagePushedAt' --output text --region $AWS_DEFAULT_REGION --profile $AWS_PROFILE 2>/dev/null)
+
+    if [ -z "$IMAGE_PUSHED" ] || [ "$IMAGE_PUSHED" = "None" ]; then
+        echo "ERROR: No container image found in ECR. Run build_and_push_comfyui_image first."
+        exit 1
+    fi
+
+    IMAGE_EPOCH=$(date -d "$IMAGE_PUSHED" +%s 2>/dev/null || date -j -f "%Y-%m-%dT%H:%M:%S" "$(echo $IMAGE_PUSHED | cut -d'+' -f1 | cut -d'.' -f1)" +%s 2>/dev/null)
+    NOW_EPOCH=$(date +%s)
+    AGE_HOURS=$(( (NOW_EPOCH - IMAGE_EPOCH) / 3600 ))
+
+    if [ $AGE_HOURS -gt $MAX_AGE_HOURS ]; then
+        echo "WARNING: Container image is ${AGE_HOURS}h old (max ${MAX_AGE_HOURS}h). Triggering rebuild..."
+        build_and_push_comfyui_image
+    else
+        echo "Container image is fresh (${AGE_HOURS}h old)"
+    fi
+    echo "==== Image freshness verified ===="
+}
+
 deploy_karpenter() {
     echo "==== Start deploying Karpenter ===="
     kubectl delete -f $CDK_DIR/manifests/Karpenter/karpenter_v1.yaml --ignore-not-found
@@ -358,6 +382,7 @@ deploy_karpenter
 deploy_pod_identity
 deploy_s3_pv_pvc
 deploy_security_policies
+verify_image_freshness
 deploy_comfyui
 wait_for_comfyui_ready
 cdk_deploy_cloudfront
