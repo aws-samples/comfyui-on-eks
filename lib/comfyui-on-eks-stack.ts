@@ -58,6 +58,7 @@ export default class BlueprintConstruct {
             new blueprints.addons.EksPodIdentityAgentAddOn(),
             karpenterAddOn,
             new blueprints.addons.S3CSIDriverAddOn({
+                version: '2.6.0',
                 bucketNames: [
                     `comfyui-inputs-${cdk.Aws.ACCOUNT_ID}-${cdk.Aws.REGION}`,
                     `comfyui-outputs-${cdk.Aws.ACCOUNT_ID}-${cdk.Aws.REGION}`,
