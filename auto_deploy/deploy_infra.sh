@@ -158,6 +158,13 @@ cdk_deploy_ecr() {
         echo "ECR deploy failed"
         exit 1
     fi
+
+    echo "==== Enabling Inspector2 enhanced ECR scanning ===="
+    aws inspector2 enable --resource-types ECR --region $AWS_DEFAULT_REGION --profile $AWS_PROFILE 2>/dev/null || true
+    aws ecr put-registry-scanning-configuration \
+        --scan-type ENHANCED \
+        --rules '[{"repositoryFilters":[{"filter":"*","filterType":"WILDCARD"}],"scanFrequency":"CONTINUOUS_SCAN"}]' \
+        --region $AWS_DEFAULT_REGION --profile $AWS_PROFILE
     echo "==== Finish deploying ECR + CodeBuild ===="
 }
 
