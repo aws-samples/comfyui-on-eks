@@ -1,141 +1,124 @@
-# Mirador Security Findings — Status & Explanation
+# Mirador Security Findings: kube-proxy and S3 CSI Driver
 
-**Date:** 2026-06-29  
+**Date:** 2026-06-30  
 **Cluster:** `ComfyUI-on-EKS-Cluster` (EKS 1.35, us-west-2)  
-**Owner:** jenntip
+**Affected images:**
+- `602401143452.dkr.ecr.us-west-2.amazonaws.com/eks/kube-proxy:v1.35.3-eksbuild.13`
+- `public.ecr.aws/mountpoint-s3-csi-driver/aws-mountpoint-s3-csi-driver:v2.6.0`
 
 ---
 
-## Summary
+## What we did and why findings still persist
 
-As of this writing, Mirador shows a mix of resolved and unresolved security findings for the ComfyUI on EKS deployment. This document explains the status of each category, what has been done, and what requires AWS action.
+We are running the latest available version of both components:
+
+| Component | Current | Latest available |
+|-----------|---------|-----------------|
+| kube-proxy | `v1.35.3-eksbuild.13` | `v1.35.3-eksbuild.13` |
+| aws-mountpoint-s3-csi-driver | `v2.6.0` | `v2.6.0` |
+
+Both were upgraded on 2026-06-25 as part of active security remediation. The findings persist not because we are behind — we are at the latest available release — but because **AWS has not yet rebuilt these images against the latest patched packages**.
 
 ---
 
-## Category 1: Stale findings from decommissioned hosts (now resolved)
+## Root cause: AWS release cadence lags behind ALAS advisories
 
-**Finding type:** `CONTAINER_REMEDIATION` — "Out of SLA, Launched out of SLA"  
-**Count:** 16 findings  
-**Status:** Root cause fixed — findings will close on Mirador's next scan cycle
+Amazon Linux 2023 security advisories (ALAS) are published continuously — multiple times per week. When an ALAS is published, the AL2023 package repositories are updated immediately. However, **EKS-distributed container images are only rebuilt at discrete intervals**, triggered by:
 
-### What happened
+- New Kubernetes patch versions (e.g., 1.35.3 → 1.35.4)
+- `eksbuild` increments — batched base-image-tag refreshes, not tied to individual package updates
+- Feature releases of add-ons (e.g., CSI driver v2.6.0)
 
-These findings persisted for over a week after the old cluster was torn down. The root cause was **6 orphaned SSM managed instances** (`mi-*` registration IDs) from a cluster that was decommissioned in March 2026. These nodes were terminated but never formally deregistered from AWS Systems Manager.
-
-Mirador uses SSM inventory as its source of truth for host liveness. Because these registrations remained in SSM with status `ConnectionLost`, Mirador treated the associated container findings as still active — even though the containers, nodes, and cluster had not existed for months.
-
-### Resolution
-
-All 6 stale SSM registrations were deregistered on 2026-06-29:
+This creates a structural lag:
 
 ```
-mi-05c939dd424cbbebe  (last ping: 2026-03-16, ConnectionLost)
-mi-0dcf52491b6389d53  (last ping: 2026-03-16, ConnectionLost)
-mi-04790ce7dabc7c646  (last ping: 2026-03-16, ConnectionLost)
-mi-01c2883d4b11a4891  (last ping: 2026-03-16, ConnectionLost)
-mi-06e416ea029899868  (last ping: 2026-03-16, ConnectionLost)
-mi-09dd803730497580e  (last ping: 2026-03-16, ConnectionLost)
+ALAS advisory published  →  AL2023 repo updated  →  [gap]  →  Image rebuild
+      (immediate)                (immediate)                   (days to weeks)
 ```
 
-SSM now shows only the 3 live nodes of the current cluster. These findings should auto-close on Mirador's next scan.
+AWS's documentation states that EKS add-ons "include the latest security patches" — this is true at time of publication, but it does not guarantee packages stay current between releases. The lag between an ALAS advisory and an image rebuild is not publicly documented; community observation puts it at days to several weeks.
 
-### Prevention
+---
 
-When tearing down an EKS cluster in future, explicitly deregister SSM managed instances:
+## Specific unpatched CVEs confirmed
+
+### aws-mountpoint-s3-csi-driver:v2.6.0
+
+Confirmed via direct inspection of the image's RPM database. The image runs Amazon Linux 2023 minimal.
+
+**openssl-libs 3.5.5-1.amzn2023.0.4 is installed.** ALAS2023-2026-1853 (published June 22, 2026 — 8 days before this writing) requires **0.5** and covers 15 CVEs. The image was built before June 22 and has not been updated.
+
+| CVE | Severity | Description | Fixed in |
+|-----|----------|-------------|---------|
+| CVE-2026-45447 | **High** | Heap use-after-free in `PKCS7_verify()` — exploitable during PKCS#7 signature verification with an empty `digestAlgorithms` field | openssl 0.5 |
+| CVE-2026-34183 | Moderate (CVSS 7.5) | Remote unauthenticated QUIC `PATH_CHALLENGE` handler causes unbounded heap memory growth — denial of service, no auth required | openssl 0.5 |
+| CVE-2026-45445 | Moderate | AES-OCB IV ignored on `EVP_Cipher()` path — nonce reuse vulnerability | openssl 0.5 |
+| CVE-2026-34182 | Moderate | CMS `AuthEnvelopedData` accepts forged messages | openssl 0.5 |
+| CVE-2026-42764 | Moderate | QUIC NULL dereference | openssl 0.5 |
+| +10 more | Low | Various OpenSSL Low severity | openssl 0.5 |
+
+The fix exists — `openssl-libs-3.5.5-1.amzn2023.0.5` is available in the AL2023 package repository. AWS simply needs to rebuild the image.
+
+### kube-proxy:v1.35.3-eksbuild.13
+
+This image is **distroless** (no shell, no package manager). It is built on a Debian-derived base (`gcr.io/distroless/base` via `kube-proxy-base:v0.18.0-eks-1-35-N`), not Amazon Linux.
+
+CVE exposure in this image comes from Debian-layer packages (`glibc`, `libssl`, `ca-certificates`), not AL2023 RPMs. Each `eksbuild` increment is typically a rebuild against a newer Debian snapshot, which picks up Debian security patches. The specific CVEs flagged by Mirador are Debian-layer issues that require AWS to issue a new `eksbuild` pulling a newer distroless base. We cannot inspect or fix these packages ourselves — the image contains no tools to do so.
+
+---
+
+## What we cannot do
+
+Both images are built, signed, and distributed exclusively by AWS. We have no ability to:
+
+- Rebuild or modify either image
+- Apply OS package updates inside either container (kube-proxy has no package manager; S3 CSI has one but modifying a managed image would break image verification)
+- Pin to a patched version that does not yet exist
+
+---
+
+## Current mitigations in place
+
+1. **ECR Enhanced Scanning (Inspector2)** enabled on 2026-06-29 with `CONTINUOUS_SCAN`. This provides package-level CVE attribution so findings can be precisely linked to specific packages and versions, rather than relying on layer-hash matching. This improves visibility but does not remediate the underlying issue.
+
+2. **Karpenter node expiry set to 7 days** — GPU nodes are replaced weekly, ensuring they always run the latest AL2023 AMI for the underlying node OS. This addresses host-level findings separately from container-level ones.
+
+3. **Weekly container image rebuild** scheduled via EventBridge/CodeBuild, ensuring the ComfyUI application image stays current. This does not apply to AWS-managed images.
+
+---
+
+## Remediation path
+
+The only path to resolving these findings is **AWS releasing updated image builds**:
+
+| Image | Required action by AWS | Expected trigger |
+|-------|----------------------|-----------------|
+| `kube-proxy` | New `eksbuild` increment (e.g., `eksbuild.14`) pulling newer distroless base | Kubernetes patch release or scheduled base refresh |
+| `aws-mountpoint-s3-csi-driver` | New patch release (e.g., `v2.6.1`) with `openssl-libs 0.5` | AWS CSI driver patch cycle |
+
+### Recommended escalation
+
+Raise an AWS Support case with the following details:
+
+**Subject:** EKS-managed images behind on AL2023/Debian security patches — ALAS2023-2026-1853 not reflected
+
+**Body:**
+> We are running the latest available versions of kube-proxy (v1.35.3-eksbuild.13) and aws-mountpoint-s3-csi-driver (v2.6.0) on EKS 1.35 in us-west-2. Both images are generating Mirador CONTAINER_REMEDIATION findings that we cannot resolve ourselves as these are AWS-managed images.
+>
+> For aws-mountpoint-s3-csi-driver:v2.6.0: the image contains openssl-libs-3.5.5-1.amzn2023.0.4. ALAS2023-2026-1853 (published 2026-06-22) requires 0.5 and covers CVE-2026-45447 (High), CVE-2026-34183 (Moderate, CVSS 7.5), and 13 additional CVEs. The patched package is available in AL2023 repos but has not been incorporated into a new CSI driver release.
+>
+> For kube-proxy:v1.35.3-eksbuild.13: the distroless base image contains Debian-layer CVEs. A new eksbuild pulling a refreshed distroless snapshot would resolve these.
+>
+> Please advise on the expected timeline for updated releases and confirm whether there is a process to request expedited builds for critical ALAS advisories.
+
+Once AWS releases updated images, the fix on our side is a single command per component:
 
 ```bash
-aws ssm describe-instance-information --query 'InstanceInformationList[?PingStatus==`ConnectionLost`].InstanceId' --output text \
-  | xargs -n1 aws ssm deregister-managed-instance --instance-id
+# kube-proxy — update to new eksbuild once available
+kubectl set image ds/kube-proxy -n kube-system \
+  kube-proxy=602401143452.dkr.ecr.us-west-2.amazonaws.com/eks/kube-proxy:v1.35.3-eksbuild.XX
+
+# S3 CSI driver — update CDK version and redeploy
+# In lib/comfyui-on-eks-stack.ts, bump S3CSIDriverAddOn version to v2.6.1 (or next patch)
+# then: npx cdk deploy ComfyUI-on-EKS-Cluster
 ```
-
----
-
-## Category 2: ComfyUI container image findings (partially resolved)
-
-**Finding type:** `CONTAINER_REMEDIATION`  
-**Image:** `comfyui-images:latest` (sha256:d125b598...)  
-**Status:** Patched + improved scanning accuracy in progress
-
-### What happened
-
-The running ComfyUI container was flagged for vulnerable packages. Some were genuine, some were false positives from the basic ECR scanner.
-
-| CVE | Package | Was it real? | Action taken |
-|-----|---------|-------------|--------------|
-| CVE-2026-24049 | `wheel 0.42.0` | **Yes** | Upgraded to 0.47.0 in Dockerfile |
-| CVE-2025-66471 | `urllib3` | False positive | Already at 2.7.0 (patched), scanner misfired |
-| CVE-2025-66418 | `urllib3` | False positive | Already at 2.7.0 (patched), scanner misfired |
-| CVE-2024-35195 | `requests` | False positive | Already at 2.32.3 (patched), scanner misfired |
-
-The basic ECR scanner does not perform package-level analysis — it flags by image layer hash, causing false positives when a package is already patched but the base layer hasn't changed.
-
-### Resolution
-
-- `wheel` upgraded to 0.47.0 in the Dockerfile (commit `1b19920`)
-- ECR enhanced scanning via **AWS Inspector2** enabled on 2026-06-29 with `CONTINUOUS_SCAN` across all repositories. Inspector2 performs deep package-level analysis and will accurately report which CVEs are genuinely unpatched, eliminating the false positives from the basic scanner
-- 3 old untagged images deleted from ECR (May 2026 vintage, no longer used)
-
----
-
-## Category 3: AWS-managed image findings — kube-proxy and S3 CSI driver (requires AWS action)
-
-**Finding type:** `CONTAINER_REMEDIATION` — "Within SLA"  
-**Status:** Cannot be self-remediated — requires AWS to release updated images
-
-### Current configuration
-
-| Component | Current version | Latest available | Notes |
-|-----------|----------------|-----------------|-------|
-| `kube-proxy` | `v1.35.3-eksbuild.13` | `v1.35.3-eksbuild.13` | Already on latest available build |
-| `aws-mountpoint-s3-csi-driver` | `v2.6.0` | `v2.6.0-eksbuild.1` | Already on latest available version |
-
-### Why we cannot fix these
-
-Both images are owned and published by AWS. The vulnerable packages are baked into the official EKS-distributed images:
-
-- **kube-proxy** is distributed by AWS at `602401143452.dkr.ecr.us-west-2.amazonaws.com/eks/kube-proxy`. We do not build or control this image. We have already upgraded to the latest available build (`eksbuild.13`) — no newer build exists.
-- **aws-mountpoint-s3-csi-driver** is distributed by AWS at `public.ecr.aws/mountpoint-s3-csi-driver`. We have already upgraded to the latest release (`v2.6.0`). No newer version is available.
-
-Upgrading to "latest" does not resolve the findings because the vulnerable packages exist in the latest AWS-published versions of these images.
-
-### What we have done
-
-1. Upgraded both components to their latest available versions (June 2026)
-2. Enabled enhanced scanning to get precise CVE-to-package mapping for any future escalation
-
-### Recommended next steps
-
-Raise an AWS Support case (or submit via the [EKS GitHub repo](https://github.com/aws/containers-roadmap/issues)) requesting patched releases. Include:
-
-- **Affected images:**
-  - `602401143452.dkr.ecr.us-west-2.amazonaws.com/eks/kube-proxy:v1.35.3-eksbuild.13`
-  - `public.ecr.aws/mountpoint-s3-csi-driver/aws-mountpoint-s3-csi-driver:v2.6.0`
-- **Cluster version:** EKS 1.35
-- **Region:** us-west-2
-- **Mirador finding type:** `CONTAINER_REMEDIATION.CONTAINER_REMEDIATION_REQUIRED`
-- **Request:** Release new `eksbuild` versions with patched base OS packages
-
-Until AWS releases updated images, these findings cannot be resolved through any configuration change on our side.
-
----
-
-## Current state (2026-06-29)
-
-| Finding category | Count | Status |
-|-----------------|-------|--------|
-| Stale SSM hosts (old cluster) | 16 | Fixed — will auto-close next Mirador scan |
-| ComfyUI image — false positives | ~3 | Fixed — enhanced scanning will confirm |
-| ComfyUI image — CVE-2026-24049 | 1 | Fixed — wheel upgraded to 0.47.0 |
-| kube-proxy image findings | 3 | Blocked on AWS — at latest available version |
-| s3-csi-driver image findings | 5 | Blocked on AWS — at latest available version |
-
----
-
-## Changes made to codebase
-
-| Commit | Change |
-|--------|--------|
-| `299405b` | Node OS patching: forceUpdate, Karpenter 7-day expiry, buildspec base image refresh, PDB |
-| `1b19920` | CVE-2026-24049: wheel 0.47.0, S3 CSI v2.6.0, kube-proxy eksbuild.13 |
-| `3425047` | Deploy script: image freshness guard (auto-rebuild if >24h old) |
-| `826c65d` | Deploy script: Inspector2 enhanced ECR scanning enabled on every deploy |
