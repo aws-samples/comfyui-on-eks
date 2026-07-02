@@ -53,12 +53,15 @@ export default class BlueprintConstruct {
             values: {replicas: 1}
         });
         const addOns: Array<blueprints.ClusterAddOn> = [
+            new blueprints.addons.VpcCniAddOn({
+                version: 'v1.22.2-eksbuild.1',
+            }),
             new blueprints.addons.AwsLoadBalancerControllerAddOn(),
             new blueprints.addons.SSMAgentAddOn(),
             new blueprints.addons.EksPodIdentityAgentAddOn(),
             karpenterAddOn,
             new blueprints.addons.S3CSIDriverAddOn({
-                version: '2.6.0',
+                version: '2.7.0',
                 bucketNames: [
                     `comfyui-inputs-${cdk.Aws.ACCOUNT_ID}-${cdk.Aws.REGION}`,
                     `comfyui-outputs-${cdk.Aws.ACCOUNT_ID}-${cdk.Aws.REGION}`,
