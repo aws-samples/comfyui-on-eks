@@ -56,6 +56,7 @@ export default class BlueprintConstruct {
             new blueprints.addons.VpcCniAddOn({
                 version: 'v1.22.2-eksbuild.1',
             }),
+            new blueprints.addons.KubeProxyAddOn('v1.35.3-eksbuild.13'),
             new blueprints.addons.AwsLoadBalancerControllerAddOn(),
             new blueprints.addons.SSMAgentAddOn(),
             new blueprints.addons.EksPodIdentityAgentAddOn(),
