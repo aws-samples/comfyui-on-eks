@@ -62,6 +62,86 @@ delete_k8s_resources() {
     echo
 }
 
+terminate_karpenter_nodes() {
+    echo "=== Start terminating Karpenter-provisioned nodes ==="
+    CLUSTER_NAME="ComfyUI-on-EKS-Cluster"
+
+    # Terminate all EC2 instances tagged with this EKS cluster (works even if kubectl is unavailable)
+    INSTANCE_IDS=$(aws ec2 describe-instances \
+        --filters "Name=tag:eks:eks-cluster-name,Values=$CLUSTER_NAME" \
+                  "Name=instance-state-name,Values=running,stopped,pending" \
+        --query 'Reservations[*].Instances[*].InstanceId' \
+        --output text 2>/dev/null)
+
+    if [ -z "$INSTANCE_IDS" ]; then
+        echo "No Karpenter nodes found for cluster $CLUSTER_NAME"
+    else
+        echo "Terminating Karpenter instances: $INSTANCE_IDS"
+        aws ec2 terminate-instances --instance-ids $INSTANCE_IDS
+        echo "Waiting for instances to terminate (this may take a few minutes for GPU instances)..."
+        aws ec2 wait instance-terminated --instance-ids $INSTANCE_IDS
+        echo "All Karpenter nodes terminated"
+    fi
+    echo "=== Finish terminating Karpenter nodes ==="
+    echo
+}
+
+delete_cluster_load_balancers() {
+    echo "=== Start deleting cluster Load Balancers ==="
+    CLUSTER_NAME="ComfyUI-on-EKS-Cluster"
+
+    # Find ALBs/NLBs created by the AWS Load Balancer Controller for this cluster
+    LB_ARNS=$(aws elbv2 describe-load-balancers \
+        --query 'LoadBalancers[*].LoadBalancerArn' \
+        --output text 2>/dev/null)
+
+    for LB_ARN in $LB_ARNS; do
+        [ -z "$LB_ARN" ] && continue
+        # Check if this LB belongs to our cluster via tags
+        CLUSTER_TAG=$(aws elbv2 describe-tags --resource-arns "$LB_ARN" \
+            --query "TagDescriptions[0].Tags[?Key=='elbv2.k8s.aws/cluster' && Value=='$CLUSTER_NAME'].Value" \
+            --output text 2>/dev/null)
+
+        if [ ! -z "$CLUSTER_TAG" ]; then
+            echo "Deleting Load Balancer: $LB_ARN"
+            aws elbv2 delete-load-balancer --load-balancer-arn "$LB_ARN"
+        fi
+    done
+
+    # Wait for LB ENIs to release before cleaning up target groups
+    if [ ! -z "$CLUSTER_TAG" ]; then
+        echo "Waiting for Load Balancer ENIs to release..."
+        sleep 20
+    fi
+
+    # Delete orphaned target groups tagged with this cluster
+    ALL_TG_ARNS=$(aws elbv2 describe-target-groups \
+        --query 'TargetGroups[*].TargetGroupArn' --output text 2>/dev/null)
+    for TG_ARN in $ALL_TG_ARNS; do
+        [ -z "$TG_ARN" ] && continue
+        TG_CLUSTER_TAG=$(aws elbv2 describe-tags --resource-arns "$TG_ARN" \
+            --query "TagDescriptions[0].Tags[?Key=='elbv2.k8s.aws/cluster' && Value=='$CLUSTER_NAME'].Value" \
+            --output text 2>/dev/null)
+        if [ ! -z "$TG_CLUSTER_TAG" ]; then
+            echo "Deleting Target Group: $TG_ARN"
+            aws elbv2 delete-target-group --target-group-arn "$TG_ARN" 2>/dev/null
+        fi
+    done
+
+    # Delete security groups created by the AWS LB Controller
+    LB_SEC_GROUPS=$(aws ec2 describe-security-groups \
+        --filters "Name=tag:elbv2.k8s.aws/cluster,Values=$CLUSTER_NAME" \
+        --query 'SecurityGroups[*].GroupId' --output text 2>/dev/null)
+    for SG in $LB_SEC_GROUPS; do
+        [ -z "$SG" ] && continue
+        echo "Deleting LB Controller Security Group: $SG"
+        aws ec2 delete-security-group --group-id "$SG" 2>/dev/null
+    done
+
+    echo "=== Finish deleting cluster Load Balancers ==="
+    echo
+}
+
 delete_ecr_repo() {
     echo "=== Start deleting ECR repo ==="
     aws ecr describe-repositories --repository-names $repo_name &> /dev/null
@@ -208,13 +288,33 @@ force_delete_vpc() {
         aws ec2 delete-internet-gateway --internet-gateway-id $IGW_ID
     fi
 
-    # 3. Delete eni
+    # 3. Delete ENIs (detach first if still in-use)
     echo "Deleting ENIs..."
-    ENIS=$(aws ec2 describe-network-interfaces --filters "Name=vpc-id,Values=$VPC_ID" --query 'NetworkInterfaces[*].NetworkInterfaceId' --output text)
-    for ENI in $ENIS; do
-        echo "Deleting ENI: $ENI"
-        aws ec2 delete-network-interface --network-interface-id $ENI
-    done
+    ENI_DATA=$(aws ec2 describe-network-interfaces \
+        --filters "Name=vpc-id,Values=$VPC_ID" \
+        --query 'NetworkInterfaces[*].[NetworkInterfaceId,Attachment.AttachmentId,Status]' \
+        --output text 2>/dev/null)
+    if [ ! -z "$ENI_DATA" ]; then
+        while IFS=$'\t' read -r ENI_ID ATTACH_ID STATUS; do
+            [ -z "$ENI_ID" ] && continue
+            if [ "$STATUS" == "in-use" ] && [ "$ATTACH_ID" != "None" ] && [ ! -z "$ATTACH_ID" ]; then
+                echo "Force detaching ENI: $ENI_ID (attachment: $ATTACH_ID)"
+                aws ec2 detach-network-interface --attachment-id "$ATTACH_ID" --force 2>/dev/null
+            fi
+        done <<< "$ENI_DATA"
+        # Wait for detachments to complete
+        echo "Waiting for ENI detachments to complete..."
+        sleep 15
+        # Now delete all ENIs
+        ENI_IDS=$(aws ec2 describe-network-interfaces \
+            --filters "Name=vpc-id,Values=$VPC_ID" \
+            --query 'NetworkInterfaces[*].NetworkInterfaceId' \
+            --output text 2>/dev/null)
+        for ENI in $ENI_IDS; do
+            echo "Deleting ENI: $ENI"
+            aws ec2 delete-network-interface --network-interface-id "$ENI" 2>/dev/null
+        done
+    fi
 
     # 4. Delete Subnets
     echo "Deleting Subnets..."
@@ -252,6 +352,8 @@ export NVM_DIR="$HOME/.nvm"
 
 get_stacks_names
 delete_k8s_resources
+terminate_karpenter_nodes
+delete_cluster_load_balancers
 delete_ecr_repo
 delete_cloudfront
 delete_s3
