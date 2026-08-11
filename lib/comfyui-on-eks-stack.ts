@@ -54,9 +54,9 @@ export default class BlueprintConstruct {
         });
         const addOns: Array<blueprints.ClusterAddOn> = [
             new blueprints.addons.VpcCniAddOn({
-                version: 'v1.22.2-eksbuild.1',
+                version: 'v1.23.0-eksbuild.1',
             }),
-            new blueprints.addons.KubeProxyAddOn('v1.35.3-eksbuild.13'),
+            new blueprints.addons.KubeProxyAddOn('v1.35.3-eksbuild.18'),
             new blueprints.addons.AwsLoadBalancerControllerAddOn(),
             new blueprints.addons.SSMAgentAddOn(),
             new blueprints.addons.EksPodIdentityAgentAddOn(),

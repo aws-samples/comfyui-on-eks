@@ -1,10 +1,32 @@
 # Mirador Security Findings: kube-proxy and S3 CSI Driver
 
-**Date:** 2026-06-30  
-**Cluster:** `ComfyUI-on-EKS-Cluster` (EKS 1.35, us-west-2)  
+**Date:** 2026-08-11 (originally 2026-06-30)
+**Cluster:** `ComfyUI-on-EKS-Cluster` (EKS 1.35, us-west-2, account 479780966925)
 **Affected images:**
 - `602401143452.dkr.ecr.us-west-2.amazonaws.com/eks/kube-proxy:v1.35.3-eksbuild.13`
-- `public.ecr.aws/mountpoint-s3-csi-driver/aws-mountpoint-s3-csi-driver:v2.6.0`
+- `public.ecr.aws/mountpoint-s3-csi-driver/aws-mountpoint-s3-csi-driver:v2.7.0`
+
+---
+
+## 2026-08-11 remediation round
+
+Two finding categories were reviewed against the 2026-08-11 Mirador export:
+
+**1. Container remediation (AWS-managed images)**
+
+| Component | Was | Now pinned | Latest available (1.35) | Action |
+|-----------|-----|-----------|-------------------------|--------|
+| kube-proxy | `v1.35.3-eksbuild.13` | **`v1.35.3-eksbuild.18`** | `v1.35.3-eksbuild.18` | Bumped in `lib/comfyui-on-eks-stack.ts`; 5 eksbuild increments = refreshed distroless base, clears the `openssl-libs` / Debian-layer findings |
+| aws-mountpoint-s3-csi-driver | `v2.7.0` | `v2.7.0` (`-eksbuild.1`) | `v2.7.0-eksbuild.1` | Already the newest build. Finding persists purely due to AWS image-rebuild lag (see below) — nothing to bump |
+
+**2. OS patching (host / NAWS)** — nodes running an AL2023 AMI older than the current release:
+
+| Node group | Was | Rolled to | Mechanism |
+|-----------|-----|-----------|-----------|
+| Managed `comfyui-on-eks-mng-lw` (t3a.xlarge x2) | AMI release `1.35.6-20260625` | `1.35.6-20260801` (latest) | `aws eks update-nodegroup-version` — rolling replace |
+| Karpenter GPU (`node-gpu`, g6.2xlarge) | AMI drifted | `al2023@latest` on relaunch | node cycled so Karpenter reprovisions on newest AMI; `NodePool.expireAfter: 168h` keeps it fresh |
+
+The ComfyUI application image built by this repo does **not** appear in the findings — its `Dockerfile` already runs `apt-get upgrade` and is rebuilt weekly.
 
 ---
 
