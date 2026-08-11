@@ -63,6 +63,10 @@ spec:
     Name: comfyui-on-eks-gpu-node
   userData: |
     #!/bin/bash
+    # Apply AL2023 security patches at first boot so freshly-provisioned GPU nodes are
+    # current immediately; the daily SSM autopatch association keeps them patched
+    # thereafter. Kernel updates needing a reboot apply on the next node recycle.
+    dnf upgrade --security -y || true
     mkfs -t xfs /dev/nvme1n1
     mkdir -p /comfyui-models
     mount /dev/nvme1n1 /comfyui-models

@@ -341,34 +341,39 @@ deploy_comfyui() {
 }
 
 configure_ssm_patching() {
-    echo "==== Configuring SSM patch scan for EKS nodes ===="
-    # Create or update a State Manager association that runs AWS-RunPatchBaseline (Scan)
-    # daily on all nodes in this cluster. Scan-only: nodes should be rotated not patched
-    # in place (kernel updates require reboot). This satisfies NAWS/Mirador patching
-    # compliance checks which require evidence that patch state is being tracked.
-    ASSOC_NAME="comfyui-eks-nodes-patch-scan"
+    echo "==== Configuring SSM automated patching for EKS nodes ===="
+    # Create or update a State Manager association that runs AWS-RunPatchBaseline (Install)
+    # daily on all nodes in this cluster. Operation=Install with RebootOption=NoReboot
+    # actually applies AL2023 security updates in place (not just scan) without disrupting
+    # running GPU workloads; kernel-level CVEs that require a reboot are cleared by node
+    # rotation (Karpenter expireAfter + managed node group AMI refresh). Targeting the
+    # kubernetes.io/cluster/<name>=owned tag covers BOTH the managed node group and the
+    # Karpenter GPU nodes (the old eks:cluster-name target missed the Karpenter nodes),
+    # and auto-enrolls any node launched later. This is what NAWS/Mirador reports as
+    # "Automated Patching Enabled" and is what clears the recurring OS_PATCHING findings.
+    ASSOC_NAME="comfyui-eks-nodes-autopatch"
     EXISTING=$(aws ssm list-associations --profile $AWS_PROFILE --region $AWS_DEFAULT_REGION \
         --query "Associations[?AssociationName=='${ASSOC_NAME}'].AssociationId" --output text 2>/dev/null)
 
     if [ -n "$EXISTING" ] && [ "$EXISTING" != "None" ]; then
-        echo "  SSM patch association already exists ($EXISTING) — skipping"
+        echo "  SSM autopatch association already exists ($EXISTING) — skipping"
     else
         ASSOC_ID=$(aws ssm create-association \
             --name "AWS-RunPatchBaseline" \
             --association-name "$ASSOC_NAME" \
-            --targets "Key=tag:eks:cluster-name,Values=${EKS_CLUSTER_STACK}" \
-            --parameters "Operation=Scan" \
+            --targets "Key=tag:kubernetes.io/cluster/${EKS_CLUSTER_STACK},Values=owned" \
+            --parameters "Operation=Install,RebootOption=NoReboot" \
             --schedule-expression "cron(0 3 * * ? *)" \
             --sync-compliance "AUTO" \
             --apply-only-at-cron-interval \
             --profile $AWS_PROFILE --region $AWS_DEFAULT_REGION \
             --query 'AssociationDescription.AssociationId' --output text 2>&1)
-        echo "  Created SSM patch association: $ASSOC_ID"
-        echo "  Running initial scan now..."
+        echo "  Created SSM autopatch association: $ASSOC_ID"
+        echo "  Running initial patch install now..."
         aws ssm start-associations-once --association-ids "$ASSOC_ID" \
             --profile $AWS_PROFILE --region $AWS_DEFAULT_REGION 2>/dev/null || true
     fi
-    echo "==== SSM patch scan configured ===="
+    echo "==== SSM automated patching configured ===="
 }
 
 wait_for_comfyui_ready() {

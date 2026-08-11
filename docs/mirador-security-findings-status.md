@@ -30,6 +30,26 @@ The ComfyUI application image built by this repo does **not** appear in the find
 
 ---
 
+## Secure-by-default on a fresh deploy (2026-08-12)
+
+Goal: a clean `auto_deploy/deploy_infra.sh` run should come up patched and stay patched with no manual steps, so the cluster is disposable. What is now built into the codebase:
+
+| Concern | Where | Behaviour on a fresh deploy |
+|---------|-------|-----------------------------|
+| kube-proxy / vpc-cni CVEs | `lib/comfyui-on-eks-stack.ts` | Pinned to current patched builds (`kube-proxy v1.35.3-eksbuild.18`, `vpc-cni v1.23.0-eksbuild.1`). Bump these pins over time. |
+| Host OS patching (recurring) | `auto_deploy/deploy_infra.sh` → `configure_ssm_patching()` | SSM `AWS-RunPatchBaseline` association now runs **`Operation=Install` (RebootOption=NoReboot)** — previously `Scan`-only, which reported but never patched. Targets `kubernetes.io/cluster/<name>=owned`, so it covers **both** the managed node group and Karpenter GPU nodes (the old `eks:cluster-name` target missed the GPU nodes) and auto-enrolls future nodes. Daily at 03:00 + on creation. This is what Mirador reads as "Automated Patching Enabled". |
+| GPU node freshly-launched gap | `manifests/Karpenter/karpenter_v1.yaml` (`userData`) | `dnf upgrade --security -y` at first boot, so a just-provisioned GPU node is current immediately instead of waiting for the next daily run. |
+| App image drift | `lib/comfyui-ecr-repo.ts` (`WeeklyImageRebuild`) | Already present — EventBridge rebuilds the image weekly via CodeBuild; a fresh deploy also builds from scratch, so the image is current at deploy time. |
+| Node AMI currency | CDK managed node group (`AL2023_X86_64_STANDARD`) + Karpenter `al2023@latest` | Both select the newest AL2023 AMI at launch; the Install association closes the gap between AMI releases (even the newest AMI trails the latest ALAS by days). |
+
+**Kernel-level CVEs** (which need a reboot) are intentionally left to node rotation — Karpenter `expireAfter: 168h` recycles GPU nodes weekly, and the managed node group picks up a newer AMI on the next `update-nodegroup-version`. `NoReboot` avoids killing in-flight GPU generations on the daily patch run.
+
+**Still out of scope / not clearable in this codebase:**
+- **S3 CSI driver** — a fresh deploy installs the newest available build; residual finding is AWS's image-rebuild lag.
+- **nginx `fis-test-app`** Criticals — a *different* cluster (`fis-test-eks-automode`), not this project.
+
+---
+
 ## What we did and why findings still persist
 
 We are running the latest available version of both components:
