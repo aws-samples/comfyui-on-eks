@@ -1,12 +1,24 @@
 *.js
 !jest.config.js
+!comfyui_image/custom_nodes/**/*.js
 *.d.ts
 node_modules
 
 # CDK asset staging directory
 .cdk.staging
 cdk.out
+cdk.out.*
 cdk.context.json
 
 *.swp
 .DS_Store
+__pycache__/
+*.pyc
+
+# AI tooling
+.claude/
+.kiro/
+.holmes/
+
+# Scan results
+holmes-report*.json

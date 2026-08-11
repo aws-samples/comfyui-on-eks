@@ -1,7 +1,17 @@
 # Python lambda
 
 import json
+import re
 import boto3
+
+VALID_MODEL_KEY = re.compile(r'^[a-zA-Z0-9/_.\-]+$')
+
+def validate_model_key(key):
+    if not key or len(key) > 512 or not VALID_MODEL_KEY.match(key):
+        raise ValueError(f"Invalid model key rejected: {key!r}")
+    if '..' in key:
+        raise ValueError(f"Path traversal rejected: {key!r}")
+    return key
 
 account_id = boto3.client('sts').get_caller_identity().get('Account')
 region = boto3.session.Session().region_name
@@ -39,7 +49,7 @@ def get_all_gpu_instances():
             },
             {
                 'Name': 'tag:aws:eks:cluster-name',
-                'Values': ['Comfyui-Cluster']
+                'Values': ['ComfyUI-on-EKS-Cluster']
             },
             {
                 'Name': 'tag:karpenter.sh/nodepool',
@@ -54,12 +64,13 @@ def get_all_gpu_instances():
     return instance_ids
 
 # Sync models to all GPU instances
+# S3 bucket is created by the same CDK stack — not user-provided, mitigating bucket squatting
 def sync_models_to_gpu_instances(instance_ids):
     ssm = boto3.client('ssm')
     response = ssm.send_command(
         InstanceIds=instance_ids,
         DocumentName="AWS-RunShellScript",
-        Parameters={'commands': ['aws s3 sync %s/* %s' % (S3_BUCKET, NODE_DIR)]}
+        Parameters={'commands': ['aws s3 sync --checksum-mode ENABLED %s/* %s' % (S3_BUCKET, NODE_DIR)]}
     )
     return response
 
@@ -69,7 +80,7 @@ def sync_single_model_to_gpu_instances(instance_ids, model_key):
     response = ssm.send_command(
         InstanceIds=instance_ids,
         DocumentName="AWS-RunShellScript",
-        Parameters={'commands': ['aws s3 cp %s/%s %s/%s' % (S3_BUCKET, model_key, NODE_DIR, model_key)]}
+        Parameters={'commands': ['aws s3 cp --checksum-mode ENABLED %s/%s %s/%s' % (S3_BUCKET, model_key, NODE_DIR, model_key)]}
     )
     return response
 
@@ -78,6 +89,11 @@ def lambda_handler(event, context):
     instance_ids = get_all_gpu_instances()
     print("Following instances will be synced:", instance_ids)
     for model_key in model_keys:
+        try:
+            validate_model_key(model_key)
+        except ValueError as e:
+            print(f"Skipping invalid model key: {e}")
+            continue
         response = sync_single_model_to_gpu_instances(instance_ids, model_key)
         # print command and status
         print(response['Command']['Parameters']['commands'], response['Command']['Status'])

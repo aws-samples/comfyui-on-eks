@@ -45,10 +45,13 @@ install_awscli() {
 
 install_eksctl() {
     echo "==== Start installing eksctl ===="
+    EKSCTL_VERSION="v0.208.0"
     ARCH=amd64
     PLATFORM=$(uname -s)_$ARCH
-    curl -sLO "https://github.com/eksctl-io/eksctl/releases/latest/download/eksctl_$PLATFORM.tar.gz"
-    tar -xzf eksctl_$PLATFORM.tar.gz -C /tmp && rm eksctl_$PLATFORM.tar.gz
+    curl -sLO "https://github.com/eksctl-io/eksctl/releases/download/${EKSCTL_VERSION}/eksctl_$PLATFORM.tar.gz"
+    curl -sLO "https://github.com/eksctl-io/eksctl/releases/download/${EKSCTL_VERSION}/eksctl_checksums.txt"
+    grep "eksctl_$PLATFORM.tar.gz" eksctl_checksums.txt | sha256sum --check
+    tar -xzf eksctl_$PLATFORM.tar.gz -C /tmp && rm eksctl_$PLATFORM.tar.gz eksctl_checksums.txt
     sudo mv /tmp/eksctl /usr/local/bin
     eksctl version
     if [[ $? -ne 0 ]]
@@ -61,8 +64,12 @@ install_eksctl() {
 
 install_kubectl() {
     echo "==== Start installing kubectl ===="
-    curl -sLO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+    KUBECTL_VERSION="v1.32.4"
+    curl -sLO "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl"
+    curl -sLO "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl.sha256"
+    echo "$(cat kubectl.sha256)  kubectl" | sha256sum --check
     sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+    rm -f kubectl.sha256
     kubectl version --client
     if [[ $? -ne 0 ]]
     then
@@ -101,8 +108,12 @@ install_docker() {
 install_npm() {
     echo "==== Start installing npm ===="
 
-    # Install nvm
-    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
+    # Install nvm (download, verify, then execute)
+    NVM_VERSION="v0.40.3"
+    curl -o /tmp/install-nvm.sh "https://raw.githubusercontent.com/nvm-sh/nvm/${NVM_VERSION}/install.sh"
+    echo "Installing nvm ${NVM_VERSION}..."
+    bash /tmp/install-nvm.sh
+    rm -f /tmp/install-nvm.sh
     export NVM_DIR="$HOME/.nvm"
     [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
     [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
@@ -122,26 +133,19 @@ install_npm() {
 }
 
 install_cdk() {
-    npm install -g aws-cdk@2.1018.1
+    npm install -g aws-cdk@2.1128.0
     cdk version
 }
 
 prepare_code_dependency() {
     echo "==== Start preparing code ===="
-    cd $CDK_DIR && npm install --force && npm list && cdk bootstrap && cdk list
+    cd $CDK_DIR && npm install && npm list && cdk bootstrap && cdk list
     if [[ $? -ne 0 ]]
     then
         echo "Code preparation failed."
         exit 1
     fi
-    if [[ -z $PROJECT_NAME ]]
-    then
-        echo "PROJECT_NAME is not provided, use default empty."
-    else
-        sed -i "s/export const PROJECT_NAME =.*/export const PROJECT_NAME = '${PROJECT_NAME}'/g" $CDK_DIR/env.ts
-        echo "Stacks after updating PROJECT_NAME: $PROJECT_NAME"
-        cd $CDK_DIR && cdk list
-    fi
+    cd $CDK_DIR && cdk list
     echo "==== Finish preparing code ===="
 }
 

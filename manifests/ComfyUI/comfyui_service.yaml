@@ -4,6 +4,7 @@ metadata:
   name: comfyui-service
   labels:
     app: comfyui
+    project: comfyui-on-eks
 spec:
   selector:
     app: comfyui
@@ -13,14 +14,20 @@ spec:
     targetPort: 8848
   type: NodePort
 ---
+# NOTE: This ingress does not include authentication. For production use, add
+# ALB authentication (Cognito/OIDC) via alb.ingress.kubernetes.io/auth-type annotation.
+# See README for guidance on adding authentication.
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: comfyui-ingress
+  labels:
+    project: comfyui-on-eks
   annotations:
     alb.ingress.kubernetes.io/scheme: internal
     alb.ingress.kubernetes.io/target-type: ip
     alb.ingress.kubernetes.io/target-group-attributes: stickiness.enabled=true,stickiness.lb_cookie.duration_seconds=300
+    alb.ingress.kubernetes.io/tags: Project=comfyui-on-eks
 spec:
   ingressClassName: alb
   rules:

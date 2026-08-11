@@ -3,6 +3,7 @@
 import requests
 import uuid
 import json
+import os
 import urllib.parse
 import sys
 import random
@@ -10,7 +11,7 @@ import time
 import threading
 import comfyui_api_utils
 
-SERVER_ADDRESS = "https://abcdefg123456.cloudfront.net"
+SERVER_ADDRESS = "https://your-cloudfront-url.example.com"
 SHOW_IMAGES = False
 
 # Check if the image is ready, if not, upload it
@@ -85,9 +86,11 @@ def single_inference(server_address, request_api_json):
     print("------")
 
 if __name__ == "__main__":
-    # Get the file path from the command line
     if len(sys.argv) == 2:
-        REQUEST_API_JSON = sys.argv[1]
+        REQUEST_API_JSON = os.path.realpath(sys.argv[1])
+        if not os.path.isfile(REQUEST_API_JSON):
+            print("Error: file does not exist: {}".format(REQUEST_API_JSON))
+            sys.exit(1)
     else:
         print("Usage: python3 invoke_comfyui_api.py <request_api_json>")
         sys.exit(1)

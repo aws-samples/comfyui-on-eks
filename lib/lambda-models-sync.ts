@@ -4,38 +4,76 @@ import { Construct } from 'constructs';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as lambdaEventSources from 'aws-cdk-lib/aws-lambda-event-sources';
 import * as iam from 'aws-cdk-lib/aws-iam';
-import { PROJECT_NAME } from '../env'
-
-const project_name = PROJECT_NAME.toLowerCase()
 
 export class LambdaModelsSync extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
-    super(scope, id, props);
+    super(scope, id, { ...props, description: 'ComfyUI on EKS - Models S3 bucket and Lambda for sync to GPU nodes' });
 
-    // Create S3 bucket for models
-    const bucketName = `comfyui-models-${project_name}`.replace(/-$/,'') + '-' + this.account + '-' + this.region;
+    const bucketName = `comfyui-models-${this.account}-${this.region}`;
+    const accessLogsBucket = new s3.Bucket(this, 'ModelsAccessLogs', {
+        bucketName: `comfyui-models-access-logs-${this.account}-${this.region}`,
+        removalPolicy: cdk.RemovalPolicy.RETAIN,
+        lifecycleRules: [{ expiration: cdk.Duration.days(90) }],
+    });
     const models_bucket = new s3.Bucket(this, bucketName, {
         bucketName: bucketName,
-        autoDeleteObjects: true,
-        removalPolicy: cdk.RemovalPolicy.DESTROY,
+        removalPolicy: cdk.RemovalPolicy.RETAIN,
+        serverAccessLogsBucket: accessLogsBucket,
+        serverAccessLogsPrefix: 'models-bucket/',
     });
 
-    // Create IAM role for lambda
-    const roleName = `ComfyModelsSyncLambdaRole-${PROJECT_NAME}`.replace(/-$/,'') + '-' + this.account + '-' + this.region;
     const lambdaRole = new iam.Role(this, 'ComfyModelsSyncLambdaRole', {
-        roleName: roleName,
         assumedBy: new iam.ServicePrincipal('lambda.amazonaws.com'),
         managedPolicies: [
-            iam.ManagedPolicy.fromAwsManagedPolicyName('AdministratorAccess'),
+            iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaBasicExecutionRole'),
         ],
+        inlinePolicies: {
+            modelSync: new iam.PolicyDocument({
+                statements: [
+                    new iam.PolicyStatement({
+                        actions: ['ssm:SendCommand'],
+                        resources: [
+                            `arn:aws:ec2:${this.region}:${this.account}:instance/*`,
+                        ],
+                        conditions: {
+                            StringEquals: {
+                                'ssm:resourceTag/aws:eks:cluster-name': 'ComfyUI-on-EKS-Cluster',
+                            },
+                        },
+                    }),
+                    new iam.PolicyStatement({
+                        actions: ['ssm:SendCommand'],
+                        resources: [
+                            `arn:aws:ssm:${this.region}::document/AWS-RunShellScript`,
+                        ],
+                    }),
+                    new iam.PolicyStatement({
+                        actions: ['ssm:GetCommandInvocation'],
+                        // ssm:GetCommandInvocation does not support resource-level permissions
+                        resources: ['*'],
+                    }),
+                    new iam.PolicyStatement({
+                        actions: ['ec2:DescribeInstances'],
+                        // ec2:DescribeInstances does not support resource-level permissions
+                        resources: ['*'],
+                    }),
+                    new iam.PolicyStatement({
+                        actions: ['s3:GetObject', 's3:ListBucket'],
+                        resources: [models_bucket.bucketArn, `${models_bucket.bucketArn}/*`],
+                    }),
+                ],
+            }),
+        },
     });
 
     const modelsSyncLambda = new lambda.Function(this, 'ComfyModelsSyncLambda', {
-        runtime: lambda.Runtime.PYTHON_3_10,
+        runtime: lambda.Runtime.PYTHON_3_12,
         code: lambda.Code.fromAsset('lib/ComfyModelsSyncLambda'),
         handler: 'model_sync.lambda_handler',
-        functionName: `comfy-models-sync-${PROJECT_NAME}`.replace(/-$/,''),
+        functionName: 'comfy-models-sync',
         role: lambdaRole,
+        timeout: cdk.Duration.seconds(120),
+        memorySize: 256,
     });
 
     const s3EventSource = new lambdaEventSources.S3EventSource(models_bucket, {

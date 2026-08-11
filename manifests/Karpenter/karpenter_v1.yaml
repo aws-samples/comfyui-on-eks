@@ -2,14 +2,18 @@ apiVersion: karpenter.sh/v1
 kind: NodePool
 metadata:
   name: karpenter-nodepool
+  labels:
+    project: comfyui-on-eks
 spec:
   disruption:
-    consolidateAfter: 30s
-    consolidationPolicy: WhenEmpty
+    consolidateAfter: 30m
+    consolidationPolicy: WhenEmptyOrUnderutilized
+    budgets:
+      - nodes: "1"
   template:
     metadata: {}
     spec:
-      expireAfter: Never
+      expireAfter: 168h
       nodeClassRef:
         group: karpenter.k8s.aws
         kind: EC2NodeClass
@@ -32,32 +36,53 @@ apiVersion: karpenter.k8s.aws/v1
 kind: EC2NodeClass
 metadata:
   name: node-gpu
+  labels:
+    project: comfyui-on-eks
 spec:
   amiFamily: AL2023
   amiSelectorTerms:
-    - alias: al2023@v20241213
+    - alias: al2023@latest
   blockDeviceMappings:
   - deviceName: /dev/xvda
     ebs:
-      volumeSize: 100Gi
+      volumeSize: 200Gi
       volumeType: gp3
-  role: Comfyui-Cluster-ComfyuiClusterkarpenternoderole-123456
+  role: ComfyUI-on-EKS-Cluster-ComfyUIonEKSClusterkarpenter-2vCCUNxfToLf
   securityGroupSelectorTerms:
   - tags:
-      Name: eks-cluster-sg-Comfyui-Cluster*
+      Name: eks-cluster-sg-ComfyUI-on-EKS-Cluster*
   subnetSelectorTerms:
   - tags:
-      Name: Comfyui-Cluster/ComfyuiVPC/private*
+      Name: ComfyUI-on-EKS-Cluster/ComfyuiVPC/private*
+  metadataOptions:
+    httpEndpoint: enabled
+    httpPutResponseHopLimit: 1
+    httpTokens: required
   tags:
-    Cost-Center: AI-Lab
-    Name: ComfyUI-EKS-GPU-Node
+    Project: comfyui-on-eks
+    Name: comfyui-on-eks-gpu-node
   userData: |
     #!/bin/bash
+    # Apply AL2023 security patches at first boot so freshly-provisioned GPU nodes are
+    # current immediately; the daily SSM autopatch association keeps them patched
+    # thereafter. Kernel updates needing a reboot apply on the next node recycle.
+    dnf upgrade --security -y || true
     mkfs -t xfs /dev/nvme1n1
     mkdir -p /comfyui-models
     mount /dev/nvme1n1 /comfyui-models
     account=$(aws sts get-caller-identity --query 'Account' --output text)
     region=$(ec2-metadata --availability-zone | sed 's/.$//'|awk '{print $NF}')
-    echo "Downloading models from s3://comfyui-models-${account}-${region}"
+    bucket="s3://comfyui-models-${account}-${region}"
+    echo "Downloading tier1 models from ${bucket}"
     aws configure set default.s3.preferred_transfer_client crt
-    aws s3 sync s3://comfyui-models-${account}-${region} /comfyui-models/
+    mkdir -p /comfyui-models/diffusion_models /comfyui-models/text_encoders /comfyui-models/vae /comfyui-models/upscale_models /comfyui-models/checkpoints /comfyui-models/loras /comfyui-models/controlnet /comfyui-models/clip_vision
+    aws s3 cp ${bucket}/diffusion_models/z_image_turbo_bf16.safetensors /comfyui-models/diffusion_models/ &
+    aws s3 cp ${bucket}/text_encoders/qwen_3_4b.safetensors /comfyui-models/text_encoders/ &
+    aws s3 cp ${bucket}/vae/ae.safetensors /comfyui-models/vae/ &
+    aws s3 cp ${bucket}/upscale_models/RealESRGAN_x4plus.safetensors /comfyui-models/upscale_models/ &
+    aws s3 cp ${bucket}/checkpoints/DreamShaper_8_pruned.safetensors /comfyui-models/checkpoints/ &
+    aws s3 cp ${bucket}/diffusion_models/flux2_dev_fp8mixed.safetensors /comfyui-models/diffusion_models/ &
+    aws s3 cp ${bucket}/text_encoders/mistral_3_small_flux2_bf16.safetensors /comfyui-models/text_encoders/ &
+    aws s3 cp ${bucket}/vae/full_encoder_small_decoder.safetensors /comfyui-models/vae/ &
+    aws s3 cp ${bucket}/loras/Flux_2-Turbo-LoRA_comfyui.safetensors /comfyui-models/loras/ &
+    wait

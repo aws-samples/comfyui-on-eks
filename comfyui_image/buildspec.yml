@@ -1,0 +1,32 @@
+version: 0.2
+
+env:
+  variables:
+    IMAGE_REPO_NAME: comfyui-images
+    IMAGE_TAG: latest
+    BASE_CACHE_REPO: comfyui-base-cache
+
+phases:
+  pre_build:
+    commands:
+      - ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+      - REGION=$AWS_DEFAULT_REGION
+      - ECR_URI=${ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com/${IMAGE_REPO_NAME}
+      - BASE_CACHE_URI=${ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com/${BASE_CACHE_REPO}
+      - aws ecr get-login-password --region ${REGION} | docker login --username AWS --password-stdin ${ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com
+      - aws ecr describe-repositories --repository-names ${BASE_CACHE_REPO} --region ${REGION} 2>/dev/null || aws ecr create-repository --repository-name ${BASE_CACHE_REPO} --region ${REGION}
+      - echo "Pulling latest base image from nvcr.io for security patches"
+      - docker pull nvcr.io/nvidia/cuda:13.0.3-cudnn-runtime-ubuntu24.04
+      - docker tag nvcr.io/nvidia/cuda:13.0.3-cudnn-runtime-ubuntu24.04 ${BASE_CACHE_URI}:latest
+      - docker push ${BASE_CACHE_URI}:latest
+  build:
+    commands:
+      - docker build --no-cache --platform linux/amd64 -t ${IMAGE_REPO_NAME}:${IMAGE_TAG} .
+      - docker tag ${IMAGE_REPO_NAME}:${IMAGE_TAG} ${ECR_URI}:${IMAGE_TAG}
+  post_build:
+    commands:
+      - IMAGE_DATE=$(date +%Y%m%d)
+      - docker tag ${IMAGE_REPO_NAME}:${IMAGE_TAG} ${ECR_URI}:${IMAGE_DATE}
+      - docker push ${ECR_URI}:${IMAGE_TAG}
+      - docker push ${ECR_URI}:${IMAGE_DATE}
+      - echo "Image pushed as ${ECR_URI}:${IMAGE_TAG} and ${ECR_URI}:${IMAGE_DATE}"

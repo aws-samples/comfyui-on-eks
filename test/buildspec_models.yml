@@ -1,0 +1,157 @@
+version: 0.2
+
+env:
+  variables:
+    MODELS_BUCKET: ""
+    MODEL_TIER: "all"
+
+phases:
+  install:
+    commands:
+      - echo "Model download CodeBuild - Tier $MODEL_TIER"
+      - mkdir -p /tmp/models
+
+  build:
+    commands:
+      - |
+        download() {
+          local dest="/tmp/models/$1"
+          local url="$2"
+          local name=$(basename "$dest")
+          mkdir -p "$(dirname "$dest")"
+          if aws s3 ls "s3://${MODELS_BUCKET}/$1" > /dev/null 2>&1; then
+            echo "SKIP (exists in S3): $1"
+            return 0
+          fi
+          echo "Downloading: $1"
+          curl -L --retry 5 --retry-delay 10 --connect-timeout 30 -o "$dest" "$url"
+          if [ $? -ne 0 ]; then
+            echo "RETRY: $name"
+            curl -L --retry 3 --retry-delay 30 --connect-timeout 60 --max-time 3600 -o "$dest" "$url"
+            if [ $? -ne 0 ]; then
+              echo "FAILED permanently: $name"
+              rm -f "$dest"
+              return 1
+            fi
+          fi
+          echo "Uploading to S3: $1"
+          aws s3 cp "$dest" "s3://${MODELS_BUCKET}/$1"
+          rm -f "$dest"
+        }
+
+        echo "=== Tier 1: z_image_turbo (Get Started) ==="
+        download "diffusion_models/z_image_turbo_bf16.safetensors" \
+          "https://huggingface.co/Comfy-Org/z_image_turbo/resolve/main/split_files/diffusion_models/z_image_turbo_bf16.safetensors?download=true"
+        download "text_encoders/qwen_3_4b.safetensors" \
+          "https://huggingface.co/Comfy-Org/z_image_turbo/resolve/main/split_files/text_encoders/qwen_3_4b.safetensors?download=true"
+        download "vae/ae.safetensors" \
+          "https://huggingface.co/Comfy-Org/z_image_turbo/resolve/main/split_files/vae/ae.safetensors?download=true"
+        download "upscale_models/RealESRGAN_x4plus.safetensors" \
+          "https://huggingface.co/Comfy-Org/Real-ESRGAN_repackaged/resolve/main/RealESRGAN_x4plus.safetensors?download=true"
+
+        if [ "$MODEL_TIER" = "tier1" ]; then
+          echo "Tier 1 only - stopping here"
+          exit 0
+        fi
+
+        echo "=== SD Checkpoints ==="
+        download "checkpoints/v1-5-pruned-emaonly-fp16.safetensors" \
+          "https://huggingface.co/Comfy-Org/stable-diffusion-v1-5-archive/resolve/main/v1-5-pruned-emaonly-fp16.safetensors?download=true"
+        download "checkpoints/sd_xl_base_1.0.safetensors" \
+          "https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0/resolve/main/sd_xl_base_1.0.safetensors?download=true"
+        download "checkpoints/sd_xl_refiner_1.0.safetensors" \
+          "https://huggingface.co/stabilityai/stable-diffusion-xl-refiner-1.0/resolve/main/sd_xl_refiner_1.0.safetensors?download=true"
+        download "checkpoints/DreamShaper_8_pruned.safetensors" \
+          "https://huggingface.co/Lykon/DreamShaper/resolve/main/DreamShaper_8_pruned.safetensors?download=true"
+        download "checkpoints/512-inpainting-ema.safetensors" \
+          "https://huggingface.co/stabilityai/stable-diffusion-2-inpainting/resolve/main/512-inpainting-ema.safetensors?download=true"
+        download "checkpoints/v2-1_768-ema-pruned.safetensors" \
+          "https://huggingface.co/stabilityai/stable-diffusion-2-1/resolve/main/v2-1_768-ema-pruned.safetensors?download=true"
+        download "checkpoints/svd.safetensors" \
+          "https://huggingface.co/stabilityai/stable-video-diffusion-img2vid/resolve/main/svd.safetensors?download=true"
+
+        echo "=== ControlNets ==="
+        download "controlnet/control_v11p_sd15_scribble_fp16.safetensors" \
+          "https://huggingface.co/comfyanonymous/ControlNet-v1-1_fp16_safetensors/resolve/main/control_v11p_sd15_scribble_fp16.safetensors?download=true"
+        download "controlnet/control_v11p_sd15_openpose_fp16.safetensors" \
+          "https://huggingface.co/comfyanonymous/ControlNet-v1-1_fp16_safetensors/resolve/main/control_v11p_sd15_openpose_fp16.safetensors?download=true"
+        download "controlnet/control_v11f1p_sd15_depth_fp16.safetensors" \
+          "https://huggingface.co/comfyanonymous/ControlNet-v1-1_fp16_safetensors/resolve/main/control_v11f1p_sd15_depth_fp16.safetensors?download=true"
+
+        echo "=== VAEs ==="
+        download "vae/vae-ft-mse-840000-ema-pruned.safetensors" \
+          "https://huggingface.co/stabilityai/sd-vae-ft-mse-original/resolve/main/vae-ft-mse-840000-ema-pruned.safetensors?download=true"
+        download "vae/qwen_image_vae.safetensors" \
+          "https://huggingface.co/Comfy-Org/Qwen-Image_ComfyUI/resolve/main/split_files/vae/qwen_image_vae.safetensors?download=true"
+        download "vae/wan_2.1_vae.safetensors" \
+          "https://huggingface.co/Comfy-Org/Wan_2.2_ComfyUI_Repackaged/resolve/main/split_files/vae/wan_2.1_vae.safetensors?download=true"
+        download "vae/ace_1.5_vae.safetensors" \
+          "https://huggingface.co/Comfy-Org/ace_step_1.5_ComfyUI_files/resolve/main/split_files/vae/ace_1.5_vae.safetensors?download=true"
+
+        echo "=== Flux 1 Dev ==="
+        download "diffusion_models/flux1-dev-fp8.safetensors" \
+          "https://huggingface.co/Comfy-Org/flux1-dev/resolve/main/flux1-dev-fp8.safetensors?download=true"
+        download "text_encoders/clip_l.safetensors" \
+          "https://huggingface.co/comfyanonymous/flux_text_encoders/resolve/main/clip_l.safetensors?download=true"
+        download "text_encoders/t5xxl_fp16.safetensors" \
+          "https://huggingface.co/comfyanonymous/flux_text_encoders/resolve/main/t5xxl_fp16.safetensors?download=true"
+
+        echo "=== Qwen Image ==="
+        download "diffusion_models/qwen_image_edit_2509_fp8_e4m3fn.safetensors" \
+          "https://huggingface.co/Comfy-Org/Qwen-Image-Edit_ComfyUI/resolve/main/split_files/diffusion_models/qwen_image_edit_2509_fp8_e4m3fn.safetensors?download=true"
+        download "diffusion_models/qwen_image_fp8_e4m3fn.safetensors" \
+          "https://huggingface.co/Comfy-Org/Qwen-Image_ComfyUI/resolve/main/split_files/diffusion_models/qwen_image_fp8_e4m3fn.safetensors?download=true"
+        download "text_encoders/qwen_2.5_vl_7b_fp8_scaled.safetensors" \
+          "https://huggingface.co/Comfy-Org/Qwen-Image_ComfyUI/resolve/main/split_files/text_encoders/qwen_2.5_vl_7b_fp8_scaled.safetensors?download=true"
+        download "loras/Qwen-Image-Lightning-8steps-V1.0.safetensors" \
+          "https://huggingface.co/lightx2v/Qwen-Image-Lightning/resolve/main/Qwen-Image-Lightning-8steps-V1.0.safetensors?download=true"
+        download "loras/Qwen-Image-Edit-2509-Lightning-4steps-V1.0-bf16.safetensors" \
+          "https://huggingface.co/lightx2v/Qwen-Image-Edit-2509-Lightning/resolve/main/Qwen-Image-Edit-2509-Lightning-4steps-V1.0-bf16.safetensors?download=true"
+
+        echo "=== Wan 2.2 Video ==="
+        download "text_encoders/umt5_xxl_fp8_e4m3fn_scaled.safetensors" \
+          "https://huggingface.co/Comfy-Org/Wan_2.1_ComfyUI_repackaged/resolve/main/split_files/text_encoders/umt5_xxl_fp8_e4m3fn_scaled.safetensors?download=true"
+        download "diffusion_models/wan2.2_i2v_high_noise_14B_fp8_scaled.safetensors" \
+          "https://huggingface.co/Comfy-Org/Wan_2.2_ComfyUI_Repackaged/resolve/main/split_files/diffusion_models/wan2.2_i2v_high_noise_14B_fp8_scaled.safetensors?download=true"
+        download "diffusion_models/wan2.2_i2v_low_noise_14B_fp8_scaled.safetensors" \
+          "https://huggingface.co/Comfy-Org/Wan_2.2_ComfyUI_Repackaged/resolve/main/split_files/diffusion_models/wan2.2_i2v_low_noise_14B_fp8_scaled.safetensors?download=true"
+        download "loras/wan2.2_i2v_lightx2v_4steps_lora_v1_high_noise.safetensors" \
+          "https://huggingface.co/Comfy-Org/Wan_2.2_ComfyUI_Repackaged/resolve/main/split_files/loras/wan2.2_i2v_lightx2v_4steps_lora_v1_high_noise.safetensors?download=true"
+        download "loras/wan2.2_i2v_lightx2v_4steps_lora_v1_low_noise.safetensors" \
+          "https://huggingface.co/Comfy-Org/Wan_2.2_ComfyUI_Repackaged/resolve/main/split_files/loras/wan2.2_i2v_lightx2v_4steps_lora_v1_low_noise.safetensors?download=true"
+
+        echo "=== ACE Step 1.5 Audio ==="
+        download "diffusion_models/acestep_v1.5_turbo.safetensors" \
+          "https://huggingface.co/Comfy-Org/ace_step_1.5_ComfyUI_files/resolve/main/split_files/diffusion_models/acestep_v1.5_turbo.safetensors?download=true"
+        download "text_encoders/qwen_0.6b_ace15.safetensors" \
+          "https://huggingface.co/Comfy-Org/ace_step_1.5_ComfyUI_files/resolve/main/split_files/text_encoders/qwen_0.6b_ace15.safetensors?download=true"
+        download "text_encoders/qwen_4b_ace15.safetensors" \
+          "https://huggingface.co/Comfy-Org/ace_step_1.5_ComfyUI_files/resolve/main/split_files/text_encoders/qwen_4b_ace15.safetensors?download=true"
+
+        echo "=== ControlNet Union + Depth ==="
+        download "model_patches/Z-Image-Turbo-Fun-Controlnet-Union.safetensors" \
+          "https://huggingface.co/alibaba-pai/Z-Image-Turbo-Fun-Controlnet-Union/resolve/main/Z-Image-Turbo-Fun-Controlnet-Union.safetensors?download=true"
+        download "diffusion_models/lotus-depth-d-v1-1.safetensors" \
+          "https://huggingface.co/Comfy-Org/lotus/resolve/main/lotus-depth-d-v1-1.safetensors?download=true"
+
+        echo "=== Hunyuan 3D 2.1 ==="
+        download "checkpoints/hunyuan_3d_v2.1.safetensors" \
+          "https://huggingface.co/Comfy-Org/hunyuan3D_2.1_repackaged/resolve/main/hunyuan_3d_v2.1.safetensors?download=true"
+
+        echo "=== Flux 2 Dev ==="
+        download "diffusion_models/flux2_dev_fp8mixed.safetensors" \
+          "https://huggingface.co/Comfy-Org/flux2-dev/resolve/main/split_files/diffusion_models/flux2_dev_fp8mixed.safetensors?download=true"
+        download "text_encoders/mistral_3_small_flux2_bf16.safetensors" \
+          "https://huggingface.co/Comfy-Org/flux2-dev/resolve/main/split_files/text_encoders/mistral_3_small_flux2_bf16.safetensors?download=true"
+        download "vae/full_encoder_small_decoder.safetensors" \
+          "https://huggingface.co/black-forest-labs/FLUX.2-small-decoder/resolve/main/full_encoder_small_decoder.safetensors?download=true"
+        download "loras/Flux_2-Turbo-LoRA_comfyui.safetensors" \
+          "https://huggingface.co/ByteZSzn/Flux.2-Turbo-ComfyUI/resolve/main/Flux_2-Turbo-LoRA_comfyui.safetensors?download=true"
+
+        echo "=== All downloads complete ==="
+
+  post_build:
+    commands:
+      - echo "Model download complete!"
+      - aws s3 ls "s3://${MODELS_BUCKET}/" --recursive --human-readable | grep -E '\.(safetensors|ckpt)$' | wc -l
+      - echo "model files in S3"
