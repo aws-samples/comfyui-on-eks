@@ -27,6 +27,12 @@ spec:
       - name: comfyui-outputs
         persistentVolumeClaim:
           claimName: comfyui-outputs-pvc # Need to apply sd-outputs-s3.yaml first
+      # Local scratch for video output. Mountpoint S3 (the outputs mount) only supports
+      # sequential writes to new objects; ffmpeg .mp4 muxing seeks/renames and fails with
+      # [Errno 22] (issue #28). ffmpeg writes here (full POSIX), the video-s3-sync sidecar
+      # copies finished files to the outputs bucket under video/.
+      - name: comfyui-video-scratch
+        emptyDir: {}
       containers:
       - name: comfyui
         image: ACCOUNT_ID.dkr.ecr.REGION.amazonaws.com/comfyui-images:latest
@@ -44,8 +50,35 @@ spec:
           name: comfyui-inputs
         - mountPath: /app/ComfyUI/output
           name: comfyui-outputs
+        - mountPath: /app/ComfyUI/output/video
+          name: comfyui-video-scratch
         resources:
           requests:
             nvidia.com/gpu: 1
           limits:
             nvidia.com/gpu: 1
+      # Sidecar: copy finished videos from the local scratch dir to the outputs bucket
+      # under video/. Uses the comfyui-sa Pod Identity role (needs s3:PutObject/ListBucket
+      # on the outputs bucket video/ prefix — added in deploy_infra.sh deploy_pod_identity).
+      - name: video-s3-sync
+        image: public.ecr.aws/aws-cli/aws-cli:latest
+        command: ["/bin/sh", "-c"]
+        args:
+          - |
+            while true; do
+              aws s3 sync /video "s3://comfyui-outputs-ACCOUNT_ID-REGION/video/" --region REGION --no-progress --only-show-errors || true
+              sleep 30
+            done
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop: ["ALL"]
+        volumeMounts:
+        - mountPath: /video
+          name: comfyui-video-scratch
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            memory: 128Mi

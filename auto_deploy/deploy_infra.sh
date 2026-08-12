@@ -272,6 +272,26 @@ deploy_pod_identity() {
         }]
     }"
 
+    # S3 write for the video-s3-sync sidecar (issue #28): the pod writes video output to a
+    # local scratch dir (Mountpoint S3 can't do ffmpeg's .mp4 seeks) and syncs it here.
+    # Scoped to the outputs bucket video/ prefix only.
+    aws iam put-role-policy --role-name $BEDROCK_ROLE_NAME --policy-name OutputsVideoS3Write --policy-document "{
+        \"Version\": \"2012-10-17\",
+        \"Statement\": [
+            {
+                \"Effect\": \"Allow\",
+                \"Action\": [\"s3:PutObject\", \"s3:AbortMultipartUpload\"],
+                \"Resource\": \"arn:aws:s3:::comfyui-outputs-${ACCOUNT_ID}-${AWS_DEFAULT_REGION}/video/*\"
+            },
+            {
+                \"Effect\": \"Allow\",
+                \"Action\": [\"s3:ListBucket\"],
+                \"Resource\": \"arn:aws:s3:::comfyui-outputs-${ACCOUNT_ID}-${AWS_DEFAULT_REGION}\",
+                \"Condition\": { \"StringLike\": { \"s3:prefix\": [\"video/*\"] } }
+            }
+        ]
+    }"
+
     # Create service account
     kubectl create serviceaccount comfyui-sa -n default 2>/dev/null || true
 
