@@ -27,6 +27,10 @@ metadata:
     alb.ingress.kubernetes.io/scheme: internal
     alb.ingress.kubernetes.io/target-type: ip
     alb.ingress.kubernetes.io/target-group-attributes: stickiness.enabled=true,stickiness.lb_cookie.duration_seconds=300
+    # Raise the ALB idle timeout (default 60s) so the ComfyUI progress WebSocket is not
+    # torn down between generations, which surfaced as "Reconnecting/Reconnected" every
+    # ~60s (issue #27). 4000s is the ALB maximum.
+    alb.ingress.kubernetes.io/load-balancer-attributes: idle_timeout.timeout_seconds=4000
     alb.ingress.kubernetes.io/tags: Project=comfyui-on-eks
 spec:
   ingressClassName: alb
