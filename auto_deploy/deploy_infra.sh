@@ -1,26 +1,14 @@
 #!/bin/bash
+# ComfyUI-on-EKS deployment. Fails loudly on version mismatch, credential failure,
+# or unresolvable stack names. See lib.sh for preflight and get_stacks_names logic.
 
-source ./env.sh
-
-get_stacks_names() {
-    echo "==== Start getting CloudFormation Stacks ===="
-    all_stacks=$(cd $CDK_DIR && cdk list)
-    export EKS_CLUSTER_STACK=$(echo $all_stacks|grep -o "ComfyUI-on-EKS-Cluster[^ ]*")
-    export LAMBDA_STACK=$(echo $all_stacks|grep -o "ComfyUI-on-EKS-Models[^ ]*")
-    export S3_STACK=$(echo $all_stacks|grep -o "ComfyUI-on-EKS-S3[^ ]*")
-    export ECR_STACK=$(echo $all_stacks|grep -o "ComfyUI-on-EKS-ECR[^ ]*")
-    export CLOUDFRONT_STACK=$(echo $all_stacks|grep -o "ComfyUI-on-EKS-CloudFront[^ ]*")
-    echo "EKS_CLUSTER_STACK : $EKS_CLUSTER_STACK"
-    echo "LAMBDA_STACK      : $LAMBDA_STACK"
-    echo "S3_STACK          : $S3_STACK"
-    echo "ECR_STACK         : $ECR_STACK"
-    echo "CLOUDFRONT_STACK  : $CLOUDFRONT_STACK"
-    echo "==== Finish getting CloudFormation Stacks ===="
-}
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/env.sh"
+source "$SCRIPT_DIR/lib.sh"
 
 cdk_deploy_eks_cluster() {
     echo "==== Start deploying EKS Cluster ===="
-    cd $CDK_DIR && cdk deploy $EKS_CLUSTER_STACK --require-approval never
+    cd "$CDK_DIR" && "$CDK" deploy "$EKS_CLUSTER_STACK" --require-approval never
     if [ $? -ne 0 ]; then
         echo "CDK deploy failed"
         exit 1
@@ -32,7 +20,7 @@ prepare_eks_env() {
     echo "==== Start preparing EKS environment ===="
 
     # Configure kubectl
-    ComfyuiClusterConfigCommand=$(aws cloudformation describe-stacks --stack-name $EKS_CLUSTER_STACK --query "Stacks[0].Outputs[?starts_with(OutputKey, 'ComfyuiCluster') && contains(OutputKey, 'ConfigCommand')].OutputValue" --output text)
+    ComfyuiClusterConfigCommand=$(aws cloudformation describe-stacks --stack-name "$EKS_CLUSTER_STACK" --query "Stacks[0].Outputs[?starts_with(OutputKey, 'ComfyuiCluster') && contains(OutputKey, 'ConfigCommand')].OutputValue" --output text)
     eval $ComfyuiClusterConfigCommand
     kubectl get svc &> /dev/null
     if [ $? -ne 0 ]; then
@@ -40,14 +28,14 @@ prepare_eks_env() {
     fi
 
     # Enable API auth mode so we can add access entries
-    authenticationMode=$(aws eks describe-cluster --name $EKS_CLUSTER_STACK --query 'cluster.accessConfig.authenticationMode' --output text)
+    authenticationMode=$(aws eks describe-cluster --name "$EKS_CLUSTER_STACK" --query 'cluster.accessConfig.authenticationMode' --output text)
     if [ "$authenticationMode" != "API_AND_CONFIG_MAP" ]; then
         echo "Updating authentication mode to API_AND_CONFIG_MAP..."
-        aws eks update-cluster-config --name $EKS_CLUSTER_STACK --access-config authenticationMode=API_AND_CONFIG_MAP
+        aws eks update-cluster-config --name "$EKS_CLUSTER_STACK" --access-config authenticationMode=API_AND_CONFIG_MAP
         while [ "$authenticationMode" != "API_AND_CONFIG_MAP" ]; do
             echo "  Waiting for auth mode update... current: $authenticationMode"
             sleep 10
-            authenticationMode=$(aws eks describe-cluster --name $EKS_CLUSTER_STACK --query 'cluster.accessConfig.authenticationMode' --output text)
+            authenticationMode=$(aws eks describe-cluster --name "$EKS_CLUSTER_STACK" --query 'cluster.accessConfig.authenticationMode' --output text)
         done
     fi
     echo "authenticationMode=API_AND_CONFIG_MAP is ready"
@@ -60,8 +48,8 @@ prepare_eks_env() {
         identity="arn:aws:iam::$account_id:role/$role_name"
     fi
     echo "Adding access entry for: $identity"
-    aws eks create-access-entry --cluster-name $EKS_CLUSTER_STACK --principal-arn $identity --type STANDARD --username comfyui-user 2>/dev/null || true
-    aws eks associate-access-policy --cluster-name $EKS_CLUSTER_STACK --principal-arn $identity --access-scope type=cluster --policy-arn arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy 2>/dev/null || true
+    aws eks create-access-entry --cluster-name "$EKS_CLUSTER_STACK" --principal-arn $identity --type STANDARD --username comfyui-user 2>/dev/null || true
+    aws eks associate-access-policy --cluster-name "$EKS_CLUSTER_STACK" --principal-arn $identity --access-scope type=cluster --policy-arn arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy 2>/dev/null || true
 
     # Verify kubectl works
     kubectl get svc &> /dev/null
@@ -76,8 +64,8 @@ prepare_eks_env() {
 
 upgrade_nodegroup_version() {
     echo "==== Start upgrading managed node group ===="
-    CONTROL_PLANE_VERSION=$(aws eks describe-cluster --name $EKS_CLUSTER_STACK --query 'cluster.version' --output text)
-    NODEGROUP_VERSION=$(aws eks describe-nodegroup --cluster-name $EKS_CLUSTER_STACK --nodegroup-name comfyui-on-eks-mng-lw --query 'nodegroup.version' --output text)
+    CONTROL_PLANE_VERSION=$(aws eks describe-cluster --name "$EKS_CLUSTER_STACK" --query 'cluster.version' --output text)
+    NODEGROUP_VERSION=$(aws eks describe-nodegroup --cluster-name "$EKS_CLUSTER_STACK" --nodegroup-name comfyui-on-eks-mng-lw --query 'nodegroup.version' --output text)
 
     echo "Control plane version: $CONTROL_PLANE_VERSION"
     echo "Node group version:    $NODEGROUP_VERSION"
@@ -96,18 +84,17 @@ upgrade_nodegroup_version() {
 
         echo "Upgrading node group: $NODEGROUP_VERSION -> $TARGET_VERSION"
         aws eks update-nodegroup-version \
-            --cluster-name $EKS_CLUSTER_STACK \
+            --cluster-name "$EKS_CLUSTER_STACK" \
             --nodegroup-name comfyui-on-eks-mng-lw \
             --kubernetes-version $TARGET_VERSION
 
-        echo "  Waiting for node group upgrade to complete (this takes ~10-15 min)..."
-        aws eks wait nodegroup-active --cluster-name $EKS_CLUSTER_STACK --nodegroup-name comfyui-on-eks-mng-lw
-        if [ $? -ne 0 ]; then
-            echo "Node group upgrade to $TARGET_VERSION failed"
+        echo "  Waiting for node group upgrade to complete (this takes ~10-15 min, timeout 20 min)..."
+        if ! timeout 1200 aws eks wait nodegroup-active --cluster-name "$EKS_CLUSTER_STACK" --nodegroup-name comfyui-on-eks-mng-lw; then
+            echo "Node group upgrade to $TARGET_VERSION timed out or failed"
             exit 1
         fi
 
-        NODEGROUP_VERSION=$(aws eks describe-nodegroup --cluster-name $EKS_CLUSTER_STACK --nodegroup-name comfyui-on-eks-mng-lw --query 'nodegroup.version' --output text)
+        NODEGROUP_VERSION=$(aws eks describe-nodegroup --cluster-name "$EKS_CLUSTER_STACK" --nodegroup-name comfyui-on-eks-mng-lw --query 'nodegroup.version' --output text)
         echo "  Node group now at: $NODEGROUP_VERSION"
     done
 
@@ -117,7 +104,7 @@ upgrade_nodegroup_version() {
 
 cdk_deploy_lambda() {
     echo "==== Start deploying Models (Lambda + S3) ===="
-    cd $CDK_DIR && cdk deploy $LAMBDA_STACK --require-approval never
+    cd "$CDK_DIR" && "$CDK" deploy "$LAMBDA_STACK" --require-approval never
     if [ $? -ne 0 ]; then
         echo "Lambda deploy failed"
         exit 1
@@ -127,7 +114,7 @@ cdk_deploy_lambda() {
 
 cdk_deploy_s3() {
     echo "==== Start deploying S3 Storage ===="
-    cd $CDK_DIR && cdk deploy $S3_STACK --require-approval never
+    cd "$CDK_DIR" && "$CDK" deploy "$S3_STACK" --require-approval never
     if [ $? -ne 0 ]; then
         echo "S3 deploy failed"
         exit 1
@@ -153,7 +140,7 @@ upload_models_to_s3_all() {
 
 cdk_deploy_ecr() {
     echo "==== Start deploying ECR + CodeBuild ===="
-    cd $CDK_DIR && cdk deploy $ECR_STACK --require-approval never
+    cd "$CDK_DIR" && "$CDK" deploy "$ECR_STACK" --require-approval never
     if [ $? -ne 0 ]; then
         echo "ECR deploy failed"
         exit 1
@@ -204,8 +191,8 @@ verify_image_freshness() {
 
 deploy_karpenter() {
     echo "==== Start deploying Karpenter ===="
-    kubectl delete -f $CDK_DIR/manifests/Karpenter/karpenter_v1.yaml --ignore-not-found
-    KarpenterInstanceNodeRole=$(aws cloudformation describe-stacks --stack-name $EKS_CLUSTER_STACK --query 'Stacks[0].Outputs[?OutputKey==`KarpenterInstanceNodeRole`].OutputValue' --output text)
+    kubectl delete -f "$CDK_DIR/manifests/Karpenter/karpenter_v1.yaml" --ignore-not-found
+    KarpenterInstanceNodeRole=$(aws cloudformation describe-stacks --stack-name "$EKS_CLUSTER_STACK" --query 'Stacks[0].Outputs[?OutputKey==`KarpenterInstanceNodeRole`].OutputValue' --output text)
     sg_tag="eks-cluster-sg-ComfyUI-on-EKS-Cluster*"
     subnet_tag="ComfyUI-on-EKS-Cluster\/ComfyuiVPC\/private*"
 
@@ -214,25 +201,39 @@ deploy_karpenter() {
         exit 1
     fi
 
+    # Create or reuse an instance profile for the Karpenter role.
+    # This is owned by us (not Karpenter), so CFN can delete the role on teardown.
+    INSTANCE_PROFILE_NAME="ComfyUI-Karpenter-${ACCOUNT_ID}-${AWS_DEFAULT_REGION}"
+    if ! aws iam get-instance-profile --instance-profile-name "$INSTANCE_PROFILE_NAME" &>/dev/null; then
+        echo "  Creating instance profile: $INSTANCE_PROFILE_NAME"
+        aws iam create-instance-profile --instance-profile-name "$INSTANCE_PROFILE_NAME"
+        aws iam add-role-to-instance-profile --instance-profile-name "$INSTANCE_PROFILE_NAME" --role-name "$KarpenterInstanceNodeRole"
+        # Wait for IAM eventual consistency
+        sleep 10
+    else
+        echo "  Instance profile already exists: $INSTANCE_PROFILE_NAME"
+    fi
+
     echo "KarpenterInstanceNodeRole            : $KarpenterInstanceNodeRole"
+    echo "Instance Profile                     : $INSTANCE_PROFILE_NAME"
     echo "securityGroupSelectorTerms tags Name : $sg_tag"
     echo "subnetSelectorTerms tags Name        : $subnet_tag"
 
     if [[ "$OSTYPE" == "linux-gnu"* ]]; then
-        sed -i "s/role: .*/role: $KarpenterInstanceNodeRole/g" $CDK_DIR/manifests/Karpenter/karpenter_v1.yaml
-        sed -i "s/Name: eks-cluster-sg-ComfyUI-on-EKS-Cluster.*/Name: $sg_tag/g" $CDK_DIR/manifests/Karpenter/karpenter_v1.yaml
-        sed -i "s/Name: ComfyUI-on-EKS-Cluster\/ComfyuiVPC\/private.*/Name: $subnet_tag/g" $CDK_DIR/manifests/Karpenter/karpenter_v1.yaml
+        sed -i "s/instanceProfile: .*/instanceProfile: $INSTANCE_PROFILE_NAME/g" "$CDK_DIR/manifests/Karpenter/karpenter_v1.yaml"
+        sed -i "s/Name: eks-cluster-sg-ComfyUI-on-EKS-Cluster.*/Name: $sg_tag/g" "$CDK_DIR/manifests/Karpenter/karpenter_v1.yaml"
+        sed -i "s/Name: ComfyUI-on-EKS-Cluster\/ComfyuiVPC\/private.*/Name: $subnet_tag/g" "$CDK_DIR/manifests/Karpenter/karpenter_v1.yaml"
     elif [[ "$OSTYPE" == "darwin"* ]]; then
-        sed -i '' "s/role: .*/role: $KarpenterInstanceNodeRole/g" $CDK_DIR/manifests/Karpenter/karpenter_v1.yaml
-        sed -i '' "s/Name: eks-cluster-sg-ComfyUI-on-EKS-Cluster.*/Name: $sg_tag/g" $CDK_DIR/manifests/Karpenter/karpenter_v1.yaml
-        sed -i '' "s/Name: ComfyUI-on-EKS-Cluster\/ComfyuiVPC\/private.*/Name: $subnet_tag/g" $CDK_DIR/manifests/Karpenter/karpenter_v1.yaml
+        sed -i '' "s/instanceProfile: .*/instanceProfile: $INSTANCE_PROFILE_NAME/g" "$CDK_DIR/manifests/Karpenter/karpenter_v1.yaml"
+        sed -i '' "s/Name: eks-cluster-sg-ComfyUI-on-EKS-Cluster.*/Name: $sg_tag/g" "$CDK_DIR/manifests/Karpenter/karpenter_v1.yaml"
+        sed -i '' "s/Name: ComfyUI-on-EKS-Cluster\/ComfyuiVPC\/private.*/Name: $subnet_tag/g" "$CDK_DIR/manifests/Karpenter/karpenter_v1.yaml"
     else
         echo "Unsupported OS: $OSTYPE"
         exit 1
     fi
 
-    kubectl apply -f $CDK_DIR/manifests/Karpenter/karpenter_v1.yaml
-    aws iam put-role-policy --role-name $KarpenterInstanceNodeRole --policy-name S3ModelsReadAccess --policy-document '{
+    kubectl apply -f "$CDK_DIR/manifests/Karpenter/karpenter_v1.yaml"
+    aws iam put-role-policy --role-name "$KarpenterInstanceNodeRole" --policy-name S3ModelsReadAccess --policy-document '{
         "Version": "2012-10-17",
         "Statement": [{
             "Effect": "Allow",
@@ -414,7 +415,7 @@ wait_for_comfyui_ready() {
 
 cdk_deploy_cloudfront() {
     echo "==== Start deploying CloudFront ===="
-    cd $CDK_DIR && cdk deploy $CLOUDFRONT_STACK --require-approval never
+    cd "$CDK_DIR" && "$CDK" deploy "$CLOUDFRONT_STACK" --require-approval never
     if [ $? -ne 0 ]; then
         echo "CloudFront deploy failed"
         exit 1
@@ -431,6 +432,7 @@ export NVM_DIR="$HOME/.nvm"
 
 # ====== Deploy all stacks in order ====== #
 start_time=$(date +%s)
+preflight_checks
 get_stacks_names
 cdk_deploy_eks_cluster
 prepare_eks_env

@@ -47,7 +47,11 @@ spec:
     ebs:
       volumeSize: 200Gi
       volumeType: gp3
-  role: ComfyUI-on-EKS-Cluster-ComfyUIonEKSClusterkarpenter-2vCCUNxfToLf
+  # Use instanceProfile (not role) so Karpenter does NOT self-create instance profiles
+  # outside CloudFormation. With role:, Karpenter creates profiles that reference the
+  # CFN-managed role, causing guaranteed DELETE_FAILED on teardown because CFN can't
+  # delete the role while Karpenter's profile still references it.
+  instanceProfile: INSTANCE_PROFILE_NAME
   securityGroupSelectorTerms:
   - tags:
       Name: eks-cluster-sg-ComfyUI-on-EKS-Cluster*
