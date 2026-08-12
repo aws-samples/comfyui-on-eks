@@ -1,23 +1,10 @@
 #!/bin/bash
+# ComfyUI-on-EKS teardown. Fails loudly on version mismatch, credential failure,
+# or partial deletion. See lib.sh for preflight and get_stacks_names logic.
 
-source ./env.sh
-
-get_stacks_names() {
-    echo "==== Start getting CloudFormation Stacks ===="
-    all_stacks=$(cd $CDK_DIR && cdk list)
-    export EKS_CLUSTER_STACK=$(echo $all_stacks|grep -o "ComfyUI-on-EKS-Cluster[^ ]*")
-    export LAMBDA_STACK=$(echo $all_stacks|grep -o "ComfyUI-on-EKS-Models[^ ]*")
-    export S3_STACK=$(echo $all_stacks|grep -o "ComfyUI-on-EKS-S3[^ ]*")
-    export ECR_STACK=$(echo $all_stacks|grep -o "ComfyUI-on-EKS-ECR[^ ]*")
-    export CLOUDFRONT_STACK=$(echo $all_stacks|grep -o "ComfyUI-on-EKS-CloudFront[^ ]*")
-    # Print more pretty
-    echo "EKS_CLUSTER_STACK : $EKS_CLUSTER_STACK"
-    echo "LAMBDA_STACK      : $LAMBDA_STACK"
-    echo "S3_STACK          : $S3_STACK"
-    echo "ECR_STACK         : $ECR_STACK"
-    echo "CLOUDFRONT_STACK  : $CLOUDFRONT_STACK"
-    echo "==== Finish getting CloudFormation Stacks ===="
-}
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/env.sh"
+source "$SCRIPT_DIR/lib.sh"
 
 delete_k8s_resources() {
     echo "=== Start deleting k8s resources ==="
@@ -150,11 +137,10 @@ delete_ecr_repo() {
     else
         aws ecr delete-repository --repository-name $repo_name --force
     fi
-    aws cloudformation describe-stacks --stack-name $ECR_STACK &> /dev/null
-    if [ $? -ne 0 ]; then
+    if ! stack_exists "$ECR_STACK"; then
         echo "$ECR_STACK stack not found"
     else
-        cd $CDK_DIR && cdk destroy -f $ECR_STACK
+        cd "$CDK_DIR" && "$CDK" destroy -f "$ECR_STACK"
     fi
     echo "=== Finish deleting ECR repo ==="
     echo
@@ -162,11 +148,10 @@ delete_ecr_repo() {
 
 delete_cloudfront() {
     echo "=== Start deleting CloudFront ==="
-    aws cloudformation describe-stacks --stack-name $CLOUDFRONT_STACK &> /dev/null
-    if [ $? -ne 0 ]; then
+    if ! stack_exists "$CLOUDFRONT_STACK"; then
         echo "$CLOUDFRONT_STACK stack not found"
     else
-        cd $CDK_DIR && cdk destroy -f $CLOUDFRONT_STACK
+        cd "$CDK_DIR" && "$CDK" destroy -f "$CLOUDFRONT_STACK"
     fi
     echo "=== Finish deleting CloudFront ==="
     echo
@@ -174,11 +159,10 @@ delete_cloudfront() {
 
 delete_s3() {
     echo "=== Start deleting S3 ==="
-    aws cloudformation describe-stacks --stack-name $S3_STACK &> /dev/null
-    if [ $? -ne 0 ]; then
+    if ! stack_exists "$S3_STACK"; then
         echo "$S3_STACK stack not found"
     else
-        cd $CDK_DIR && cdk destroy -f $S3_STACK
+        cd "$CDK_DIR" && "$CDK" destroy -f "$S3_STACK"
     fi
     echo "=== Finish deleting S3 ==="
     echo
@@ -186,11 +170,10 @@ delete_s3() {
 
 delete_lambda_sync() {
     echo "=== Start deleting LambdaModelsSync ==="
-    aws cloudformation describe-stacks --stack-name $LAMBDA_STACK &> /dev/null
-    if [ $? -ne 0 ]; then
+    if ! stack_exists "$LAMBDA_STACK"; then
         echo "$LAMBDA_STACK stack not found"
     else
-        cd $CDK_DIR && cdk destroy -f $LAMBDA_STACK
+        cd "$CDK_DIR" && "$CDK" destroy -f "$LAMBDA_STACK"
     fi
     echo "=== Finish deleting LambdaModelsSync ==="
     echo
@@ -200,15 +183,15 @@ delete_comfyui_cluster() {
     echo "=== Start deleting Comfyui-Cluster ==="
 
     # Try 3 times
+    local i=0
     while [[ $i -lt 3 ]]; do
         fix_comfyui_stack_deletion
         # Delete stack
-        aws cloudformation describe-stacks --stack-name $EKS_CLUSTER_STACK &> /dev/null
-        if [ $? -ne 0 ]; then
+        if ! stack_exists "$EKS_CLUSTER_STACK"; then
             echo "$EKS_CLUSTER_STACK stack not found"
             break
         else
-            cd $CDK_DIR && cdk destroy -f $EKS_CLUSTER_STACK
+            cd "$CDK_DIR" && "$CDK" destroy -f "$EKS_CLUSTER_STACK"
             if [ $? -ne 0 ]; then
                 echo "Failed to delete $EKS_CLUSTER_STACK stack, try again"
             else
@@ -227,7 +210,7 @@ fix_comfyui_stack_deletion() {
     echo "=== Start fixing comfyui stack deletion ==="
 
     # Remove KarpenterInstanceNodeRole from instance profile
-    KarpenterInstanceNodeRole=$(aws cloudformation describe-stacks --stack-name $EKS_CLUSTER_STACK --query 'Stacks[0].Outputs[?OutputKey==`KarpenterInstanceNodeRole`].OutputValue' --output text 2>/dev/null)
+    KarpenterInstanceNodeRole=$(aws cloudformation describe-stacks --stack-name "$EKS_CLUSTER_STACK" --query 'Stacks[0].Outputs[?OutputKey==`KarpenterInstanceNodeRole`].OutputValue' --output text 2>/dev/null)
     profiles=$(aws iam list-instance-profiles-for-role --role-name $KarpenterInstanceNodeRole | jq -r '.InstanceProfiles[].InstanceProfileName' 2>/dev/null)
     for profile in $profiles
     do
@@ -241,11 +224,11 @@ fix_comfyui_stack_deletion() {
 
     # vpc deletion failed
     vpc_id=$(aws cloudformation describe-stack-events \
-        --stack-name $EKS_CLUSTER_STACK \
+        --stack-name "$EKS_CLUSTER_STACK" \
         --query 'StackEvents[?ResourceStatus==`DELETE_FAILED` && ResourceType==`AWS::EC2::VPC`].{Reason:ResourceStatusReason}'| grep -o 'vpc-[a-z0-9]*'|tail -1)
     if [ -z $vpc_id ]; then
         subnet_id=$(aws cloudformation describe-stack-events \
-            --stack-name $EKS_CLUSTER_STACK \
+            --stack-name "$EKS_CLUSTER_STACK" \
             --query 'StackEvents[?ResourceStatus==`DELETE_FAILED` && ResourceType==`AWS::EC2::Subnet`].{Reason:ResourceStatusReason}'| grep -o 'subnet-[a-z0-9]*'|tail -1)
         if [ -z $subnet_id ]; then
             echo "No subnet found in delete failed"
@@ -345,11 +328,122 @@ force_delete_vpc() {
     aws ec2 delete-vpc --vpc-id $VPC_ID
 }
 
+# ====== Residual cleanup (non-data orphans outside CloudFormation) ====== #
+cleanup_residuals() {
+    echo "=== Cleaning up residual resources ==="
+
+    # 1. Bedrock Pod Identity role (created imperatively, not via CFN)
+    local ROLE_NAME="ComfyUI-Bedrock-PodIdentity-${ACCOUNT_ID}-${AWS_DEFAULT_REGION}"
+    if aws iam get-role --role-name "$ROLE_NAME" &>/dev/null; then
+        echo "  Deleting IAM role: $ROLE_NAME"
+        # Delete all inline policies (there may be 1-N, don't hardcode names)
+        for pol in $(aws iam list-role-policies --role-name "$ROLE_NAME" --query 'PolicyNames[]' --output text 2>/dev/null); do
+            aws iam delete-role-policy --role-name "$ROLE_NAME" --policy-name "$pol" 2>/dev/null
+        done
+        aws iam delete-role --role-name "$ROLE_NAME" 2>/dev/null && echo "    Deleted" || echo "    (could not delete)"
+    else
+        echo "  IAM role $ROLE_NAME not found (already clean)"
+    fi
+
+    # 1b. Karpenter instance profile (created by deploy_karpenter, outside CFN)
+    local IP_NAME="ComfyUI-Karpenter-${ACCOUNT_ID}-${AWS_DEFAULT_REGION}"
+    if aws iam get-instance-profile --instance-profile-name "$IP_NAME" &>/dev/null; then
+        echo "  Deleting instance profile: $IP_NAME"
+        # Remove all roles first
+        for role in $(aws iam get-instance-profile --instance-profile-name "$IP_NAME" --query 'InstanceProfile.Roles[].RoleName' --output text 2>/dev/null); do
+            aws iam remove-role-from-instance-profile --instance-profile-name "$IP_NAME" --role-name "$role" 2>/dev/null
+        done
+        aws iam delete-instance-profile --instance-profile-name "$IP_NAME" 2>/dev/null && echo "    Deleted" || echo "    (could not delete)"
+    fi
+
+    # 2. CloudWatch log groups
+    echo "  Deleting orphaned log groups..."
+    for prefix in "/aws/lambda/ComfyUI" "/aws/lambda/Comfyui" "/aws/codebuild/comfyui-"; do
+        for lg in $(aws logs describe-log-groups --log-group-name-prefix "$prefix" --query 'logGroups[].logGroupName' --output text 2>/dev/null); do
+            echo "    Deleting: $lg"
+            aws logs delete-log-group --log-group-name "$lg" 2>/dev/null
+        done
+    done
+
+    # 3. ECR base-cache repo (created by CodeBuild buildspec, not CDK)
+    if aws ecr describe-repositories --repository-names comfyui-base-cache &>/dev/null; then
+        echo "  Deleting ECR repo: comfyui-base-cache"
+        aws ecr delete-repository --repository-name comfyui-base-cache --force 2>/dev/null
+    fi
+
+    # 4. SSM patch association (created imperatively)
+    local ASSOC_ID
+    ASSOC_ID=$(aws ssm list-associations \
+        --query "Associations[?AssociationName=='comfyui-eks-nodes-autopatch'].AssociationId" \
+        --output text 2>/dev/null)
+    if [ -n "$ASSOC_ID" ] && [ "$ASSOC_ID" != "None" ]; then
+        echo "  Deleting SSM association: $ASSOC_ID"
+        aws ssm delete-association --association-id "$ASSOC_ID" 2>/dev/null
+    fi
+
+    # 5. KMS key (schedule deletion; can't be immediate)
+    local KEY_ID
+    KEY_ID=$(aws kms list-keys --query 'Keys[].KeyId' --output text 2>/dev/null | while read -r kid; do
+        tags=$(aws kms list-resource-tags --key-id "$kid" --query "Tags[?TagKey=='Project' && TagValue=='comfyui-on-eks'].TagValue" --output text 2>/dev/null)
+        [ -n "$tags" ] && echo "$kid" && break
+    done)
+    if [ -n "$KEY_ID" ]; then
+        echo "  Scheduling KMS key deletion (7 days): $KEY_ID"
+        aws kms schedule-key-deletion --key-id "$KEY_ID" --pending-window-in-days 7 2>/dev/null
+    fi
+
+    echo "=== Residual cleanup complete ==="
+    echo
+}
+
+# ====== Post-deletion verification backstop ====== #
+verify_teardown_complete() {
+    echo "=== Verifying teardown completeness ==="
+    local failures=0
+
+    # Check no ComfyUI stacks remain in a non-deleted state
+    local remaining
+    remaining=$(aws cloudformation list-stacks \
+        --stack-status-filter CREATE_COMPLETE UPDATE_COMPLETE ROLLBACK_COMPLETE UPDATE_ROLLBACK_COMPLETE CREATE_IN_PROGRESS DELETE_IN_PROGRESS \
+        --query "StackSummaries[?contains(StackName,'ComfyUI')].StackName" --output text 2>/dev/null)
+    if [ -n "$remaining" ]; then
+        echo "  WARNING: stacks still present: $remaining"
+        failures=$((failures+1))
+    fi
+
+    # Check no EKS cluster
+    if aws eks describe-cluster --name "ComfyUI-on-EKS-Cluster" &>/dev/null; then
+        echo "  WARNING: EKS cluster still exists"
+        failures=$((failures+1))
+    fi
+
+    # Check no tagged EC2 instances running
+    local instances
+    instances=$(aws ec2 describe-instances \
+        --filters "Name=tag:eks:eks-cluster-name,Values=ComfyUI-on-EKS-Cluster" \
+                  "Name=instance-state-name,Values=running,pending,stopped" \
+        --query 'Reservations[].Instances[].InstanceId' --output text 2>/dev/null)
+    if [ -n "$instances" ]; then
+        echo "  WARNING: EC2 instances still running: $instances"
+        failures=$((failures+1))
+    fi
+
+    if [ $failures -gt 0 ]; then
+        echo "  TEARDOWN INCOMPLETE: $failures issue(s) found above."
+        echo "  Some resources may still be running and billing."
+        return 1
+    fi
+    echo "  All clear -- no ComfyUI resources detected."
+    echo "=== Verification passed ==="
+}
+
 # ====== Activate NVM & CDK ====== #
 export NVM_DIR="$HOME/.nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
-[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
 
+# ====== Main execution ====== #
+preflight_checks
 get_stacks_names
 delete_k8s_resources
 terminate_karpenter_nodes
@@ -359,5 +453,20 @@ delete_cloudfront
 delete_s3
 delete_lambda_sync
 delete_comfyui_cluster
+cleanup_residuals
 
-echo "=== Destroy infra done! ==="
+if verify_teardown_complete; then
+    echo ""
+    echo "=========================================="
+    echo "  Destroy infra done!"
+    echo "=========================================="
+    echo ""
+    echo "Note: S3 buckets (models, inputs, outputs) are preserved."
+    echo "To delete them: rerun with --delete-data"
+else
+    echo ""
+    echo "=========================================="
+    echo "  TEARDOWN INCOMPLETE -- see warnings above"
+    echo "=========================================="
+    exit 1
+fi
