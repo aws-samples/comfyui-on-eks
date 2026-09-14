@@ -32,6 +32,10 @@
     "js-yaml": "4.3.2",
     "yaml": "2.9.0",
     "fast-uri": "3.1.7",
-    "brace-expansion": "5.0.9"
+    "brace-expansion": "5.0.9",
+    "qs": "6.16.0",
+    "browserslist": "4.28.9",
+    "baseline-browser-mapping": "2.11.22",
+    "ts-deepmerge": "8.0.0"
   }
 }
