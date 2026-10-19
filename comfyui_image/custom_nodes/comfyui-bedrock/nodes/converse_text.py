@@ -9,9 +9,6 @@ MODELS = [
     "us.anthropic.claude-haiku-5-5",
     "us.anthropic.claude-sonnet-5-5",
     "us.anthropic.claude-opus-5-5",
-    # Previous-gen Claude (accept temperature/topP) — kept as options:
-    "us.anthropic.claude-haiku-4-5-20251001-v1:0",
-    "us.anthropic.claude-sonnet-4-6",
     # OpenAI GPT (frontier, text):
     "us.openai.gpt-6.1-sol",
     "us.openai.gpt-6-sol",

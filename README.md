@@ -105,7 +105,7 @@ The nodes communicate with Bedrock via EKS Pod Identity. The deploy script autom
 
 | Provider | Model ID | Type |
 |----------|----------|------|
-| Anthropic (**default**) | `us.anthropic.claude-haiku-5-5`, `us.anthropic.claude-sonnet-5-5`, `us.anthropic.claude-opus-5-5` (latest 5.x line); `us.anthropic.claude-haiku-4-5-20251001-v1:0`, `us.anthropic.claude-sonnet-4-6` (prev gen) | Text + Vision |
+| Anthropic (**default**) | `us.anthropic.claude-haiku-5-5`, `us.anthropic.claude-sonnet-5-5`, `us.anthropic.claude-opus-5-5` (latest 5.x line) | Text + Vision |
 | Meta | `us.meta.llama4-scout-17b-instruct-v1:0`, `us.meta.llama4-maverick-17b-instruct-v1:0`, `us.meta.llama3-3-70b-instruct-v1:0` | Text + Vision |
 | Mistral | `mistral.mistral-large-3-675b-instruct`, `mistral.ministral-3-14b-instruct`, `mistral.magistral-small-2509`, `us.mistral.pixtral-large-2502-v1:0` | Text + Vision |
 | NVIDIA | `nvidia.nemotron-super-3-120b`, `nvidia.nemotron-nano-9b-v2` | Text |

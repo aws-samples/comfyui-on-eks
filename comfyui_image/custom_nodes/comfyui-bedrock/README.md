@@ -29,8 +29,6 @@ Sends an image + text prompt to a multimodal model. Use for image captioning, sc
 | Anthropic (**default**) | `us.anthropic.claude-haiku-5-5` | Latest Claude, fast — node default |
 | Anthropic | `us.anthropic.claude-sonnet-5-5` | Latest Claude, balanced |
 | Anthropic | `us.anthropic.claude-opus-5-5` | Latest Claude, most capable |
-| Anthropic | `us.anthropic.claude-haiku-4-5-20251001-v1:0` | Prev-gen fast |
-| Anthropic | `us.anthropic.claude-sonnet-4-6` | Prev-gen balanced |
 | OpenAI | `us.openai.gpt-6.1-sol` | Latest GPT |
 | OpenAI | `us.openai.gpt-5.5` | GPT 5.5 |
 | Meta | `us.meta.llama4-scout-17b-instruct-v1:0` | 17B scout (open weight) |
@@ -54,8 +52,6 @@ Sends an image + text prompt to a multimodal model. Use for image captioning, sc
 | Anthropic | `us.anthropic.claude-haiku-5-5` | Fast vision (default) |
 | Anthropic | `us.anthropic.claude-sonnet-5-5` | Balanced vision |
 | Anthropic | `us.anthropic.claude-opus-5-5` | Most capable vision |
-| Anthropic | `us.anthropic.claude-haiku-4-5-20251001-v1:0` | Prev-gen fast vision |
-| Anthropic | `us.anthropic.claude-sonnet-4-6` | Prev-gen balanced vision |
 | Meta | `us.meta.llama4-scout-17b-instruct-v1:0` | Multimodal scout |
 | Meta | `us.meta.llama4-maverick-17b-instruct-v1:0` | Multimodal maverick |
 | Mistral | `us.mistral.pixtral-large-2502-v1:0` | Pixtral Large |
