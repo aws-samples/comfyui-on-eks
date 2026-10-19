@@ -26,21 +26,27 @@ Sends an image + text prompt to a multimodal model. Use for image captioning, sc
 
 | Provider | Model ID | Notes |
 |----------|----------|-------|
-| Amazon | `us.amazon.nova-lite-v1:0` | Fast, cost-effective |
-| Amazon | `us.amazon.nova-pro-v1:0` | Balanced performance |
-| Amazon | `us.amazon.nova-micro-v1:0` | Lowest latency |
-| Anthropic | `us.anthropic.claude-opus-4-7` | Most capable |
-| Anthropic | `us.anthropic.claude-sonnet-4-6` | Balanced |
-| Anthropic | `us.anthropic.claude-haiku-4-5-20251001-v1:0` | Fast |
-| DeepSeek | `us.deepseek.r1-v1:0` | Reasoning model |
-| Meta | `us.meta.llama4-scout-17b-instruct-v1:0` | 17B scout |
-| Meta | `us.meta.llama4-maverick-17b-instruct-v1:0` | 17B maverick |
-| Meta | `us.meta.llama3-3-70b-instruct-v1:0` | 70B instruct |
-| Mistral | `mistral.mistral-large-3-675b-instruct` | 675B large |
-| Qwen | `qwen.qwen3-235b-a22b-2507-v1:0` | 235B MoE |
-| Qwen | `qwen.qwen3-32b-v1:0` | 32B dense |
-| Qwen | `qwen.qwen3-next-80b-a3b` | 80B next |
-| Qwen | `qwen.qwen3-coder-480b-a35b-v1:0` | 480B coder |
+| Anthropic (**default**) | `us.anthropic.claude-haiku-5-5` | Latest Claude, fast — node default |
+| Anthropic | `us.anthropic.claude-sonnet-5-5` | Latest Claude, balanced |
+| Anthropic | `us.anthropic.claude-opus-5-5` | Latest Claude, most capable |
+| Anthropic | `us.anthropic.claude-haiku-4-5-20251001-v1:0` | Prev-gen fast |
+| Anthropic | `us.anthropic.claude-sonnet-4-6` | Prev-gen balanced |
+| OpenAI | `us.openai.gpt-6.1-sol` | Latest GPT |
+| OpenAI | `us.openai.gpt-5.5` | GPT 5.5 |
+| Meta | `us.meta.llama4-scout-17b-instruct-v1:0` | 17B scout (open weight) |
+| Meta | `us.meta.llama4-maverick-17b-instruct-v1:0` | 17B maverick (open weight) |
+| Meta | `us.meta.llama3-3-70b-instruct-v1:0` | 70B instruct (open weight) |
+| Mistral | `mistral.mistral-large-3-675b-instruct` | 675B large (open weight) |
+| Mistral | `mistral.ministral-3-14b-instruct` | 14B (open weight) |
+| Mistral | `mistral.magistral-small-2509` | reasoning (open weight) |
+| NVIDIA | `nvidia.nemotron-super-3-120b` | 120B (open weight) |
+| NVIDIA | `nvidia.nemotron-nano-9b-v2` | 9B (open weight) |
+| DeepSeek | `us.deepseek.r1-v1:0` | Reasoning (open weight) |
+| Qwen | `qwen.qwen3-235b-a22b-2507-v1:0` | 235B MoE (open weight) |
+| Qwen | `qwen.qwen3-32b-v1:0` | 32B dense (open weight) |
+| Amazon Nova (deprecating) | `us.amazon.nova-lite-v1:0`, `us.amazon.nova-pro-v1:0` | Kept for compatibility only |
+
+> Default is **Claude Haiku 5.5**. Claude 5.x rejects `temperature`/`topP`, so the node sends those only when changed from defaults — the default path works across every model above. Amazon Nova is being wound down (Nova Premier is already EOL; Nova Canvas/Reel removed).
 
 #### Vision + Text (Bedrock Vision node)
 

@@ -11,6 +11,10 @@ MODELS = [
     # Previous-gen Claude (accept temperature/topP) — kept as options:
     "us.anthropic.claude-haiku-4-5-20251001-v1:0",
     "us.anthropic.claude-sonnet-4-6",
+    # OpenAI GPT (frontier, text):
+    "us.openai.gpt-6.1-sol",
+    "us.openai.gpt-6-sol",
+    "us.openai.gpt-5.5",
     # Meta Llama (open weight):
     "us.meta.llama4-scout-17b-instruct-v1:0",
     "us.meta.llama4-maverick-17b-instruct-v1:0",
