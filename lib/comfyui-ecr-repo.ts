@@ -28,10 +28,31 @@ export class ComfyuiEcrRepo extends cdk.Stack {
 
         const codebuildRole = new iam.Role(this, 'CodeBuildRole', {
             assumedBy: new iam.ServicePrincipal('codebuild.amazonaws.com'),
-            managedPolicies: [
-                iam.ManagedPolicy.fromAwsManagedPolicyName('AmazonEC2ContainerRegistryPowerUser'),
-            ],
             inlinePolicies: {
+                codebuildEcr: new iam.PolicyDocument({
+                    statements: [
+                        // GetAuthorizationToken has no resource scope (API requirement).
+                        new iam.PolicyStatement({
+                            actions: ['ecr:GetAuthorizationToken'],
+                            resources: ['*'],
+                        }),
+                        // Push/pull scoped to this project's repos only (comfyui-images +
+                        // the base-image cache repo), not every repo in the account.
+                        new iam.PolicyStatement({
+                            actions: [
+                                'ecr:BatchCheckLayerAvailability',
+                                'ecr:GetDownloadUrlForLayer',
+                                'ecr:BatchGetImage',
+                                'ecr:PutImage',
+                                'ecr:InitiateLayerUpload',
+                                'ecr:UploadLayerPart',
+                                'ecr:CompleteLayerUpload',
+                                'ecr:DescribeRepositories',
+                            ],
+                            resources: [`arn:${this.partition}:ecr:${this.region}:${this.account}:repository/comfyui-*`],
+                        }),
+                    ],
+                }),
                 codebuildS3: new iam.PolicyDocument({
                     statements: [
                         new iam.PolicyStatement({
@@ -40,11 +61,13 @@ export class ComfyuiEcrRepo extends cdk.Stack {
                         }),
                         new iam.PolicyStatement({
                             actions: ['logs:CreateLogGroup', 'logs:CreateLogStream', 'logs:PutLogEvents'],
-                            resources: [`arn:aws:logs:${this.region}:${this.account}:log-group:/aws/codebuild/comfyui-*`],
+                            resources: [`arn:${this.partition}:logs:${this.region}:${this.account}:log-group:/aws/codebuild/comfyui-*`],
                         }),
+                        // buildspec.yml creates the base-image cache repo (comfyui-base-cache)
+                        // on first run; scoped to comfyui-* repo names.
                         new iam.PolicyStatement({
                             actions: ['ecr:CreateRepository'],
-                            resources: [`arn:aws:ecr:${this.region}:${this.account}:repository/comfyui-*`],
+                            resources: [`arn:${this.partition}:ecr:${this.region}:${this.account}:repository/comfyui-*`],
                         }),
                     ],
                 }),

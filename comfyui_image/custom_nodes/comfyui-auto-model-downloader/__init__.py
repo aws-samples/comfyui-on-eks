@@ -217,6 +217,7 @@ _WIDGET_ORDER = {
     "UNETLoader": ["unet_name", "weight_dtype"],
     "CLIPLoader": ["clip_name", "type", "device"],
     "DualCLIPLoader": ["clip_name1", "clip_name2", "type"],
+    "TripleCLIPLoader": ["clip_name1", "clip_name2", "clip_name3"],
     "VAELoader": ["vae_name"],
     "LoraLoader": ["lora_name", "strength_model", "strength_clip"],
     "LoraLoaderModelOnly": ["lora_name", "strength_model"],
@@ -281,6 +282,12 @@ def _fix_prompt_from_definitions(prompt: dict, prefix_to_def: dict[str, dict]):
 
 def _fix_prompt_group_mismatches(prompt: dict):
     """Detect model group mismatches using dependency relationships.
+
+    NOTE: currently NOT wired into the prompt handler — _on_prompt_handler calls
+    _fix_prompt_from_definitions only. Kept as an opt-in dependency-chain corrector;
+    enable by calling it from _on_prompt_handler after _fix_prompt_from_definitions
+    if group-aware correction is needed. Left unwired to avoid double-rewriting the
+    prompt until that interaction is validated.
 
     Uses the catalog's 'requires' field to determine which models belong together.
     If a text encoder is a dependency of a specific diffusion model, those must be
