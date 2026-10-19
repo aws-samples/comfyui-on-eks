@@ -2,8 +2,9 @@ import base64
 from .utils import get_bedrock_client, tensor_to_bytes, invoke_converse
 
 VISION_MODELS = [
-    # Latest Claude line (5.5), multimodal — default. Nova de-defaulted (winding down).
-    # Claude 5.x rejects temperature/topP, so analyze() omits them at their defaults.
+    # Latest Claude line (5.5), multimodal — default. Amazon Nova models removed (Nova line
+    # being deprecated by AWS). Claude 5.x rejects temperature/topP, so analyze() omits them
+    # at their defaults.
     "us.anthropic.claude-haiku-5-5",
     "us.anthropic.claude-sonnet-5-5",
     "us.anthropic.claude-opus-5-5",
@@ -17,9 +18,8 @@ VISION_MODELS = [
     "google.gemma-3-27b-it",
     "google.gemma-3-12b-it",
     "qwen.qwen3-vl-235b-a22b",
-    # Amazon Nova (deprecation in progress — kept for compatibility, not the default):
-    "us.amazon.nova-lite-v1:0",
-    "us.amazon.nova-pro-v1:0",
+    # Amazon Nova removed — the Nova line is being deprecated by AWS (Nova Premier already
+    # EOL; Canvas/Reel removed earlier). Use the non-Nova vision models above instead.
 ]
 
 

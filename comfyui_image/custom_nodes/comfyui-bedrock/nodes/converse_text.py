@@ -1,10 +1,11 @@
 from .utils import get_bedrock_client, invoke_converse
 
 MODELS = [
-    # Default is a non-Amazon-Nova model on the latest Claude line (5.5). Nova is being
-    # wound down, so it is no longer the default. NOTE: the Claude 5.x family rejects the
-    # `temperature`/`topP` knobs ("deprecated for this model"), so generate() only sends
-    # them when the user changes them from the defaults — see below.
+    # Default is a non-Amazon-Nova model on the latest Claude line (5.5). The Amazon Nova
+    # models have been removed because the Nova line is being deprecated by AWS.
+    # NOTE: the Claude 5.x family rejects the `temperature`/`topP` knobs ("deprecated for
+    # this model"), so generate() only sends them when the user changes them from the
+    # defaults — see below.
     "us.anthropic.claude-haiku-5-5",
     "us.anthropic.claude-sonnet-5-5",
     "us.anthropic.claude-opus-5-5",
@@ -30,9 +31,8 @@ MODELS = [
     "us.deepseek.r1-v1:0",
     "qwen.qwen3-235b-a22b-2507-v1:0",
     "qwen.qwen3-32b-v1:0",
-    # Amazon Nova (deprecation in progress — kept for compatibility, not the default):
-    "us.amazon.nova-lite-v1:0",
-    "us.amazon.nova-pro-v1:0",
+    # Amazon Nova removed — the Nova line is being deprecated by AWS (Nova Premier already
+    # EOL; Canvas/Reel removed earlier). Use the non-Nova models above instead.
 ]
 
 

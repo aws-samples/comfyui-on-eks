@@ -112,9 +112,8 @@ The nodes communicate with Bedrock via EKS Pod Identity. The deploy script autom
 | DeepSeek | `us.deepseek.r1-v1:0` | Text |
 | Qwen | `qwen.qwen3-235b-a22b-2507-v1:0`, `qwen.qwen3-32b-v1:0`, `qwen.qwen3-vl-235b-a22b` | Text + Vision |
 | Google | `google.gemma-3-27b-it`, `google.gemma-3-12b-it` | Vision |
-| Amazon Nova (deprecating) | `us.amazon.nova-lite-v1:0`, `us.amazon.nova-pro-v1:0` | Text + Vision |
 
-> The Converse nodes default to **Claude Haiku 5.5**. The Claude 5.x models reject the `temperature`/`topP` sampling knobs, so the nodes send those only when you change them from their defaults — the default path works across every listed model. Amazon Nova is kept selectable but is being wound down by AWS.
+> The Converse nodes default to **Claude Haiku 5.5**. The Claude 5.x models reject the `temperature`/`topP` sampling knobs, so the nodes send those only when you change them from their defaults — the default path works across every listed model. Amazon Nova has been removed — the Nova line is being deprecated by AWS (Nova Premier already EOL; Nova Canvas/Reel removed earlier).
 
 **Image Generation/Editing (InvokeModel API)**
 
@@ -160,7 +159,7 @@ The nodes communicate with Bedrock via EKS Pod Identity. The deploy script autom
 
 ### Prerequisites
 
-1. Enable the desired model access in the [Bedrock console](https://console.aws.amazon.com/bedrock/home#/modelaccess) (Claude, Stability AI, Llama, Qwen — the Converse nodes default to Claude Haiku; Amazon Nova is optional and being deprecated)
+1. Enable the desired model access in the [Bedrock console](https://console.aws.amazon.com/bedrock/home#/modelaccess) (Claude, Stability AI, Llama, Qwen — the Converse nodes default to Claude Haiku; Amazon Nova has been removed as it is being deprecated)
 2. For Luma Ray v2 video: provide an S3 bucket for video output (the node writes async results to S3)
 3. The deploy script handles all IAM configuration automatically
 

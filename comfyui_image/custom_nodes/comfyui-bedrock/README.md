@@ -44,23 +44,21 @@ Sends an image + text prompt to a multimodal model. Use for image captioning, sc
 | DeepSeek | `us.deepseek.r1-v1:0` | Reasoning (open weight) |
 | Qwen | `qwen.qwen3-235b-a22b-2507-v1:0` | 235B MoE (open weight) |
 | Qwen | `qwen.qwen3-32b-v1:0` | 32B dense (open weight) |
-| Amazon Nova (deprecating) | `us.amazon.nova-lite-v1:0`, `us.amazon.nova-pro-v1:0` | Kept for compatibility only |
 
-> Default is **Claude Haiku 5.5**. Claude 5.x rejects `temperature`/`topP`, so the node sends those only when changed from defaults — the default path works across every model above. Amazon Nova is being wound down (Nova Premier is already EOL; Nova Canvas/Reel removed).
+> Default is **Claude Haiku 5.5**. Claude 5.x rejects `temperature`/`topP`, so the node sends those only when changed from defaults — the default path works across every model above. Amazon Nova has been removed — the Nova line is being deprecated by AWS (Nova Premier already EOL; Nova Canvas/Reel removed earlier).
 
 #### Vision + Text (Bedrock Vision node)
 
 | Provider | Model ID | Notes |
 |----------|----------|-------|
-| Amazon | `us.amazon.nova-lite-v1:0` | Fast multimodal |
-| Amazon | `us.amazon.nova-pro-v1:0` | Balanced multimodal |
-| Anthropic | `us.anthropic.claude-opus-4-7` | Most capable vision |
-| Anthropic | `us.anthropic.claude-sonnet-4-6` | Balanced vision |
-| Anthropic | `us.anthropic.claude-haiku-4-5-20251001-v1:0` | Fast vision |
+| Anthropic | `us.anthropic.claude-haiku-5-5` | Fast vision (default) |
+| Anthropic | `us.anthropic.claude-sonnet-5-5` | Balanced vision |
+| Anthropic | `us.anthropic.claude-opus-5-5` | Most capable vision |
+| Anthropic | `us.anthropic.claude-haiku-4-5-20251001-v1:0` | Prev-gen fast vision |
+| Anthropic | `us.anthropic.claude-sonnet-4-6` | Prev-gen balanced vision |
 | Meta | `us.meta.llama4-scout-17b-instruct-v1:0` | Multimodal scout |
 | Meta | `us.meta.llama4-maverick-17b-instruct-v1:0` | Multimodal maverick |
 | Mistral | `us.mistral.pixtral-large-2502-v1:0` | Pixtral Large |
-| Mistral | `mistral.mistral-large-3-675b-instruct` | Large with vision |
 | Google | `google.gemma-3-27b-it` | 27B multimodal |
 | Google | `google.gemma-3-12b-it` | 12B multimodal |
 | Qwen | `qwen.qwen3-vl-235b-a22b` | 235B vision-language |
