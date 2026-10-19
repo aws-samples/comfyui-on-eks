@@ -2,11 +2,11 @@ import base64
 from .utils import get_bedrock_client, tensor_to_bytes, invoke_converse
 
 VISION_MODELS = [
-    "us.amazon.nova-lite-v1:0",
-    "us.amazon.nova-pro-v1:0",
-    "us.anthropic.claude-opus-4-7",
-    "us.anthropic.claude-sonnet-4-6",
+    # Default is a non-Amazon-Nova vision model (Claude Haiku) for the same reason as
+    # the text node — the Nova line is being wound down. Nova entries remain selectable.
     "us.anthropic.claude-haiku-4-5-20251001-v1:0",
+    "us.anthropic.claude-sonnet-4-6",
+    "us.anthropic.claude-opus-4-7",
     "us.meta.llama4-scout-17b-instruct-v1:0",
     "us.meta.llama4-maverick-17b-instruct-v1:0",
     "us.mistral.pixtral-large-2502-v1:0",
@@ -14,6 +14,9 @@ VISION_MODELS = [
     "google.gemma-3-27b-it",
     "google.gemma-3-12b-it",
     "qwen.qwen3-vl-235b-a22b",
+    # Amazon Nova (deprecation in progress — kept for compatibility, not the default):
+    "us.amazon.nova-lite-v1:0",
+    "us.amazon.nova-pro-v1:0",
 ]
 
 

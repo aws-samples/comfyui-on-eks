@@ -12,7 +12,7 @@ A solution to deploy [ComfyUI](https://github.com/comfyanonymous/ComfyUI) on Ama
 6. **Secure Access via CloudFront VPC Origins**: [Amazon CloudFront](https://aws.amazon.com/cloudfront/) connects to the internal ALB via [VPC Origins](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/private-content-vpc-origins.html) — the ALB is never exposed to the internet.
 7. **Serverless Event-Triggered Model Synchronization**: S3 events trigger a Lambda function to sync model files across all GPU nodes via SSM.
 8. **CodeBuild for Builds and Model Downloads**: Container images and model downloads run on [AWS CodeBuild](https://aws.amazon.com/codebuild/) — no local Docker, GPU, disk space, or bandwidth required. Models download at 200+ MiB/s directly from HuggingFace to S3.
-9. **Amazon Bedrock Integration**: Built-in custom nodes for [Amazon Bedrock](https://aws.amazon.com/bedrock/) — text-to-image and editing (Stability AI: SD3.5 Large / Stable Image Core / Ultra), text-to-video (Luma Ray v2), prompt enhancement (Claude, Nova, Qwen3), and image understanding (vision models).
+9. **Amazon Bedrock Integration**: Built-in custom nodes for [Amazon Bedrock](https://aws.amazon.com/bedrock/) — text-to-image and editing (Stability AI: SD3.5 Large / Stable Image Core / Ultra), text-to-video (Luma Ray v2), prompt enhancement (Claude, Llama, Qwen3), and image understanding (vision models).
 
 ## Security Considerations
 
@@ -157,13 +157,13 @@ The nodes communicate with Bedrock via EKS Pod Identity. The deploy script autom
 
 ### Prerequisites
 
-1. Enable the desired model access in the [Bedrock console](https://console.aws.amazon.com/bedrock/home#/modelaccess) (Nova, Stability AI, Claude, and/or Qwen)
+1. Enable the desired model access in the [Bedrock console](https://console.aws.amazon.com/bedrock/home#/modelaccess) (Claude, Stability AI, Llama, Qwen — the Converse nodes default to Claude Haiku; Amazon Nova is optional and being deprecated)
 2. For Luma Ray v2 video: provide an S3 bucket for video output (the node writes async results to S3)
 3. The deploy script handles all IAM configuration automatically
 
 ### Example Workflows
 
-**Prompt Enhancement** — Use the Bedrock Text node with Claude or Nova Lite:
+**Prompt Enhancement** — Use the Bedrock Text node (defaults to Claude Haiku; any listed model works):
 1. Connect a simple text prompt (e.g., "a cat in a garden")
 2. Set system prompt to "Enhance this prompt for Stable Diffusion with rich visual details"
 3. Connect the output text to the positive prompt of a KSampler node
