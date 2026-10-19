@@ -257,10 +257,10 @@ deploy_karpenter() {
 
 deploy_pod_identity() {
     echo "==== Start deploying Pod Identity for ComfyUI ===="
-    BEDROCK_ROLE_NAME=ComfyUI-Bedrock-PodIdentity-${ACCOUNT_ID}-${AWS_DEFAULT_REGION}
+    POD_IDENTITY_ROLE_NAME=ComfyUI-PodIdentity-${ACCOUNT_ID}-${AWS_DEFAULT_REGION}
 
     # Create IAM role with Pod Identity trust policy
-    aws iam create-role --role-name $BEDROCK_ROLE_NAME --assume-role-policy-document '{
+    aws iam create-role --role-name $POD_IDENTITY_ROLE_NAME --assume-role-policy-document '{
         "Version": "2012-10-17",
         "Statement": [{
             "Effect": "Allow",
@@ -275,7 +275,7 @@ deploy_pod_identity() {
     # several regions (us-east-1, us-east-2, us-west-2), not just the deploy region. Scoping
     # foundation-model to ${AWS_DEFAULT_REGION} alone caused AccessDeniedException on bedrock:InvokeModel
     # for a us-east-1 foundation-model ARN. Do not narrow this back to a single region.
-    aws iam put-role-policy --role-name $BEDROCK_ROLE_NAME --policy-name BedrockInvokeAccess --policy-document "{
+    aws iam put-role-policy --role-name $POD_IDENTITY_ROLE_NAME --policy-name BedrockInvokeAccess --policy-document "{
         \"Version\": \"2012-10-17\",
         \"Statement\": [{
             \"Effect\": \"Allow\",
@@ -290,7 +290,7 @@ deploy_pod_identity() {
     # S3 write for the video-s3-sync sidecar (issue #28): the pod writes video output to a
     # local scratch dir (Mountpoint S3 can't do ffmpeg's .mp4 seeks) and syncs it here.
     # Scoped to the outputs bucket video/ prefix only.
-    aws iam put-role-policy --role-name $BEDROCK_ROLE_NAME --policy-name OutputsVideoS3Write --policy-document "{
+    aws iam put-role-policy --role-name $POD_IDENTITY_ROLE_NAME --policy-name OutputsVideoS3Write --policy-document "{
         \"Version\": \"2012-10-17\",
         \"Statement\": [
             {
@@ -311,12 +311,12 @@ deploy_pod_identity() {
     kubectl create serviceaccount comfyui-sa -n default 2>/dev/null || true
 
     # Create Pod Identity association
-    BEDROCK_ROLE_ARN="arn:aws:iam::${ACCOUNT_ID}:role/${BEDROCK_ROLE_NAME}"
+    POD_IDENTITY_ROLE_ARN="arn:aws:iam::${ACCOUNT_ID}:role/${POD_IDENTITY_ROLE_NAME}"
     aws eks create-pod-identity-association \
         --cluster-name $EKS_CLUSTER_STACK \
         --namespace default \
         --service-account comfyui-sa \
-        --role-arn $BEDROCK_ROLE_ARN 2>/dev/null || true
+        --role-arn $POD_IDENTITY_ROLE_ARN 2>/dev/null || true
 
     echo "==== Finish deploying Pod Identity for ComfyUI ===="
 }

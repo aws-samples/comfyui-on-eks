@@ -333,7 +333,7 @@ cleanup_residuals() {
     echo "=== Cleaning up residual resources ==="
 
     # 1. Bedrock Pod Identity role (created imperatively, not via CFN)
-    local ROLE_NAME="ComfyUI-Bedrock-PodIdentity-${ACCOUNT_ID}-${AWS_DEFAULT_REGION}"
+    local ROLE_NAME="ComfyUI-PodIdentity-${ACCOUNT_ID}-${AWS_DEFAULT_REGION}"
     if aws iam get-role --role-name "$ROLE_NAME" &>/dev/null; then
         echo "  Deleting IAM role: $ROLE_NAME"
         # Delete all inline policies (there may be 1-N, don't hardcode names)
