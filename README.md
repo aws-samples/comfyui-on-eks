@@ -24,7 +24,7 @@ A solution to deploy [ComfyUI](https://github.com/comfyanonymous/ComfyUI) on Ama
 
 2. **IAM and Least Privilege**:
    - All IAM roles use scoped inline policies with specific resource ARN patterns (no wildcards except where AWS APIs require them)
-   - Bedrock access is scoped to the deployment region only
+   - Bedrock access is scoped to InvokeModel on foundation models and account-owned inference profiles; the foundation-model ARN is region-wildcarded because cross-region inference profiles (`us.*` models) route to foundation models in several regions
    - S3 model sync uses checksum verification (`--checksum-mode ENABLED`)
    - Node IMDSv2 enforced with hop limit of 1 (containers cannot reach node metadata)
 
@@ -142,8 +142,8 @@ The nodes communicate with Bedrock via EKS Pod Identity. The deploy script autom
      "Effect": "Allow",
      "Action": ["bedrock:InvokeModel", "bedrock:InvokeModelWithResponseStream", "bedrock:StartAsyncInvoke", "bedrock:GetAsyncInvoke"],
      "Resource": [
-       "arn:aws:bedrock:<REGION>::foundation-model/*",
-       "arn:aws:bedrock:<REGION>:<ACCOUNT>:inference-profile/*"
+       "arn:aws:bedrock:*::foundation-model/*",
+       "arn:aws:bedrock:*:<ACCOUNT>:inference-profile/*"
      ]
    }
    ```

@@ -269,14 +269,20 @@ deploy_pod_identity() {
         }]
     }' 2>/dev/null || true
 
+    # NOTE: the foundation-model resource is region-wildcarded (arn:aws:bedrock:*::foundation-model/*)
+    # on purpose. The Converse/Nova nodes use CROSS-REGION inference profiles (model ids prefixed
+    # "us." e.g. us.amazon.nova-lite-v1:0), which fan out to the regional foundation-model ARNs of
+    # several regions (us-east-1, us-east-2, us-west-2), not just the deploy region. Scoping
+    # foundation-model to ${AWS_DEFAULT_REGION} alone caused AccessDeniedException on bedrock:InvokeModel
+    # for a us-east-1 foundation-model ARN. Do not narrow this back to a single region.
     aws iam put-role-policy --role-name $BEDROCK_ROLE_NAME --policy-name BedrockInvokeAccess --policy-document "{
         \"Version\": \"2012-10-17\",
         \"Statement\": [{
             \"Effect\": \"Allow\",
             \"Action\": [\"bedrock:InvokeModel\", \"bedrock:InvokeModelWithResponseStream\", \"bedrock:StartAsyncInvoke\", \"bedrock:GetAsyncInvoke\"],
             \"Resource\": [
-                \"arn:aws:bedrock:${AWS_DEFAULT_REGION}::foundation-model/*\",
-                \"arn:aws:bedrock:${AWS_DEFAULT_REGION}:${ACCOUNT_ID}:inference-profile/*\"
+                \"arn:aws:bedrock:*::foundation-model/*\",
+                \"arn:aws:bedrock:*:${ACCOUNT_ID}:inference-profile/*\"
             ]
         }]
     }"
