@@ -12,7 +12,7 @@ A solution to deploy [ComfyUI](https://github.com/comfyanonymous/ComfyUI) on Ama
 6. **Secure Access via CloudFront VPC Origins**: [Amazon CloudFront](https://aws.amazon.com/cloudfront/) connects to the internal ALB via [VPC Origins](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/private-content-vpc-origins.html) — the ALB is never exposed to the internet.
 7. **Serverless Event-Triggered Model Synchronization**: S3 events trigger a Lambda function to sync model files across all GPU nodes via SSM.
 8. **CodeBuild for Builds and Model Downloads**: Container images and model downloads run on [AWS CodeBuild](https://aws.amazon.com/codebuild/) — no local Docker, GPU, disk space, or bandwidth required. Models download at 200+ MiB/s directly from HuggingFace to S3.
-9. **Amazon Bedrock Integration**: Built-in custom nodes for [Amazon Bedrock](https://aws.amazon.com/bedrock/) — text-to-image (Nova Canvas), text-to-video (Nova Reel), upscaling/inpainting (Stability AI), prompt enhancement (Claude, Nova, Qwen3), and image understanding (vision models).
+9. **Amazon Bedrock Integration**: Built-in custom nodes for [Amazon Bedrock](https://aws.amazon.com/bedrock/) — text-to-image and editing (Stability AI: SD3.5 Large / Stable Image Core / Ultra), text-to-video (Luma Ray v2), prompt enhancement (Claude, Nova, Qwen3), and image understanding (vision models).
 
 ## Security Considerations
 
@@ -88,7 +88,7 @@ The nodes communicate with Bedrock via EKS Pod Identity. The deploy script autom
 |------|----------|-------------|----------|
 | **Bedrock Text (Converse)** | Bedrock | Text generation via Converse API | Prompt enhancement, creative writing |
 | **Bedrock Vision (Converse)** | Bedrock | Image+text understanding via Converse API | Image captioning, scene analysis |
-| **Bedrock Nova Canvas** | Bedrock/Nova Canvas | Image generation and editing | Text-to-image, inpaint, outpaint, background removal, variations |
+| **Bedrock Stability Generate** | Bedrock/Stability | Text-to-image and image-to-image | Text-to-image with SD3.5 Large / Stable Image Core / Ultra |
 | **Bedrock Nova Reel (Video)** | Bedrock/Nova Reel | Text/image-to-video generation | Short video clips with camera motion control |
 | **Bedrock Stability Inpaint** | Bedrock/Stability | Mask-based inpainting | Fill masked regions with generated content |
 | **Bedrock Stability Remove Background** | Bedrock/Stability | Background removal | Extract subjects from images |
@@ -117,16 +117,18 @@ The nodes communicate with Bedrock via EKS Pod Identity. The deploy script autom
 
 | Model ID | Provider | Capability |
 |----------|----------|------------|
-| `amazon.nova-canvas-v1:0` | Amazon | Text-to-image, inpaint, outpaint, background removal, variations |
+| `stability.sd3-5-large-v1:0` | Stability AI | Text-to-image and image-to-image (SD3.5 Large) |
+| `stability.stable-image-core-v1:1` | Stability AI | Fast, affordable text-to-image |
+| `stability.stable-image-ultra-v1:1` | Stability AI | Highest-fidelity text-to-image |
 | `stability.stable-image-inpaint-v1:0` | Stability AI | Inpainting |
 | `stability.stable-image-remove-background-v1:0` | Stability AI | Background removal |
-| `stability.stable-image-fast-upscale-v1:0` | Stability AI | Fast upscaling |
-| `stability.stable-image-conservative-upscale-v1:0` | Stability AI | Conservative upscaling |
-| `stability.stable-image-creative-upscale-v1:0` | Stability AI | Creative upscaling |
+| `stability.stable-fast-upscale-v1:0` | Stability AI | Fast upscaling |
+| `stability.stable-conservative-upscale-v1:0` | Stability AI | Conservative upscaling |
+| `stability.stable-creative-upscale-v1:0` | Stability AI | Creative upscaling |
 | `stability.stable-image-control-structure-v1:0` | Stability AI | Depth/edge-guided generation |
 | `stability.stable-image-control-sketch-v1:0` | Stability AI | Sketch-guided generation |
-| `stability.stable-image-search-and-replace-v1:0` | Stability AI | Object replacement |
-| `stability.stable-image-style-transfer-v1:0` | Stability AI | Style transfer |
+| `stability.stable-image-search-replace-v1:0` | Stability AI | Object replacement |
+| `stability.stable-style-transfer-v1:0` | Stability AI | Style transfer |
 
 **Video Generation (StartAsyncInvoke API)**
 
@@ -164,9 +166,9 @@ The nodes communicate with Bedrock via EKS Pod Identity. The deploy script autom
 2. Set system prompt to "Enhance this prompt for Stable Diffusion with rich visual details"
 3. Connect the output text to the positive prompt of a KSampler node
 
-**Cloud Image Generation** — Use the Nova Canvas node:
+**Cloud Image Generation** — Use the Bedrock Stability Generate node:
 1. Enter a text prompt describing the desired image
-2. Set width/height and cfg_scale
+2. Pick a model (SD3.5 Large / Stable Image Core / Ultra) and an aspect ratio
 3. Connect the output IMAGE to a preview or save node
 
 **Upscaling** — Use the Stability Upscale node:

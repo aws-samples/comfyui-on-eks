@@ -2,9 +2,9 @@ import json
 from .utils import get_bedrock_client, tensor_to_base64, mask_to_base64, base64_to_tensor
 
 GENERATE_MODELS = [
-    ("SD 3.5 Large", "us.stability.sd3-5-large-v1:0"),
-    ("Stable Image Core", "us.stability.stable-image-core-v1:1"),
-    ("Stable Image Ultra", "us.stability.sd3-ultra-v1:1"),
+    ("SD 3.5 Large", "stability.sd3-5-large-v1:0"),
+    ("Stable Image Core", "stability.stable-image-core-v1:1"),
+    ("Stable Image Ultra", "stability.stable-image-ultra-v1:1"),
 ]
 
 
@@ -105,7 +105,7 @@ class BedrockStabilityOutpaint:
             body["down"] = down
 
         response = client.invoke_model(
-            modelId="us.stability.stable-outpaint-v1:0",
+            modelId="stability.stable-outpaint-v1:0",
             body=json.dumps(body),
             contentType="application/json",
             accept="application/json",
@@ -144,7 +144,7 @@ class BedrockStabilityEraseObject:
             body["seed"] = seed
 
         response = client.invoke_model(
-            modelId="us.stability.stable-image-erase-object-v1:0",
+            modelId="stability.stable-image-erase-object-v1:0",
             body=json.dumps(body),
             contentType="application/json",
             accept="application/json",
@@ -188,7 +188,7 @@ class BedrockStabilitySearchRecolor:
             body["seed"] = seed
 
         response = client.invoke_model(
-            modelId="us.stability.stable-image-search-recolor-v1:0",
+            modelId="stability.stable-image-search-recolor-v1:0",
             body=json.dumps(body),
             contentType="application/json",
             accept="application/json",

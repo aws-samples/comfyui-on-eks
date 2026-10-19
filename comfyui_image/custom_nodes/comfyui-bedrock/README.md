@@ -61,14 +61,23 @@ Sends an image + text prompt to a multimodal model. Use for image captioning, sc
 
 ## Image Generation & Editing
 
-### Bedrock Nova Canvas
+### Image Generation (Stability AI)
 
-Multi-mode image generation and editing using Amazon Nova Canvas.
+Amazon's native image models (Nova Canvas, Titan Image Generator) have been
+deprecated on Bedrock and are no longer wired here. Image generation now runs
+on Stability AI, which covers every capability the Nova Canvas node used to
+provide:
 
-**Task types:** TEXT_IMAGE, INPAINTING, OUTPAINTING, IMAGE_VARIATION, BACKGROUND_REMOVAL, COLOR_GUIDED_GENERATION
+| Former Nova Canvas task | Use instead |
+|-------------------------|-------------|
+| TEXT_IMAGE | **Bedrock Stability Generate** (SD3.5 Large / Stable Image Core / Ultra) |
+| IMAGE_VARIATION | **Bedrock Stability Generate** (supply an `image` for image-to-image) |
+| INPAINTING | **Bedrock Stability Inpaint** |
+| OUTPAINTING | **Bedrock Stability Outpaint** |
+| BACKGROUND_REMOVAL | **Bedrock Stability Remove Background** |
+| COLOR_GUIDED_GENERATION | **Bedrock Stability Search & Recolor** / **Style Guide** |
 
-**Inputs:** prompt, task_type, width, height, cfg_scale, seed, optional image/mask/negative_prompt
-**Output:** image
+See the Stability sections below for inputs and model IDs.
 
 ### Stability AI Nodes
 
@@ -108,7 +117,6 @@ Text-to-video and image-to-video via Luma Ray v2. Produces 5-9 second clips with
 |------|----------|-------------|
 | Bedrock Text (Converse) | Bedrock | Text generation with 15+ LLMs |
 | Bedrock Vision (Converse) | Bedrock | Image understanding with 12+ multimodal models |
-| Bedrock Nova Canvas | Bedrock/Nova Canvas | Image generation and editing (6 modes) |
 | Bedrock Nova Reel (Video) | Bedrock/Nova Reel | Text/image-to-video |
 | Bedrock Luma Ray v2 (Video) | Bedrock/Luma | Text/image-to-video |
 | Bedrock Stability Generate | Bedrock/Stability | Text-to-image with SD3.5/Core/Ultra |
