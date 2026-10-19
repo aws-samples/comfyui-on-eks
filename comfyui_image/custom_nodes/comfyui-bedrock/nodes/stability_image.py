@@ -37,7 +37,7 @@ class BedrockStabilityInpaint:
             body["seed"] = seed
 
         response = client.invoke_model(
-            modelId="stability.stable-image-inpaint-v1:0",
+            modelId="us.stability.stable-image-inpaint-v1:0",
             body=json.dumps(body),
             contentType="application/json",
             accept="application/json",
@@ -68,7 +68,7 @@ class BedrockStabilityRemoveBackground:
             "output_format": output_format,
         }
         response = client.invoke_model(
-            modelId="stability.stable-image-remove-background-v1:0",
+            modelId="us.stability.stable-image-remove-background-v1:0",
             body=json.dumps(body),
             contentType="application/json",
             accept="application/json",
@@ -100,9 +100,9 @@ class BedrockStabilityUpscale:
     def upscale(self, image, mode, output_format, prompt="", creativity=0.3):
         client = get_bedrock_client()
         model_map = {
-            "fast": "stability.stable-fast-upscale-v1:0",
-            "conservative": "stability.stable-conservative-upscale-v1:0",
-            "creative": "stability.stable-creative-upscale-v1:0",
+            "fast": "us.stability.stable-fast-upscale-v1:0",
+            "conservative": "us.stability.stable-conservative-upscale-v1:0",
+            "creative": "us.stability.stable-creative-upscale-v1:0",
         }
         body = {
             "image": tensor_to_base64(image),
@@ -148,8 +148,8 @@ class BedrockStabilityControlStructure:
     def generate(self, image, prompt, control_mode, control_strength, output_format, negative_prompt="", seed=0):
         client = get_bedrock_client()
         model_map = {
-            "structure": "stability.stable-image-control-structure-v1:0",
-            "sketch": "stability.stable-image-control-sketch-v1:0",
+            "structure": "us.stability.stable-image-control-structure-v1:0",
+            "sketch": "us.stability.stable-image-control-sketch-v1:0",
         }
         body = {
             "image": tensor_to_base64(image),
@@ -207,7 +207,7 @@ class BedrockStabilitySearchReplace:
             body["seed"] = seed
 
         response = client.invoke_model(
-            modelId="stability.stable-image-search-replace-v1:0",
+            modelId="us.stability.stable-image-search-replace-v1:0",
             body=json.dumps(body),
             contentType="application/json",
             accept="application/json",
@@ -258,7 +258,7 @@ class BedrockStabilityStyleTransfer:
             body["composition_fidelity"] = composition_fidelity
 
         response = client.invoke_model(
-            modelId="stability.stable-style-transfer-v1:0",
+            modelId="us.stability.stable-style-transfer-v1:0",
             body=json.dumps(body),
             contentType="application/json",
             accept="application/json",
@@ -306,7 +306,7 @@ class BedrockStabilityStyleGuide:
             body["aspect_ratio"] = aspect_ratio
 
         response = client.invoke_model(
-            modelId="stability.stable-image-style-guide-v1:0",
+            modelId="us.stability.stable-image-style-guide-v1:0",
             body=json.dumps(body),
             contentType="application/json",
             accept="application/json",

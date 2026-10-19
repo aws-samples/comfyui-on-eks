@@ -130,6 +130,8 @@ The nodes communicate with Bedrock via EKS Pod Identity. The deploy script autom
 | `stability.stable-image-search-replace-v1:0` | Stability AI | Object replacement |
 | `stability.stable-style-transfer-v1:0` | Stability AI | Style transfer |
 
+> The three text-to-image models (SD3.5 Large, Stable Image Core, Stable Image Ultra) support on-demand throughput and are invoked by the bare model ID. All the editing/upscale models above are **inference-profile only** — the nodes invoke them with the `us.` cross-region prefix (e.g. `us.stability.stable-fast-upscale-v1:0`), which the Pod Identity policy allows via the region-wildcarded inference-profile ARN.
+
 **Video Generation (StartAsyncInvoke API)**
 
 | Model ID | Provider | Capability |

@@ -105,7 +105,7 @@ class BedrockStabilityOutpaint:
             body["down"] = down
 
         response = client.invoke_model(
-            modelId="stability.stable-outpaint-v1:0",
+            modelId="us.stability.stable-outpaint-v1:0",
             body=json.dumps(body),
             contentType="application/json",
             accept="application/json",
@@ -144,7 +144,7 @@ class BedrockStabilityEraseObject:
             body["seed"] = seed
 
         response = client.invoke_model(
-            modelId="stability.stable-image-erase-object-v1:0",
+            modelId="us.stability.stable-image-erase-object-v1:0",
             body=json.dumps(body),
             contentType="application/json",
             accept="application/json",
@@ -188,7 +188,7 @@ class BedrockStabilitySearchRecolor:
             body["seed"] = seed
 
         response = client.invoke_model(
-            modelId="stability.stable-image-search-recolor-v1:0",
+            modelId="us.stability.stable-image-search-recolor-v1:0",
             body=json.dumps(body),
             contentType="application/json",
             accept="application/json",
