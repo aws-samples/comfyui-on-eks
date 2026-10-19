@@ -3,6 +3,10 @@ kind: Namespace
 metadata:
   name: default
   labels:
-    pod-security.kubernetes.io/enforce: baseline
+    # NOTE: enforce is intentionally NOT set to baseline. The ComfyUI pod mounts
+    # hostPath (/comfyui-models on the instance-store NVMe), which the PodSecurity
+    # 'baseline' standard forbids -- enforcing baseline would reject the pod at
+    # admission and break rollouts. warn/audit surface the hostPath usage without
+    # blocking the workload that legitimately requires it.
     pod-security.kubernetes.io/warn: baseline
     pod-security.kubernetes.io/audit: baseline
