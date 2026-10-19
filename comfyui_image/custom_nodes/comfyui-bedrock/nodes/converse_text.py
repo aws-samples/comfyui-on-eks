@@ -47,14 +47,19 @@ class BedrockConverseText:
     def generate(self, prompt, model_id, max_tokens, temperature, top_p, system_prompt=""):
         client = get_bedrock_client()
         messages = [{"role": "user", "content": [{"text": prompt}]}]
+        inference_config = {
+            "maxTokens": max_tokens,
+            "temperature": temperature,
+        }
+        # Some models (e.g. Anthropic Claude) reject temperature and topP being set
+        # together ("cannot both be specified"). Send topP only when the user has
+        # changed it from the default, so the common case sends temperature alone.
+        if top_p != 0.9:
+            inference_config["topP"] = top_p
         kwargs = {
             "modelId": model_id,
             "messages": messages,
-            "inferenceConfig": {
-                "maxTokens": max_tokens,
-                "temperature": temperature,
-                "topP": top_p,
-            },
+            "inferenceConfig": inference_config,
         }
         if system_prompt:
             kwargs["system"] = [{"text": system_prompt}]
