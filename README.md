@@ -105,13 +105,16 @@ The nodes communicate with Bedrock via EKS Pod Identity. The deploy script autom
 
 | Provider | Model ID | Type |
 |----------|----------|------|
-| Amazon | `us.amazon.nova-lite-v1:0`, `us.amazon.nova-pro-v1:0`, `us.amazon.nova-micro-v1:0` | Text + Vision |
-| Anthropic | `us.anthropic.claude-opus-4-7`, `us.anthropic.claude-sonnet-4-6`, `us.anthropic.claude-haiku-4-5-20251001-v1:0` | Text + Vision |
-| DeepSeek | `us.deepseek.r1-v1:0` | Text |
+| Anthropic (**default**) | `us.anthropic.claude-haiku-5-5`, `us.anthropic.claude-sonnet-5-5`, `us.anthropic.claude-opus-5-5` (latest 5.x line); `us.anthropic.claude-haiku-4-5-20251001-v1:0`, `us.anthropic.claude-sonnet-4-6` (prev gen) | Text + Vision |
 | Meta | `us.meta.llama4-scout-17b-instruct-v1:0`, `us.meta.llama4-maverick-17b-instruct-v1:0`, `us.meta.llama3-3-70b-instruct-v1:0` | Text + Vision |
-| Mistral | `mistral.mistral-large-3-675b-instruct`, `us.mistral.pixtral-large-2502-v1:0` | Text + Vision |
-| Google | `google.gemma-3-27b-it`, `google.gemma-3-12b-it` | Vision |
+| Mistral | `mistral.mistral-large-3-675b-instruct`, `mistral.ministral-3-14b-instruct`, `mistral.magistral-small-2509`, `us.mistral.pixtral-large-2502-v1:0` | Text + Vision |
+| NVIDIA | `nvidia.nemotron-super-3-120b`, `nvidia.nemotron-nano-9b-v2` | Text |
+| DeepSeek | `us.deepseek.r1-v1:0` | Text |
 | Qwen | `qwen.qwen3-235b-a22b-2507-v1:0`, `qwen.qwen3-32b-v1:0`, `qwen.qwen3-vl-235b-a22b` | Text + Vision |
+| Google | `google.gemma-3-27b-it`, `google.gemma-3-12b-it` | Vision |
+| Amazon Nova (deprecating) | `us.amazon.nova-lite-v1:0`, `us.amazon.nova-pro-v1:0` | Text + Vision |
+
+> The Converse nodes default to **Claude Haiku 5.5**. The Claude 5.x models reject the `temperature`/`topP` sampling knobs, so the nodes send those only when you change them from their defaults — the default path works across every listed model. Amazon Nova is kept selectable but is being wound down by AWS.
 
 **Image Generation/Editing (InvokeModel API)**
 
