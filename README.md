@@ -354,7 +354,7 @@ The catalog is defined in `comfyui_image/custom_nodes/comfyui-auto-model-downloa
 | Amazon EKS | 1.35 |
 | Karpenter | 1.9.0 |
 | NVIDIA GPU Operator | v26.3.2 (driver/toolkit from AMI) |
-| ComfyUI | v0.21.1 |
+| ComfyUI | v0.41.3 |
 | PyTorch | 2.12.0 (CUDA 13.0) |
 | Mountpoint S3 CSI Driver | v2.5.0 |
 | AWS CDK | 2.260.0 (CLI 2.1128.0) |
@@ -400,6 +400,21 @@ The total cost of deploying this solution in us-west-2 is approximately **$450/m
 
 ## Change logs
 
+### ComfyUI Upgrade -- 2026.10.19
+
+- Upgraded ComfyUI v0.21.1 -> v0.41.3 (pinned to commit `8713616`, released 2026-10-17).
+  Chose the newest patch (`.3`) tag one minor behind the v0.42.x line cut the prior day,
+  to pick up a few days of soak rather than tracking the bleeding edge.
+- Unlocks newer native model support added since v0.21.1 (Flux.2, Z-Image, Qwen Image Edit,
+  Wan 2.2 refinements, LTX-Video 2, HunyuanVideo 1.5, SD3.5 improvements, newer 3D/vision).
+- ComfyUI-Florence2 kept at v1.1.0 (`9ece3de`) — verified as the current tip of main; since
+  commit `9acc6e9` it runs the model natively without `transformers`, reducing version risk.
+- No CDK/infrastructure changes — container image only. Rebuild via the `comfyui-model-download`
+  sibling CodeBuild image build, then functional smoke test required before merge:
+  load the UI, run a Tier-1 workflow (z_image_turbo), exercise a Bedrock node, and trigger the
+  auto-model-downloader on a missing model to confirm the `folder_paths` monkeypatches and the
+  `/auto-model-downloader/*` routes still bind against the new core.
+
 ### Security Hardening -- 2026.06.19
 
 - Upgraded to EKS 1.35, Karpenter 1.9.0, NVIDIA GPU Operator v26.3.2
@@ -434,7 +449,7 @@ Automatic deployment scripts in `comfyui-on-eks/auto_deploy/`, supports Ubuntu a
 
 ### Flux / SD3 / Custom Nodes Support
 
-ComfyUI v0.21.1 supports Flux, Stable Diffusion 3, and custom nodes. To use any model:
+ComfyUI v0.41.3 supports Flux, Flux.2, Stable Diffusion 3.5, Qwen Image, Wan 2.2, and custom nodes. To use any model:
 
 1. Upload models to the S3 models bucket following the `ComfyUI/models` directory structure
 2. Use the corresponding workflow JSON via the API (see `test/` folder for examples)

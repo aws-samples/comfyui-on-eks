@@ -25,10 +25,15 @@ RUN pip3 install --break-system-packages --ignore-installed "pip>=24.3" "wheel>=
     rm -rf /var/lib/apt/lists/*
 RUN pip3 install --break-system-packages torch==2.12.0 torchvision==0.27.0 --extra-index-url https://download.pytorch.org/whl/cu130
 RUN git clone https://github.com/comfyanonymous/ComfyUI.git
-RUN cd /app/ComfyUI && git checkout 26515acd23fa291a8f5ab53c5997258598de0701
+# ComfyUI v0.41.3 (released 2026-10-17). Proven-stable patch tag, deliberately one
+# minor behind the v0.42.x line cut the day before, to pick up a few days of soak.
+RUN cd /app/ComfyUI && git checkout 8713616fcc321624e306bbd36be5906203dcb0dc
 RUN pip3 install --break-system-packages -r /app/ComfyUI/requirements.txt
 RUN pip3 install --break-system-packages requests==2.32.3
 
+# ComfyUI-Florence2 v1.1.0 (9ece3de, 2026-05-06) — verified current tip of main as of
+# the v0.41.3 upgrade. Since 9acc6e9 the node runs the model natively without transformers,
+# which avoids transformers-version breakage against newer ComfyUI.
 RUN cd /app/ComfyUI/custom_nodes && git clone https://github.com/kijai/ComfyUI-Florence2.git && \
     cd ComfyUI-Florence2 && git checkout 9ece3de914214c5f581d725167bc9d0eeb0d1120
 RUN pip3 install --break-system-packages -r /app/ComfyUI/custom_nodes/ComfyUI-Florence2/requirements.txt
