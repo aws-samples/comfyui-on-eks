@@ -98,7 +98,11 @@ def invoke_converse(client, kwargs):
 
 
 def tensor_to_pil(image_tensor):
-    img_array = (image_tensor.squeeze(0).cpu().numpy() * 255).astype(np.uint8)
+    # ComfyUI IMAGE tensors are [batch, H, W, C]; these Bedrock nodes operate on a
+    # single image, so take the first batch element explicitly rather than relying
+    # on squeeze (which only drops the batch dim when batch==1).
+    arr = image_tensor[0] if image_tensor.dim() == 4 else image_tensor
+    img_array = (arr.cpu().numpy() * 255).astype(np.uint8)
     return Image.fromarray(img_array)
 
 
@@ -117,7 +121,9 @@ def tensor_to_base64(image_tensor, format="PNG", max_dim=None):
 
 
 def mask_to_bytes(mask_tensor, format="PNG"):
-    mask_array = (mask_tensor.squeeze(0).cpu().numpy() * 255).astype(np.uint8)
+    # MASK tensors are [batch, H, W]; take the first element explicitly (single-image contract).
+    m = mask_tensor[0] if mask_tensor.dim() == 3 else mask_tensor
+    mask_array = (m.cpu().numpy() * 255).astype(np.uint8)
     img = Image.fromarray(mask_array, mode="L")
     buffer = io.BytesIO()
     img.save(buffer, format=format)

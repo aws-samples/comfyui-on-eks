@@ -40,7 +40,7 @@ export class LambdaModelsSync extends cdk.Stack {
                     new iam.PolicyStatement({
                         actions: ['ssm:SendCommand'],
                         resources: [
-                            `arn:aws:ec2:${this.region}:${this.account}:instance/*`,
+                            `arn:${this.partition}:ec2:${this.region}:${this.account}:instance/*`,
                         ],
                         conditions: {
                             StringEquals: {
@@ -51,7 +51,7 @@ export class LambdaModelsSync extends cdk.Stack {
                     new iam.PolicyStatement({
                         actions: ['ssm:SendCommand'],
                         resources: [
-                            `arn:aws:ssm:${this.region}::document/AWS-RunShellScript`,
+                            `arn:${this.partition}:ssm:${this.region}::document/AWS-RunShellScript`,
                         ],
                     }),
                     new iam.PolicyStatement({

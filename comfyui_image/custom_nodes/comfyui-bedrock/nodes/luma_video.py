@@ -26,6 +26,13 @@ class BedrockLumaRay:
     CATEGORY = "Bedrock/Luma"
 
     def generate_video(self, prompt, s3_output_bucket, s3_output_prefix, aspect_ratio, duration_seconds, image=None):
+        if not prompt or not prompt.strip():
+            raise ValueError("Luma Ray requires a non-empty prompt.")
+        if not s3_output_bucket or not s3_output_bucket.strip():
+            raise ValueError(
+                "Luma Ray requires an S3 output bucket (the model writes async video results to S3)."
+            )
+
         client = get_bedrock_client()
 
         model_input = {
@@ -40,7 +47,12 @@ class BedrockLumaRay:
                 "source": {"bytes": tensor_to_base64(image)},
             }
 
-        s3_uri = f"s3://{s3_output_bucket}/{s3_output_prefix}"
+        # Normalize the prefix so the output URI is well-formed regardless of
+        # whether the user included a trailing slash.
+        prefix = s3_output_prefix.strip().lstrip("/")
+        if prefix and not prefix.endswith("/"):
+            prefix += "/"
+        s3_uri = f"s3://{s3_output_bucket.strip()}/{prefix}"
 
         try:
             response = client.start_async_invoke(

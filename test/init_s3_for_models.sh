@@ -10,6 +10,9 @@ account=$(aws sts get-caller-identity --query Account --output text)
 bucket="comfyui-models-$account-$region"
 echo "Uploading to bucket: $bucket"
 
+# Count download failures so we can surface them before the S3 sync (L6).
+DOWNLOAD_FAILURES=0
+
 dirs=(checkpoints clip clip_vision configs controlnet diffusers diffusion_models embeddings gligen hypernetworks loras style_models text_encoders unet upscale_models vae vae_approx model_patches latent_upscale_models)
 for dir in "${dirs[@]}"
 do
@@ -30,6 +33,7 @@ download() {
     if [ $? -ne 0 ]; then
         echo "FAILED: $name"
         rm -f "$dest"
+        DOWNLOAD_FAILURES=$((DOWNLOAD_FAILURES + 1))
         return 1
     fi
 }
@@ -187,9 +191,17 @@ download ~/comfyui-models/loras/Qwen-Image-Edit-2509-Lightning-4steps-V1.0-bf16.
 # ============================================================
 echo ""
 echo "=== Uploading all models to S3 ==="
+if [ "$DOWNLOAD_FAILURES" -gt 0 ]; then
+    echo "WARNING: $DOWNLOAD_FAILURES model(s) failed to download; the S3 set will be INCOMPLETE."
+fi
 aws s3 sync ~/comfyui-models s3://$bucket/ --region $region
 if [ $? -ne 0 ]; then
     echo "S3 upload failed!"
+    exit 1
+fi
+if [ "$DOWNLOAD_FAILURES" -gt 0 ]; then
+    echo "Upload complete, but $DOWNLOAD_FAILURES download(s) failed — re-run to fetch the missing models."
+    rm -rf ~/comfyui-models
     exit 1
 fi
 echo "Upload complete!"

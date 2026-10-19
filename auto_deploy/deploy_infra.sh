@@ -21,11 +21,11 @@ prepare_eks_env() {
 
     # Configure kubectl
     ComfyuiClusterConfigCommand=$(aws cloudformation describe-stacks --stack-name "$EKS_CLUSTER_STACK" --query "Stacks[0].Outputs[?contains(OutputKey, 'ConfigCommand')].OutputValue" --output text)
-    eval $ComfyuiClusterConfigCommand
-    kubectl get svc &> /dev/null
-    if [ $? -ne 0 ]; then
-        echo "EKS environment is not ready via CDK admin role, configuring access entry..."
+    if [ -z "$ComfyuiClusterConfigCommand" ] || [ "$ComfyuiClusterConfigCommand" = "None" ]; then
+        echo "FATAL: could not resolve the kubeconfig ConfigCommand output from $EKS_CLUSTER_STACK"
+        exit 1
     fi
+    eval "$ComfyuiClusterConfigCommand"
 
     # Enable API auth mode so we can add access entries
     authenticationMode=$(aws eks describe-cluster --name "$EKS_CLUSTER_STACK" --query 'cluster.accessConfig.authenticationMode' --output text)

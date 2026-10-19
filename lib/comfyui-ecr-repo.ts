@@ -11,7 +11,7 @@ export class ComfyuiEcrRepo extends cdk.Stack {
     constructor(scope: Construct, id: string, props: cdk.StackProps) {
         super(scope, id, { ...props, description: 'ComfyUI on EKS - ECR repository and CodeBuild project for container images' });
 
-        const repo = new ecr.Repository(this, 'comfyui-images', {
+        new ecr.Repository(this, 'comfyui-images', {
             repositoryName: 'comfyui-images',
             removalPolicy: cdk.RemovalPolicy.RETAIN,
             imageScanOnPush: true,
@@ -113,7 +113,7 @@ export class ComfyuiEcrRepo extends cdk.Stack {
                         }),
                         new iam.PolicyStatement({
                             actions: ['logs:CreateLogGroup', 'logs:CreateLogStream', 'logs:PutLogEvents'],
-                            resources: [`arn:aws:logs:${this.region}:${this.account}:log-group:/aws/codebuild/comfyui-*`],
+                            resources: [`arn:${this.partition}:logs:${this.region}:${this.account}:log-group:/aws/codebuild/comfyui-*`],
                         }),
                     ],
                 }),
