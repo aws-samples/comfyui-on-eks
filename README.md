@@ -360,9 +360,9 @@ The catalog is defined in `comfyui_image/custom_nodes/comfyui-auto-model-downloa
 | NVIDIA GPU Operator | v26.3.2 (driver/toolkit from AMI) |
 | ComfyUI | v0.41.3 |
 | PyTorch | 2.12.0 (CUDA 13.0) |
-| Mountpoint S3 CSI Driver | v2.5.0 |
-| AWS CDK | 2.260.0 (CLI 2.1128.0) |
-| EKS Blueprints | 1.18.2 |
+| Mountpoint S3 CSI Driver | v2.7.0 |
+| AWS CDK | aws-cdk-lib 2.273.0 (CLI 2.1145.0) |
+| EKS Blueprints | 1.19.0 |
 | Node AMI | AL2023 GPU (driver 580+) |
 
 ## Cost Analysis
