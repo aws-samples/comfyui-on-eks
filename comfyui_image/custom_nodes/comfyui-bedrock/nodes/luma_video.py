@@ -1,5 +1,6 @@
 import json
 import time
+from botocore.exceptions import ClientError, BotoCoreError
 from .utils import get_bedrock_client, tensor_to_base64
 
 
@@ -41,16 +42,27 @@ class BedrockLumaRay:
 
         s3_uri = f"s3://{s3_output_bucket}/{s3_output_prefix}"
 
-        response = client.start_async_invoke(
-            modelId="luma.ray-v2:0",
-            modelInput=model_input,
-            outputDataConfig={"s3OutputDataConfig": {"s3Uri": s3_uri}},
-        )
+        try:
+            response = client.start_async_invoke(
+                modelId="luma.ray-v2:0",
+                modelInput=model_input,
+                outputDataConfig={"s3OutputDataConfig": {"s3Uri": s3_uri}},
+            )
+        except (ClientError, BotoCoreError) as e:
+            raise RuntimeError(f"Luma Ray start_async_invoke failed: {e}") from e
 
         invocation_arn = response["invocationArn"]
 
+        deadline = time.time() + 900  # 15 min wall-clock cap
         while True:
-            status_response = client.get_async_invoke(invocationArn=invocation_arn)
+            if time.time() > deadline:
+                raise RuntimeError(
+                    f"Luma Ray generation timed out after 15 min (invocationArn={invocation_arn})"
+                )
+            try:
+                status_response = client.get_async_invoke(invocationArn=invocation_arn)
+            except (ClientError, BotoCoreError) as e:
+                raise RuntimeError(f"Luma Ray get_async_invoke failed: {e}") from e
             status = status_response["status"]
 
             if status == "Completed":
@@ -59,6 +71,8 @@ class BedrockLumaRay:
             elif status in ("Failed", "Expired"):
                 failure = status_response.get("failureMessage", "Unknown error")
                 raise RuntimeError(f"Luma Ray generation failed: {failure}")
+            elif status not in ("InProgress", "Submitted"):
+                raise RuntimeError(f"Luma Ray returned unexpected status: {status}")
 
             time.sleep(5)
 

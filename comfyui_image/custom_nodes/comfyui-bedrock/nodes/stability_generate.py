@@ -1,5 +1,4 @@
-import json
-from .utils import get_bedrock_client, tensor_to_base64, mask_to_base64, base64_to_tensor
+from .utils import get_bedrock_client, tensor_to_base64, mask_to_base64, base64_to_tensor, invoke_stability_model
 
 GENERATE_MODELS = [
     ("SD 3.5 Large", "stability.sd3-5-large-v1:0"),
@@ -49,14 +48,7 @@ class BedrockStabilityGenerate:
             body["strength"] = strength
             body["mode"] = "image-to-image"
 
-        response = client.invoke_model(
-            modelId=model_id,
-            body=json.dumps(body),
-            contentType="application/json",
-            accept="application/json",
-        )
-        result = json.loads(response["body"].read())
-        return (base64_to_tensor(result["images"][0]),)
+        return (invoke_stability_model(client, model_id, body),)
 
 
 class BedrockStabilityOutpaint:
@@ -104,14 +96,7 @@ class BedrockStabilityOutpaint:
         if down > 0:
             body["down"] = down
 
-        response = client.invoke_model(
-            modelId="us.stability.stable-outpaint-v1:0",
-            body=json.dumps(body),
-            contentType="application/json",
-            accept="application/json",
-        )
-        result = json.loads(response["body"].read())
-        return (base64_to_tensor(result["images"][0]),)
+        return (invoke_stability_model(client, "us.stability.stable-outpaint-v1:0", body),)
 
 
 class BedrockStabilityEraseObject:
@@ -143,14 +128,7 @@ class BedrockStabilityEraseObject:
         if seed > 0:
             body["seed"] = seed
 
-        response = client.invoke_model(
-            modelId="us.stability.stable-image-erase-object-v1:0",
-            body=json.dumps(body),
-            contentType="application/json",
-            accept="application/json",
-        )
-        result = json.loads(response["body"].read())
-        return (base64_to_tensor(result["images"][0]),)
+        return (invoke_stability_model(client, "us.stability.stable-image-erase-object-v1:0", body),)
 
 
 class BedrockStabilitySearchRecolor:
@@ -187,14 +165,7 @@ class BedrockStabilitySearchRecolor:
         if seed > 0:
             body["seed"] = seed
 
-        response = client.invoke_model(
-            modelId="us.stability.stable-image-search-recolor-v1:0",
-            body=json.dumps(body),
-            contentType="application/json",
-            accept="application/json",
-        )
-        result = json.loads(response["body"].read())
-        return (base64_to_tensor(result["images"][0]),)
+        return (invoke_stability_model(client, "us.stability.stable-image-search-recolor-v1:0", body),)
 
 
 NODE_CLASS_MAPPINGS = {

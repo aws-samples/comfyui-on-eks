@@ -1,5 +1,5 @@
 import base64
-from .utils import get_bedrock_client, tensor_to_bytes
+from .utils import get_bedrock_client, tensor_to_bytes, invoke_converse
 
 VISION_MODELS = [
     "us.amazon.nova-lite-v1:0",
@@ -63,9 +63,7 @@ class BedrockConverseVision:
         if system_prompt:
             kwargs["system"] = [{"text": system_prompt}]
 
-        response = client.converse(**kwargs)
-        output_text = response["output"]["message"]["content"][0]["text"]
-        return (output_text,)
+        return (invoke_converse(client, kwargs),)
 
 
 NODE_CLASS_MAPPINGS = {

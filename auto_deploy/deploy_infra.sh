@@ -434,8 +434,12 @@ cdk_deploy_cloudfront() {
         echo "CloudFront deploy failed"
         exit 1
     fi
-    CLOUDFRONT_URL=$(aws cloudformation describe-stacks --stack-name $CLOUDFRONT_STACK --query "Stacks[0].Outputs[?contains(OutputKey, 'DistributionDomain') || contains(OutputKey, 'CloudFront')].OutputValue" --output text 2>/dev/null)
-    echo "CloudFront URL: https://$CLOUDFRONT_URL"
+    CLOUDFRONT_URL=$(aws cloudformation describe-stacks --stack-name $CLOUDFRONT_STACK --query "Stacks[0].Outputs[?OutputKey=='cloudFrontEntryUrl'].OutputValue" --output text 2>/dev/null)
+    if [ -z "$CLOUDFRONT_URL" ] || [ "$CLOUDFRONT_URL" = "None" ]; then
+        echo "WARNING: could not resolve CloudFront URL from stack outputs ($CLOUDFRONT_STACK)"
+    else
+        echo "CloudFront URL: https://$CLOUDFRONT_URL"
+    fi
     echo "==== Finish deploying CloudFront ===="
 }
 

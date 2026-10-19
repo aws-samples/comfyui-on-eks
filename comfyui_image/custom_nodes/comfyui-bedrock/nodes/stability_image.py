@@ -1,5 +1,4 @@
-import json
-from .utils import get_bedrock_client, tensor_to_base64, mask_to_base64, base64_to_tensor
+from .utils import get_bedrock_client, tensor_to_base64, mask_to_base64, base64_to_tensor, invoke_stability_model
 
 
 class BedrockStabilityInpaint:
@@ -36,14 +35,7 @@ class BedrockStabilityInpaint:
         if seed > 0:
             body["seed"] = seed
 
-        response = client.invoke_model(
-            modelId="us.stability.stable-image-inpaint-v1:0",
-            body=json.dumps(body),
-            contentType="application/json",
-            accept="application/json",
-        )
-        result = json.loads(response["body"].read())
-        return (base64_to_tensor(result["images"][0]),)
+        return (invoke_stability_model(client, "us.stability.stable-image-inpaint-v1:0", body),)
 
 
 class BedrockStabilityRemoveBackground:
@@ -67,14 +59,7 @@ class BedrockStabilityRemoveBackground:
             "image": tensor_to_base64(image),
             "output_format": output_format,
         }
-        response = client.invoke_model(
-            modelId="us.stability.stable-image-remove-background-v1:0",
-            body=json.dumps(body),
-            contentType="application/json",
-            accept="application/json",
-        )
-        result = json.loads(response["body"].read())
-        return (base64_to_tensor(result["images"][0]),)
+        return (invoke_stability_model(client, "us.stability.stable-image-remove-background-v1:0", body),)
 
 
 class BedrockStabilityUpscale:
@@ -113,14 +98,7 @@ class BedrockStabilityUpscale:
         if mode in ("creative", "conservative"):
             body["creativity"] = creativity
 
-        response = client.invoke_model(
-            modelId=model_map[mode],
-            body=json.dumps(body),
-            contentType="application/json",
-            accept="application/json",
-        )
-        result = json.loads(response["body"].read())
-        return (base64_to_tensor(result["images"][0]),)
+        return (invoke_stability_model(client, model_map[mode], body),)
 
 
 class BedrockStabilityControlStructure:
@@ -162,14 +140,7 @@ class BedrockStabilityControlStructure:
         if seed > 0:
             body["seed"] = seed
 
-        response = client.invoke_model(
-            modelId=model_map[control_mode],
-            body=json.dumps(body),
-            contentType="application/json",
-            accept="application/json",
-        )
-        result = json.loads(response["body"].read())
-        return (base64_to_tensor(result["images"][0]),)
+        return (invoke_stability_model(client, model_map[control_mode], body),)
 
 
 class BedrockStabilitySearchReplace:
@@ -206,14 +177,7 @@ class BedrockStabilitySearchReplace:
         if seed > 0:
             body["seed"] = seed
 
-        response = client.invoke_model(
-            modelId="us.stability.stable-image-search-replace-v1:0",
-            body=json.dumps(body),
-            contentType="application/json",
-            accept="application/json",
-        )
-        result = json.loads(response["body"].read())
-        return (base64_to_tensor(result["images"][0]),)
+        return (invoke_stability_model(client, "us.stability.stable-image-search-replace-v1:0", body),)
 
 
 class BedrockStabilityStyleTransfer:
@@ -257,14 +221,7 @@ class BedrockStabilityStyleTransfer:
         if composition_fidelity != 0.9:
             body["composition_fidelity"] = composition_fidelity
 
-        response = client.invoke_model(
-            modelId="us.stability.stable-style-transfer-v1:0",
-            body=json.dumps(body),
-            contentType="application/json",
-            accept="application/json",
-        )
-        result = json.loads(response["body"].read())
-        return (base64_to_tensor(result["images"][0]),)
+        return (invoke_stability_model(client, "us.stability.stable-style-transfer-v1:0", body),)
 
 
 class BedrockStabilityStyleGuide:
@@ -305,14 +262,7 @@ class BedrockStabilityStyleGuide:
         if aspect_ratio != "1:1":
             body["aspect_ratio"] = aspect_ratio
 
-        response = client.invoke_model(
-            modelId="us.stability.stable-image-style-guide-v1:0",
-            body=json.dumps(body),
-            contentType="application/json",
-            accept="application/json",
-        )
-        result = json.loads(response["body"].read())
-        return (base64_to_tensor(result["images"][0]),)
+        return (invoke_stability_model(client, "us.stability.stable-image-style-guide-v1:0", body),)
 
 
 NODE_CLASS_MAPPINGS = {

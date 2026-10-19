@@ -3,5 +3,6 @@ kind: Namespace
 metadata:
   name: default
   labels:
+    pod-security.kubernetes.io/enforce: baseline
     pod-security.kubernetes.io/warn: baseline
     pod-security.kubernetes.io/audit: baseline

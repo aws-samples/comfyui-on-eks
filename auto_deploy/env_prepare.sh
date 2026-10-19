@@ -2,6 +2,22 @@
 
 source ./env.sh
 
+# Detect host architecture once and expose per-tool arch strings.
+# AWS CLI uses x86_64/aarch64; kubectl/eksctl use amd64/arm64.
+detect_arch() {
+    local m
+    m=$(uname -m)
+    case "$m" in
+        x86_64|amd64)
+            AWSCLI_ARCH="x86_64"; GO_ARCH="amd64" ;;
+        aarch64|arm64)
+            AWSCLI_ARCH="aarch64"; GO_ARCH="arm64" ;;
+        *)
+            echo "Unsupported architecture: $m"; exit 1 ;;
+    esac
+}
+detect_arch
+
 install_dependencies() {
     sudo apt-get update
     sudo apt-get install -yy unzip curl
@@ -9,7 +25,7 @@ install_dependencies() {
 
 install_awscli() {
     echo "==== Start installing AWS CLI ===="
-    curl -s "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+    curl -s "https://awscli.amazonaws.com/awscli-exe-linux-${AWSCLI_ARCH}.zip" -o "awscliv2.zip"
     unzip awscliv2.zip
     if ! command -v aws &> /dev/null; then
         echo "AWS CLI not found, installing..."
@@ -46,7 +62,7 @@ install_awscli() {
 install_eksctl() {
     echo "==== Start installing eksctl ===="
     EKSCTL_VERSION="v0.208.0"
-    ARCH=amd64
+    ARCH=$GO_ARCH
     PLATFORM=$(uname -s)_$ARCH
     curl -sLO "https://github.com/eksctl-io/eksctl/releases/download/${EKSCTL_VERSION}/eksctl_$PLATFORM.tar.gz"
     curl -sLO "https://github.com/eksctl-io/eksctl/releases/download/${EKSCTL_VERSION}/eksctl_checksums.txt"
@@ -65,8 +81,8 @@ install_eksctl() {
 install_kubectl() {
     echo "==== Start installing kubectl ===="
     KUBECTL_VERSION="v1.32.4"
-    curl -sLO "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl"
-    curl -sLO "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl.sha256"
+    curl -sLO "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/${GO_ARCH}/kubectl"
+    curl -sLO "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/${GO_ARCH}/kubectl.sha256"
     echo "$(cat kubectl.sha256)  kubectl" | sha256sum --check
     sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
     rm -f kubectl.sha256
