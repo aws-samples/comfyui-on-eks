@@ -20,7 +20,7 @@ prepare_eks_env() {
     echo "==== Start preparing EKS environment ===="
 
     # Configure kubectl
-    ComfyuiClusterConfigCommand=$(aws cloudformation describe-stacks --stack-name "$EKS_CLUSTER_STACK" --query "Stacks[0].Outputs[?starts_with(OutputKey, 'ComfyuiCluster') && contains(OutputKey, 'ConfigCommand')].OutputValue" --output text)
+    ComfyuiClusterConfigCommand=$(aws cloudformation describe-stacks --stack-name "$EKS_CLUSTER_STACK" --query "Stacks[0].Outputs[?contains(OutputKey, 'ConfigCommand')].OutputValue" --output text)
     eval $ComfyuiClusterConfigCommand
     kubectl get svc &> /dev/null
     if [ $? -ne 0 ]; then
@@ -51,9 +51,17 @@ prepare_eks_env() {
     aws eks create-access-entry --cluster-name "$EKS_CLUSTER_STACK" --principal-arn $identity --type STANDARD --username comfyui-user 2>/dev/null || true
     aws eks associate-access-policy --cluster-name "$EKS_CLUSTER_STACK" --principal-arn $identity --access-scope type=cluster --policy-arn arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy 2>/dev/null || true
 
-    # Verify kubectl works
-    kubectl get svc &> /dev/null
-    if [ $? -eq 0 ]; then
+    # Verify kubectl works (retry: access-entry propagation can lag a few seconds)
+    ready=0
+    for attempt in $(seq 1 12); do
+        if kubectl get svc &> /dev/null; then
+            ready=1
+            break
+        fi
+        echo "  kubectl not ready yet, waiting for access-entry propagation... (attempt ${attempt}/12)"
+        sleep 10
+    done
+    if [ $ready -eq 1 ]; then
         echo "EKS environment is ready"
     else
         echo "EKS environment is not ready after access entry creation"
