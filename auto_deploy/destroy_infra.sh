@@ -51,7 +51,7 @@ delete_k8s_resources() {
 
 terminate_karpenter_nodes() {
     echo "=== Start terminating Karpenter-provisioned nodes ==="
-    CLUSTER_NAME="ComfyUI-on-EKS-Cluster"
+    CLUSTER_NAME="$EKS_CLUSTER_STACK"
 
     # Terminate all EC2 instances tagged with this EKS cluster (works even if kubectl is unavailable)
     INSTANCE_IDS=$(aws ec2 describe-instances \
@@ -75,7 +75,7 @@ terminate_karpenter_nodes() {
 
 delete_cluster_load_balancers() {
     echo "=== Start deleting cluster Load Balancers ==="
-    CLUSTER_NAME="ComfyUI-on-EKS-Cluster"
+    CLUSTER_NAME="$EKS_CLUSTER_STACK"
 
     # Find ALBs/NLBs created by the AWS Load Balancer Controller for this cluster
     LB_ARNS=$(aws elbv2 describe-load-balancers \
@@ -226,17 +226,17 @@ fix_comfyui_stack_deletion() {
     vpc_id=$(aws cloudformation describe-stack-events \
         --stack-name "$EKS_CLUSTER_STACK" \
         --query 'StackEvents[?ResourceStatus==`DELETE_FAILED` && ResourceType==`AWS::EC2::VPC`].{Reason:ResourceStatusReason}'| grep -o 'vpc-[a-z0-9]*'|tail -1)
-    if [ -z $vpc_id ]; then
+    if [ -z "$vpc_id" ]; then
         subnet_id=$(aws cloudformation describe-stack-events \
             --stack-name "$EKS_CLUSTER_STACK" \
             --query 'StackEvents[?ResourceStatus==`DELETE_FAILED` && ResourceType==`AWS::EC2::Subnet`].{Reason:ResourceStatusReason}'| grep -o 'subnet-[a-z0-9]*'|tail -1)
-        if [ -z $subnet_id ]; then
+        if [ -z "$subnet_id" ]; then
             echo "No subnet found in delete failed"
         else
             vpc_id=$(aws ec2 describe-subnets --subnet-ids $subnet_id --query 'Subnets[0].VpcId' --output text)
         fi
     fi
-    if [ -z $vpc_id ]; then
+    if [ -z "$vpc_id" ]; then
         echo "No vpc found in delete failed"
     else
         echo "Force delete vpc: $vpc_id"
@@ -249,7 +249,7 @@ fix_comfyui_stack_deletion() {
 
 force_delete_vpc() {
     VPC_ID=$1
-    if [ -z $VPC_ID ]; then
+    if [ -z "$VPC_ID" ]; then
         echo "VPC ID is empty"
         return
     fi
@@ -333,7 +333,7 @@ cleanup_residuals() {
     echo "=== Cleaning up residual resources ==="
 
     # 1. Bedrock Pod Identity role (created imperatively, not via CFN)
-    local ROLE_NAME="ComfyUI-Bedrock-PodIdentity-${ACCOUNT_ID}-${AWS_DEFAULT_REGION}"
+    local ROLE_NAME="ComfyUI-PodIdentity-${ACCOUNT_ID}-${AWS_DEFAULT_REGION}"
     if aws iam get-role --role-name "$ROLE_NAME" &>/dev/null; then
         echo "  Deleting IAM role: $ROLE_NAME"
         # Delete all inline policies (there may be 1-N, don't hardcode names)
@@ -381,16 +381,16 @@ cleanup_residuals() {
         aws ssm delete-association --association-id "$ASSOC_ID" 2>/dev/null
     fi
 
-    # 5. KMS key (schedule deletion; can't be immediate)
-    local KEY_ID
-    KEY_ID=$(aws kms list-keys --query 'Keys[].KeyId' --output text 2>/dev/null | while read -r kid; do
+    # 5. KMS keys (schedule deletion; can't be immediate). Schedule ALL matching keys.
+    local kid tags
+    aws kms list-keys --query 'Keys[].KeyId' --output text 2>/dev/null | tr '\t' '\n' | while read -r kid; do
+        [ -z "$kid" ] && continue
         tags=$(aws kms list-resource-tags --key-id "$kid" --query "Tags[?TagKey=='Project' && TagValue=='comfyui-on-eks'].TagValue" --output text 2>/dev/null)
-        [ -n "$tags" ] && echo "$kid" && break
-    done)
-    if [ -n "$KEY_ID" ]; then
-        echo "  Scheduling KMS key deletion (7 days): $KEY_ID"
-        aws kms schedule-key-deletion --key-id "$KEY_ID" --pending-window-in-days 7 2>/dev/null
-    fi
+        if [ -n "$tags" ]; then
+            echo "  Scheduling KMS key deletion (7 days): $kid"
+            aws kms schedule-key-deletion --key-id "$kid" --pending-window-in-days 7 2>/dev/null
+        fi
+    done
 
     echo "=== Residual cleanup complete ==="
     echo
@@ -412,7 +412,7 @@ verify_teardown_complete() {
     fi
 
     # Check no EKS cluster
-    if aws eks describe-cluster --name "ComfyUI-on-EKS-Cluster" &>/dev/null; then
+    if aws eks describe-cluster --name "$EKS_CLUSTER_STACK" &>/dev/null; then
         echo "  WARNING: EKS cluster still exists"
         failures=$((failures+1))
     fi
@@ -420,7 +420,7 @@ verify_teardown_complete() {
     # Check no tagged EC2 instances running
     local instances
     instances=$(aws ec2 describe-instances \
-        --filters "Name=tag:eks:eks-cluster-name,Values=ComfyUI-on-EKS-Cluster" \
+        --filters "Name=tag:eks:eks-cluster-name,Values=$EKS_CLUSTER_STACK" \
                   "Name=instance-state-name,Values=running,pending,stopped" \
         --query 'Reservations[].Instances[].InstanceId' --output text 2>/dev/null)
     if [ -n "$instances" ]; then

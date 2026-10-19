@@ -26,49 +26,58 @@ Sends an image + text prompt to a multimodal model. Use for image captioning, sc
 
 | Provider | Model ID | Notes |
 |----------|----------|-------|
-| Amazon | `us.amazon.nova-lite-v1:0` | Fast, cost-effective |
-| Amazon | `us.amazon.nova-pro-v1:0` | Balanced performance |
-| Amazon | `us.amazon.nova-micro-v1:0` | Lowest latency |
-| Anthropic | `us.anthropic.claude-opus-4-7` | Most capable |
-| Anthropic | `us.anthropic.claude-sonnet-4-6` | Balanced |
-| Anthropic | `us.anthropic.claude-haiku-4-5-20251001-v1:0` | Fast |
-| DeepSeek | `us.deepseek.r1-v1:0` | Reasoning model |
-| Meta | `us.meta.llama4-scout-17b-instruct-v1:0` | 17B scout |
-| Meta | `us.meta.llama4-maverick-17b-instruct-v1:0` | 17B maverick |
-| Meta | `us.meta.llama3-3-70b-instruct-v1:0` | 70B instruct |
-| Mistral | `mistral.mistral-large-3-675b-instruct` | 675B large |
-| Qwen | `qwen.qwen3-235b-a22b-2507-v1:0` | 235B MoE |
-| Qwen | `qwen.qwen3-32b-v1:0` | 32B dense |
-| Qwen | `qwen.qwen3-next-80b-a3b` | 80B next |
-| Qwen | `qwen.qwen3-coder-480b-a35b-v1:0` | 480B coder |
+| Anthropic (**default**) | `us.anthropic.claude-haiku-5-5` | Latest Claude, fast — node default |
+| Anthropic | `us.anthropic.claude-sonnet-5-5` | Latest Claude, balanced |
+| Anthropic | `us.anthropic.claude-opus-5-5` | Latest Claude, most capable |
+| OpenAI | `us.openai.gpt-6.1-sol` | Latest GPT |
+| OpenAI | `us.openai.gpt-5.5` | GPT 5.5 |
+| Meta | `us.meta.llama4-scout-17b-instruct-v1:0` | 17B scout (open weight) |
+| Meta | `us.meta.llama4-maverick-17b-instruct-v1:0` | 17B maverick (open weight) |
+| Meta | `us.meta.llama3-3-70b-instruct-v1:0` | 70B instruct (open weight) |
+| Mistral | `mistral.mistral-large-3-675b-instruct` | 675B large (open weight) |
+| Mistral | `mistral.ministral-3-14b-instruct` | 14B (open weight) |
+| Mistral | `mistral.magistral-small-2509` | reasoning (open weight) |
+| NVIDIA | `nvidia.nemotron-super-3-120b` | 120B (open weight) |
+| NVIDIA | `nvidia.nemotron-nano-9b-v2` | 9B (open weight) |
+| DeepSeek | `us.deepseek.r1-v1:0` | Reasoning (open weight) |
+| Qwen | `qwen.qwen3-235b-a22b-2507-v1:0` | 235B MoE (open weight) |
+| Qwen | `qwen.qwen3-32b-v1:0` | 32B dense (open weight) |
+
+> Default is **Claude Haiku 5.5**. Claude 5.x rejects `temperature`/`topP`, so the node sends those only when changed from defaults — the default path works across every model above. Amazon Nova has been removed — the Nova line is being deprecated by AWS (Nova Premier already EOL; Nova Canvas/Reel removed earlier).
 
 #### Vision + Text (Bedrock Vision node)
 
 | Provider | Model ID | Notes |
 |----------|----------|-------|
-| Amazon | `us.amazon.nova-lite-v1:0` | Fast multimodal |
-| Amazon | `us.amazon.nova-pro-v1:0` | Balanced multimodal |
-| Anthropic | `us.anthropic.claude-opus-4-7` | Most capable vision |
-| Anthropic | `us.anthropic.claude-sonnet-4-6` | Balanced vision |
-| Anthropic | `us.anthropic.claude-haiku-4-5-20251001-v1:0` | Fast vision |
+| Anthropic | `us.anthropic.claude-haiku-5-5` | Fast vision (default) |
+| Anthropic | `us.anthropic.claude-sonnet-5-5` | Balanced vision |
+| Anthropic | `us.anthropic.claude-opus-5-5` | Most capable vision |
 | Meta | `us.meta.llama4-scout-17b-instruct-v1:0` | Multimodal scout |
 | Meta | `us.meta.llama4-maverick-17b-instruct-v1:0` | Multimodal maverick |
 | Mistral | `us.mistral.pixtral-large-2502-v1:0` | Pixtral Large |
-| Mistral | `mistral.mistral-large-3-675b-instruct` | Large with vision |
 | Google | `google.gemma-3-27b-it` | 27B multimodal |
 | Google | `google.gemma-3-12b-it` | 12B multimodal |
 | Qwen | `qwen.qwen3-vl-235b-a22b` | 235B vision-language |
 
 ## Image Generation & Editing
 
-### Bedrock Nova Canvas
+### Image Generation (Stability AI)
 
-Multi-mode image generation and editing using Amazon Nova Canvas.
+Amazon's native image models (Nova Canvas, Titan Image Generator) have been
+deprecated on Bedrock and are no longer wired here. Image generation now runs
+on Stability AI, which covers every capability the Nova Canvas node used to
+provide:
 
-**Task types:** TEXT_IMAGE, INPAINTING, OUTPAINTING, IMAGE_VARIATION, BACKGROUND_REMOVAL, COLOR_GUIDED_GENERATION
+| Former Nova Canvas task | Use instead |
+|-------------------------|-------------|
+| TEXT_IMAGE | **Bedrock Stability Generate** (SD3.5 Large / Stable Image Core / Ultra) |
+| IMAGE_VARIATION | **Bedrock Stability Generate** (supply an `image` for image-to-image) |
+| INPAINTING | **Bedrock Stability Inpaint** |
+| OUTPAINTING | **Bedrock Stability Outpaint** |
+| BACKGROUND_REMOVAL | **Bedrock Stability Remove Background** |
+| COLOR_GUIDED_GENERATION | **Bedrock Stability Search & Recolor** / **Style Guide** |
 
-**Inputs:** prompt, task_type, width, height, cfg_scale, seed, optional image/mask/negative_prompt
-**Output:** image
+See the Stability sections below for inputs and model IDs.
 
 ### Stability AI Nodes
 
@@ -88,13 +97,6 @@ Multi-mode image generation and editing using Amazon Nova Canvas.
 
 ## Video Generation
 
-### Bedrock Nova Reel (Video)
-
-Text-to-video and image-to-video generation using Amazon Nova Reel. Produces 6-second clips at 1280x720, 24fps. Outputs to S3.
-
-**Inputs:** prompt, s3_output_bucket, s3_output_prefix, seed, optional image (for img2vid)
-**Output:** s3_video_uri (STRING)
-
 ### Bedrock Luma Ray v2 (Video)
 
 Text-to-video and image-to-video via Luma Ray v2. Produces 5-9 second clips with configurable aspect ratio. Outputs to S3.
@@ -108,8 +110,6 @@ Text-to-video and image-to-video via Luma Ray v2. Produces 5-9 second clips with
 |------|----------|-------------|
 | Bedrock Text (Converse) | Bedrock | Text generation with 15+ LLMs |
 | Bedrock Vision (Converse) | Bedrock | Image understanding with 12+ multimodal models |
-| Bedrock Nova Canvas | Bedrock/Nova Canvas | Image generation and editing (6 modes) |
-| Bedrock Nova Reel (Video) | Bedrock/Nova Reel | Text/image-to-video |
 | Bedrock Luma Ray v2 (Video) | Bedrock/Luma | Text/image-to-video |
 | Bedrock Stability Generate | Bedrock/Stability | Text-to-image with SD3.5/Core/Ultra |
 | Bedrock Stability Inpaint | Bedrock/Stability | Mask-based inpainting |

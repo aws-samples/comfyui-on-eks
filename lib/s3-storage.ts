@@ -10,12 +10,18 @@ export class S3Storage extends cdk.Stack {
     new s3.Bucket(this, outputsBucketName, {
         bucketName: outputsBucketName,
         removalPolicy: cdk.RemovalPolicy.RETAIN,
+        encryption: s3.BucketEncryption.S3_MANAGED,
+        blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+        enforceSSL: true,
     });
 
     const inputsBucketName = `comfyui-inputs-${this.account}-${this.region}`;
     new s3.Bucket(this, inputsBucketName, {
         bucketName: inputsBucketName,
         removalPolicy: cdk.RemovalPolicy.RETAIN,
+        encryption: s3.BucketEncryption.S3_MANAGED,
+        blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+        enforceSSL: true,
     });
   }
 }

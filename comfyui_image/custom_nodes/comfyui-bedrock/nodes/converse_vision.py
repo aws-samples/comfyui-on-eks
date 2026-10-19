@@ -1,19 +1,22 @@
 import base64
-from .utils import get_bedrock_client, tensor_to_bytes
+from .utils import get_bedrock_client, tensor_to_bytes, invoke_converse
 
 VISION_MODELS = [
-    "us.amazon.nova-lite-v1:0",
-    "us.amazon.nova-pro-v1:0",
-    "us.anthropic.claude-opus-4-7",
-    "us.anthropic.claude-sonnet-4-6",
-    "us.anthropic.claude-haiku-4-5-20251001-v1:0",
+    # Latest Claude line (5.5), multimodal — default. Amazon Nova models removed (Nova line
+    # being deprecated by AWS). Claude 5.x rejects temperature/topP, so analyze() omits them
+    # at their defaults.
+    "us.anthropic.claude-haiku-5-5",
+    "us.anthropic.claude-sonnet-5-5",
+    "us.anthropic.claude-opus-5-5",
+    # Open-weight vision models:
     "us.meta.llama4-scout-17b-instruct-v1:0",
     "us.meta.llama4-maverick-17b-instruct-v1:0",
     "us.mistral.pixtral-large-2502-v1:0",
-    "mistral.mistral-large-3-675b-instruct",
     "google.gemma-3-27b-it",
     "google.gemma-3-12b-it",
     "qwen.qwen3-vl-235b-a22b",
+    # Amazon Nova removed — the Nova line is being deprecated by AWS (Nova Premier already
+    # EOL; Canvas/Reel removed earlier). Use the non-Nova vision models above instead.
 ]
 
 
@@ -52,20 +55,20 @@ class BedrockConverseVision:
             }
         ]
 
+        inference_config = {"maxTokens": max_tokens}
+        # Claude 5.x rejects `temperature` ("deprecated for this model"); send it only
+        # when the user changed it from the default so the default path works everywhere.
+        if temperature != 0.7:
+            inference_config["temperature"] = temperature
         kwargs = {
             "modelId": model_id,
             "messages": messages,
-            "inferenceConfig": {
-                "maxTokens": max_tokens,
-                "temperature": temperature,
-            },
+            "inferenceConfig": inference_config,
         }
         if system_prompt:
             kwargs["system"] = [{"text": system_prompt}]
 
-        response = client.converse(**kwargs)
-        output_text = response["output"]["message"]["content"][0]["text"]
-        return (output_text,)
+        return (invoke_converse(client, kwargs),)
 
 
 NODE_CLASS_MAPPINGS = {

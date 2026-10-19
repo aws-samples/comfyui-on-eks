@@ -20,12 +20,12 @@ prepare_eks_env() {
     echo "==== Start preparing EKS environment ===="
 
     # Configure kubectl
-    ComfyuiClusterConfigCommand=$(aws cloudformation describe-stacks --stack-name "$EKS_CLUSTER_STACK" --query "Stacks[0].Outputs[?starts_with(OutputKey, 'ComfyuiCluster') && contains(OutputKey, 'ConfigCommand')].OutputValue" --output text)
-    eval $ComfyuiClusterConfigCommand
-    kubectl get svc &> /dev/null
-    if [ $? -ne 0 ]; then
-        echo "EKS environment is not ready via CDK admin role, configuring access entry..."
+    ComfyuiClusterConfigCommand=$(aws cloudformation describe-stacks --stack-name "$EKS_CLUSTER_STACK" --query "Stacks[0].Outputs[?contains(OutputKey, 'ConfigCommand')].OutputValue" --output text)
+    if [ -z "$ComfyuiClusterConfigCommand" ] || [ "$ComfyuiClusterConfigCommand" = "None" ]; then
+        echo "FATAL: could not resolve the kubeconfig ConfigCommand output from $EKS_CLUSTER_STACK"
+        exit 1
     fi
+    eval "$ComfyuiClusterConfigCommand"
 
     # Enable API auth mode so we can add access entries
     authenticationMode=$(aws eks describe-cluster --name "$EKS_CLUSTER_STACK" --query 'cluster.accessConfig.authenticationMode' --output text)
@@ -51,9 +51,17 @@ prepare_eks_env() {
     aws eks create-access-entry --cluster-name "$EKS_CLUSTER_STACK" --principal-arn $identity --type STANDARD --username comfyui-user 2>/dev/null || true
     aws eks associate-access-policy --cluster-name "$EKS_CLUSTER_STACK" --principal-arn $identity --access-scope type=cluster --policy-arn arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy 2>/dev/null || true
 
-    # Verify kubectl works
-    kubectl get svc &> /dev/null
-    if [ $? -eq 0 ]; then
+    # Verify kubectl works (retry: access-entry propagation can lag a few seconds)
+    ready=0
+    for attempt in $(seq 1 12); do
+        if kubectl get svc &> /dev/null; then
+            ready=1
+            break
+        fi
+        echo "  kubectl not ready yet, waiting for access-entry propagation... (attempt ${attempt}/12)"
+        sleep 10
+    done
+    if [ $ready -eq 1 ]; then
         echo "EKS environment is ready"
     else
         echo "EKS environment is not ready after access entry creation"
@@ -249,10 +257,10 @@ deploy_karpenter() {
 
 deploy_pod_identity() {
     echo "==== Start deploying Pod Identity for ComfyUI ===="
-    BEDROCK_ROLE_NAME=ComfyUI-Bedrock-PodIdentity-${ACCOUNT_ID}-${AWS_DEFAULT_REGION}
+    POD_IDENTITY_ROLE_NAME=ComfyUI-PodIdentity-${ACCOUNT_ID}-${AWS_DEFAULT_REGION}
 
     # Create IAM role with Pod Identity trust policy
-    aws iam create-role --role-name $BEDROCK_ROLE_NAME --assume-role-policy-document '{
+    aws iam create-role --role-name $POD_IDENTITY_ROLE_NAME --assume-role-policy-document '{
         "Version": "2012-10-17",
         "Statement": [{
             "Effect": "Allow",
@@ -261,14 +269,20 @@ deploy_pod_identity() {
         }]
     }' 2>/dev/null || true
 
-    aws iam put-role-policy --role-name $BEDROCK_ROLE_NAME --policy-name BedrockInvokeAccess --policy-document "{
+    # NOTE: the foundation-model resource is region-wildcarded (arn:aws:bedrock:*::foundation-model/*)
+    # on purpose. The Converse/Nova nodes use CROSS-REGION inference profiles (model ids prefixed
+    # "us." e.g. us.amazon.nova-lite-v1:0), which fan out to the regional foundation-model ARNs of
+    # several regions (us-east-1, us-east-2, us-west-2), not just the deploy region. Scoping
+    # foundation-model to ${AWS_DEFAULT_REGION} alone caused AccessDeniedException on bedrock:InvokeModel
+    # for a us-east-1 foundation-model ARN. Do not narrow this back to a single region.
+    aws iam put-role-policy --role-name $POD_IDENTITY_ROLE_NAME --policy-name BedrockInvokeAccess --policy-document "{
         \"Version\": \"2012-10-17\",
         \"Statement\": [{
             \"Effect\": \"Allow\",
             \"Action\": [\"bedrock:InvokeModel\", \"bedrock:InvokeModelWithResponseStream\", \"bedrock:StartAsyncInvoke\", \"bedrock:GetAsyncInvoke\"],
             \"Resource\": [
-                \"arn:aws:bedrock:${AWS_DEFAULT_REGION}::foundation-model/*\",
-                \"arn:aws:bedrock:${AWS_DEFAULT_REGION}:${ACCOUNT_ID}:inference-profile/*\"
+                \"arn:aws:bedrock:*::foundation-model/*\",
+                \"arn:aws:bedrock:*:${ACCOUNT_ID}:inference-profile/*\"
             ]
         }]
     }"
@@ -276,7 +290,7 @@ deploy_pod_identity() {
     # S3 write for the video-s3-sync sidecar (issue #28): the pod writes video output to a
     # local scratch dir (Mountpoint S3 can't do ffmpeg's .mp4 seeks) and syncs it here.
     # Scoped to the outputs bucket video/ prefix only.
-    aws iam put-role-policy --role-name $BEDROCK_ROLE_NAME --policy-name OutputsVideoS3Write --policy-document "{
+    aws iam put-role-policy --role-name $POD_IDENTITY_ROLE_NAME --policy-name OutputsVideoS3Write --policy-document "{
         \"Version\": \"2012-10-17\",
         \"Statement\": [
             {
@@ -297,12 +311,12 @@ deploy_pod_identity() {
     kubectl create serviceaccount comfyui-sa -n default 2>/dev/null || true
 
     # Create Pod Identity association
-    BEDROCK_ROLE_ARN="arn:aws:iam::${ACCOUNT_ID}:role/${BEDROCK_ROLE_NAME}"
+    POD_IDENTITY_ROLE_ARN="arn:aws:iam::${ACCOUNT_ID}:role/${POD_IDENTITY_ROLE_NAME}"
     aws eks create-pod-identity-association \
         --cluster-name $EKS_CLUSTER_STACK \
         --namespace default \
         --service-account comfyui-sa \
-        --role-arn $BEDROCK_ROLE_ARN 2>/dev/null || true
+        --role-arn $POD_IDENTITY_ROLE_ARN 2>/dev/null || true
 
     echo "==== Finish deploying Pod Identity for ComfyUI ===="
 }
@@ -420,8 +434,12 @@ cdk_deploy_cloudfront() {
         echo "CloudFront deploy failed"
         exit 1
     fi
-    CLOUDFRONT_URL=$(aws cloudformation describe-stacks --stack-name $CLOUDFRONT_STACK --query "Stacks[0].Outputs[?contains(OutputKey, 'DistributionDomain') || contains(OutputKey, 'CloudFront')].OutputValue" --output text 2>/dev/null)
-    echo "CloudFront URL: https://$CLOUDFRONT_URL"
+    CLOUDFRONT_URL=$(aws cloudformation describe-stacks --stack-name $CLOUDFRONT_STACK --query "Stacks[0].Outputs[?OutputKey=='cloudFrontEntryUrl'].OutputValue" --output text 2>/dev/null)
+    if [ -z "$CLOUDFRONT_URL" ] || [ "$CLOUDFRONT_URL" = "None" ]; then
+        echo "WARNING: could not resolve CloudFront URL from stack outputs ($CLOUDFRONT_STACK)"
+    else
+        echo "CloudFront URL: https://$CLOUDFRONT_URL"
+    fi
     echo "==== Finish deploying CloudFront ===="
 }
 

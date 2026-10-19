@@ -12,7 +12,7 @@ A solution to deploy [ComfyUI](https://github.com/comfyanonymous/ComfyUI) on Ama
 6. **Secure Access via CloudFront VPC Origins**: [Amazon CloudFront](https://aws.amazon.com/cloudfront/) connects to the internal ALB via [VPC Origins](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/private-content-vpc-origins.html) — the ALB is never exposed to the internet.
 7. **Serverless Event-Triggered Model Synchronization**: S3 events trigger a Lambda function to sync model files across all GPU nodes via SSM.
 8. **CodeBuild for Builds and Model Downloads**: Container images and model downloads run on [AWS CodeBuild](https://aws.amazon.com/codebuild/) — no local Docker, GPU, disk space, or bandwidth required. Models download at 200+ MiB/s directly from HuggingFace to S3.
-9. **Amazon Bedrock Integration**: Built-in custom nodes for [Amazon Bedrock](https://aws.amazon.com/bedrock/) — text-to-image (Nova Canvas), text-to-video (Nova Reel), upscaling/inpainting (Stability AI), prompt enhancement (Claude, Nova, Qwen3), and image understanding (vision models).
+9. **Amazon Bedrock Integration**: Built-in custom nodes for [Amazon Bedrock](https://aws.amazon.com/bedrock/) — text-to-image and editing (Stability AI: SD3.5 Large / Stable Image Core / Ultra), text-to-video (Luma Ray v2), prompt enhancement (Claude, Llama, Qwen3), and image understanding (vision models).
 
 ## Security Considerations
 
@@ -24,7 +24,7 @@ A solution to deploy [ComfyUI](https://github.com/comfyanonymous/ComfyUI) on Ama
 
 2. **IAM and Least Privilege**:
    - All IAM roles use scoped inline policies with specific resource ARN patterns (no wildcards except where AWS APIs require them)
-   - Bedrock access is scoped to the deployment region only
+   - Bedrock access is scoped to InvokeModel on foundation models and account-owned inference profiles; the foundation-model ARN is region-wildcarded because cross-region inference profiles (`us.*` models) route to foundation models in several regions
    - S3 model sync uses checksum verification (`--checksum-mode ENABLED`)
    - Node IMDSv2 enforced with hop limit of 1 (containers cannot reach node metadata)
 
@@ -88,8 +88,8 @@ The nodes communicate with Bedrock via EKS Pod Identity. The deploy script autom
 |------|----------|-------------|----------|
 | **Bedrock Text (Converse)** | Bedrock | Text generation via Converse API | Prompt enhancement, creative writing |
 | **Bedrock Vision (Converse)** | Bedrock | Image+text understanding via Converse API | Image captioning, scene analysis |
-| **Bedrock Nova Canvas** | Bedrock/Nova Canvas | Image generation and editing | Text-to-image, inpaint, outpaint, background removal, variations |
-| **Bedrock Nova Reel (Video)** | Bedrock/Nova Reel | Text/image-to-video generation | Short video clips with camera motion control |
+| **Bedrock Stability Generate** | Bedrock/Stability | Text-to-image and image-to-image | Text-to-image with SD3.5 Large / Stable Image Core / Ultra |
+| **Bedrock Luma Ray v2 (Video)** | Bedrock/Luma | Text/image-to-video generation | Short video clips (5-9s) written to S3 |
 | **Bedrock Stability Inpaint** | Bedrock/Stability | Mask-based inpainting | Fill masked regions with generated content |
 | **Bedrock Stability Remove Background** | Bedrock/Stability | Background removal | Extract subjects from images |
 | **Bedrock Stability Upscale** | Bedrock/Stability | Image upscaling (fast/conservative/creative) | Enhance resolution |
@@ -105,34 +105,40 @@ The nodes communicate with Bedrock via EKS Pod Identity. The deploy script autom
 
 | Provider | Model ID | Type |
 |----------|----------|------|
-| Amazon | `us.amazon.nova-lite-v1:0`, `us.amazon.nova-pro-v1:0`, `us.amazon.nova-micro-v1:0` | Text + Vision |
-| Anthropic | `us.anthropic.claude-opus-4-7`, `us.anthropic.claude-sonnet-4-6`, `us.anthropic.claude-haiku-4-5-20251001-v1:0` | Text + Vision |
-| DeepSeek | `us.deepseek.r1-v1:0` | Text |
+| Anthropic (**default**) | `us.anthropic.claude-haiku-5-5`, `us.anthropic.claude-sonnet-5-5`, `us.anthropic.claude-opus-5-5` (latest 5.x line) | Text + Vision |
 | Meta | `us.meta.llama4-scout-17b-instruct-v1:0`, `us.meta.llama4-maverick-17b-instruct-v1:0`, `us.meta.llama3-3-70b-instruct-v1:0` | Text + Vision |
-| Mistral | `mistral.mistral-large-3-675b-instruct`, `us.mistral.pixtral-large-2502-v1:0` | Text + Vision |
-| Google | `google.gemma-3-27b-it`, `google.gemma-3-12b-it` | Vision |
+| Mistral | `mistral.mistral-large-3-675b-instruct`, `mistral.ministral-3-14b-instruct`, `mistral.magistral-small-2509`, `us.mistral.pixtral-large-2502-v1:0` | Text + Vision |
+| NVIDIA | `nvidia.nemotron-super-3-120b`, `nvidia.nemotron-nano-9b-v2` | Text |
+| DeepSeek | `us.deepseek.r1-v1:0` | Text |
 | Qwen | `qwen.qwen3-235b-a22b-2507-v1:0`, `qwen.qwen3-32b-v1:0`, `qwen.qwen3-vl-235b-a22b` | Text + Vision |
+| Google | `google.gemma-3-27b-it`, `google.gemma-3-12b-it` | Vision |
+
+> The Converse nodes default to **Claude Haiku 5.5**. The Claude 5.x models reject the `temperature`/`topP` sampling knobs, so the nodes send those only when you change them from their defaults — the default path works across every listed model. Amazon Nova has been removed — the Nova line is being deprecated by AWS (Nova Premier already EOL; Nova Canvas/Reel removed earlier).
 
 **Image Generation/Editing (InvokeModel API)**
 
 | Model ID | Provider | Capability |
 |----------|----------|------------|
-| `amazon.nova-canvas-v1:0` | Amazon | Text-to-image, inpaint, outpaint, background removal, variations |
+| `stability.sd3-5-large-v1:0` | Stability AI | Text-to-image and image-to-image (SD3.5 Large) |
+| `stability.stable-image-core-v1:1` | Stability AI | Fast, affordable text-to-image |
+| `stability.stable-image-ultra-v1:1` | Stability AI | Highest-fidelity text-to-image |
 | `stability.stable-image-inpaint-v1:0` | Stability AI | Inpainting |
 | `stability.stable-image-remove-background-v1:0` | Stability AI | Background removal |
-| `stability.stable-image-fast-upscale-v1:0` | Stability AI | Fast upscaling |
-| `stability.stable-image-conservative-upscale-v1:0` | Stability AI | Conservative upscaling |
-| `stability.stable-image-creative-upscale-v1:0` | Stability AI | Creative upscaling |
+| `stability.stable-fast-upscale-v1:0` | Stability AI | Fast upscaling |
+| `stability.stable-conservative-upscale-v1:0` | Stability AI | Conservative upscaling |
+| `stability.stable-creative-upscale-v1:0` | Stability AI | Creative upscaling |
 | `stability.stable-image-control-structure-v1:0` | Stability AI | Depth/edge-guided generation |
 | `stability.stable-image-control-sketch-v1:0` | Stability AI | Sketch-guided generation |
-| `stability.stable-image-search-and-replace-v1:0` | Stability AI | Object replacement |
-| `stability.stable-image-style-transfer-v1:0` | Stability AI | Style transfer |
+| `stability.stable-image-search-replace-v1:0` | Stability AI | Object replacement |
+| `stability.stable-style-transfer-v1:0` | Stability AI | Style transfer |
+
+> The three text-to-image models (SD3.5 Large, Stable Image Core, Stable Image Ultra) support on-demand throughput and are invoked by the bare model ID. All the editing/upscale models above are **inference-profile only** — the nodes invoke them with the `us.` cross-region prefix (e.g. `us.stability.stable-fast-upscale-v1:0`), which the Pod Identity policy allows via the region-wildcarded inference-profile ARN.
 
 **Video Generation (StartAsyncInvoke API)**
 
 | Model ID | Provider | Capability |
 |----------|----------|------------|
-| `amazon.nova-reel-v1:0` | Amazon | Text-to-video, image-to-video (6s clips, 1280x720, 24fps) |
+| `luma.ray-v2:0` | Luma AI | Text-to-video, image-to-video (5-9s clips, written to S3) |
 
 ### How Bedrock Access Works
 
@@ -142,8 +148,8 @@ The nodes communicate with Bedrock via EKS Pod Identity. The deploy script autom
      "Effect": "Allow",
      "Action": ["bedrock:InvokeModel", "bedrock:InvokeModelWithResponseStream", "bedrock:StartAsyncInvoke", "bedrock:GetAsyncInvoke"],
      "Resource": [
-       "arn:aws:bedrock:<REGION>::foundation-model/*",
-       "arn:aws:bedrock:<REGION>:<ACCOUNT>:inference-profile/*"
+       "arn:aws:bedrock:*::foundation-model/*",
+       "arn:aws:bedrock:*:<ACCOUNT>:inference-profile/*"
      ]
    }
    ```
@@ -153,20 +159,20 @@ The nodes communicate with Bedrock via EKS Pod Identity. The deploy script autom
 
 ### Prerequisites
 
-1. Enable the desired model access in the [Bedrock console](https://console.aws.amazon.com/bedrock/home#/modelaccess) (Nova, Stability AI, Claude, and/or Qwen)
-2. For Nova Reel: provide an S3 bucket for video output (the node writes async results to S3)
+1. Enable the desired model access in the [Bedrock console](https://console.aws.amazon.com/bedrock/home#/modelaccess) (Claude, Stability AI, Llama, Qwen — the Converse nodes default to Claude Haiku; Amazon Nova has been removed as it is being deprecated)
+2. For Luma Ray v2 video: provide an S3 bucket for video output (the node writes async results to S3)
 3. The deploy script handles all IAM configuration automatically
 
 ### Example Workflows
 
-**Prompt Enhancement** — Use the Bedrock Text node with Claude or Nova Lite:
+**Prompt Enhancement** — Use the Bedrock Text node (defaults to Claude Haiku; any listed model works):
 1. Connect a simple text prompt (e.g., "a cat in a garden")
 2. Set system prompt to "Enhance this prompt for Stable Diffusion with rich visual details"
 3. Connect the output text to the positive prompt of a KSampler node
 
-**Cloud Image Generation** — Use the Nova Canvas node:
+**Cloud Image Generation** — Use the Bedrock Stability Generate node:
 1. Enter a text prompt describing the desired image
-2. Set width/height and cfg_scale
+2. Pick a model (SD3.5 Large / Stable Image Core / Ultra) and an aspect ratio
 3. Connect the output IMAGE to a preview or save node
 
 **Upscaling** — Use the Stability Upscale node:
@@ -174,11 +180,11 @@ The nodes communicate with Bedrock via EKS Pod Identity. The deploy script autom
 2. Select upscale mode (fast, conservative, or creative)
 3. Connect the upscaled IMAGE to a save node
 
-**Video Generation** — Use the Nova Reel node:
+**Video Generation** — Use the Bedrock Luma Ray v2 node:
 1. Enter a text prompt describing the video scene
 2. Optionally connect an IMAGE as the first frame
 3. Provide an S3 bucket/prefix for the output video
-4. The node returns the S3 URI of the generated .mp4 file (6 seconds, 1280x720, 24fps)
+4. The node returns the S3 URI of the generated .mp4 file (5-9 seconds)
 
 ## Deployment Instructions
 
@@ -354,11 +360,11 @@ The catalog is defined in `comfyui_image/custom_nodes/comfyui-auto-model-downloa
 | Amazon EKS | 1.35 |
 | Karpenter | 1.9.0 |
 | NVIDIA GPU Operator | v26.3.2 (driver/toolkit from AMI) |
-| ComfyUI | v0.21.1 |
-| PyTorch | 2.12.0 (CUDA 13.0) |
-| Mountpoint S3 CSI Driver | v2.5.0 |
-| AWS CDK | 2.260.0 (CLI 2.1128.0) |
-| EKS Blueprints | 1.18.2 |
+| ComfyUI | v0.41.3 |
+| PyTorch | 2.13.0 (CUDA 13.0) |
+| Mountpoint S3 CSI Driver | v2.7.0 |
+| AWS CDK | aws-cdk-lib 2.273.0 (CLI 2.1145.0) |
+| EKS Blueprints | 1.19.0 |
 | Node AMI | AL2023 GPU (driver 580+) |
 
 ## Cost Analysis
@@ -400,6 +406,21 @@ The total cost of deploying this solution in us-west-2 is approximately **$450/m
 
 ## Change logs
 
+### ComfyUI Upgrade -- 2026.10.19
+
+- Upgraded ComfyUI v0.21.1 -> v0.41.3 (pinned to commit `8713616`, released 2026-10-17).
+  Chose the newest patch (`.3`) tag one minor behind the v0.42.x line cut the prior day,
+  to pick up a few days of soak rather than tracking the bleeding edge.
+- Unlocks newer native model support added since v0.21.1 (Flux.2, Z-Image, Qwen Image Edit,
+  Wan 2.2 refinements, LTX-Video 2, HunyuanVideo 1.5, SD3.5 improvements, newer 3D/vision).
+- ComfyUI-Florence2 kept at v1.1.0 (`9ece3de`) — verified as the current tip of main; since
+  commit `9acc6e9` it runs the model natively without `transformers`, reducing version risk.
+- No CDK/infrastructure changes — container image only. Rebuild via the `comfyui-model-download`
+  sibling CodeBuild image build, then functional smoke test required before merge:
+  load the UI, run a Tier-1 workflow (z_image_turbo), exercise a Bedrock node, and trigger the
+  auto-model-downloader on a missing model to confirm the `folder_paths` monkeypatches and the
+  `/auto-model-downloader/*` routes still bind against the new core.
+
 ### Security Hardening -- 2026.06.19
 
 - Upgraded to EKS 1.35, Karpenter 1.9.0, NVIDIA GPU Operator v26.3.2
@@ -434,7 +455,7 @@ Automatic deployment scripts in `comfyui-on-eks/auto_deploy/`, supports Ubuntu a
 
 ### Flux / SD3 / Custom Nodes Support
 
-ComfyUI v0.21.1 supports Flux, Stable Diffusion 3, and custom nodes. To use any model:
+ComfyUI v0.41.3 supports Flux, Flux.2, Stable Diffusion 3.5, Qwen Image, Wan 2.2, and custom nodes. To use any model:
 
 1. Upload models to the S3 models bucket following the `ComfyUI/models` directory structure
 2. Use the corresponding workflow JSON via the API (see `test/` folder for examples)

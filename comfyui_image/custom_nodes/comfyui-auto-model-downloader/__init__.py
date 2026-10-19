@@ -32,17 +32,22 @@ __all__ = ["NODE_CLASS_MAPPINGS", "NODE_DISPLAY_NAME_MAPPINGS", "WEB_DIRECTORY"]
 # Patch folder_paths.get_filename_list to include catalog entries as virtual files.
 # This allows ComfyUI's server-side combo validation to pass for models that are in
 # our catalog but not yet downloaded — the auto-downloader will fetch them at execution.
-_original_get_filename_list = folder_paths.get_filename_list
+# Guarded with hasattr/try so a renamed/moved symbol in a future ComfyUI version
+# degrades gracefully (feature off) instead of breaking the whole extension import.
+if hasattr(folder_paths, "get_filename_list"):
+    _original_get_filename_list = folder_paths.get_filename_list
 
-def _patched_get_filename_list(folder_name: str) -> list[str]:
-    result = _original_get_filename_list(folder_name)
-    catalog_additions = _get_catalog_filenames(folder_name)
-    if catalog_additions:
-        existing = set(result)
-        for filename in catalog_additions:
-            if filename not in existing:
-                result.append(filename)
-    return result
+    def _patched_get_filename_list(folder_name: str) -> list[str]:
+        result = _original_get_filename_list(folder_name)
+        catalog_additions = _get_catalog_filenames(folder_name)
+        if catalog_additions:
+            existing = set(result)
+            for filename in catalog_additions:
+                if filename not in existing:
+                    result.append(filename)
+        return result
+else:
+    logger.warning("folder_paths.get_filename_list not found; catalog virtual-file patch disabled")
 
 def _get_catalog_filenames(folder_name: str) -> list[str]:
     """Return filenames from the catalog that belong to this folder type."""
@@ -54,7 +59,8 @@ def _get_catalog_filenames(folder_name: str) -> list[str]:
             filenames.append(filename)
     return filenames
 
-folder_paths.get_filename_list = _patched_get_filename_list
+if hasattr(folder_paths, "get_filename_list"):
+    folder_paths.get_filename_list = _patched_get_filename_list
 
 
 # Patch output directory to use local disk instead of S3 FUSE mount.
@@ -91,18 +97,20 @@ def _check_s3_output_mount() -> bool:
 if _check_s3_output_mount():
     os.makedirs(_LOCAL_OUTPUT_DIR, exist_ok=True)
 
-    _original_get_output_directory = folder_paths.get_output_directory
-    def _patched_get_output_directory():
-        return _LOCAL_OUTPUT_DIR
-    folder_paths.get_output_directory = _patched_get_output_directory
-    folder_paths.output_directory = _LOCAL_OUTPUT_DIR
+    if hasattr(folder_paths, "get_output_directory"):
+        _original_get_output_directory = folder_paths.get_output_directory
+        def _patched_get_output_directory():
+            return _LOCAL_OUTPUT_DIR
+        folder_paths.get_output_directory = _patched_get_output_directory
+        folder_paths.output_directory = _LOCAL_OUTPUT_DIR
 
-    _original_get_save_image_path = folder_paths.get_save_image_path
-    def _patched_get_save_image_path(filename_prefix, output_dir=None, *args, **kwargs):
-        if output_dir is None or output_dir == _original_get_output_directory():
-            output_dir = _LOCAL_OUTPUT_DIR
-        return _original_get_save_image_path(filename_prefix, output_dir, *args, **kwargs)
-    folder_paths.get_save_image_path = _patched_get_save_image_path
+    if hasattr(folder_paths, "get_save_image_path"):
+        _original_get_save_image_path = folder_paths.get_save_image_path
+        def _patched_get_save_image_path(filename_prefix, output_dir=None, *args, **kwargs):
+            if output_dir is None or output_dir == _LOCAL_OUTPUT_DIR:
+                output_dir = _LOCAL_OUTPUT_DIR
+            return _original_get_save_image_path(filename_prefix, output_dir, *args, **kwargs)
+        folder_paths.get_save_image_path = _patched_get_save_image_path
 
     def _s3_upload_worker():
         """Background thread that uploads completed output files to S3."""
@@ -217,6 +225,7 @@ _WIDGET_ORDER = {
     "UNETLoader": ["unet_name", "weight_dtype"],
     "CLIPLoader": ["clip_name", "type", "device"],
     "DualCLIPLoader": ["clip_name1", "clip_name2", "type"],
+    "TripleCLIPLoader": ["clip_name1", "clip_name2", "clip_name3"],
     "VAELoader": ["vae_name"],
     "LoraLoader": ["lora_name", "strength_model", "strength_clip"],
     "LoraLoaderModelOnly": ["lora_name", "strength_model"],
@@ -281,6 +290,12 @@ def _fix_prompt_from_definitions(prompt: dict, prefix_to_def: dict[str, dict]):
 
 def _fix_prompt_group_mismatches(prompt: dict):
     """Detect model group mismatches using dependency relationships.
+
+    NOTE: currently NOT wired into the prompt handler — _on_prompt_handler calls
+    _fix_prompt_from_definitions only. Kept as an opt-in dependency-chain corrector;
+    enable by calling it from _on_prompt_handler after _fix_prompt_from_definitions
+    if group-aware correction is needed. Left unwired to avoid double-rewriting the
+    prompt until that interaction is validated.
 
     Uses the catalog's 'requires' field to determine which models belong together.
     If a text encoder is a dependency of a specific diffusion model, those must be

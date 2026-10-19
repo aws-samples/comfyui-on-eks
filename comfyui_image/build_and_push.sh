@@ -22,6 +22,10 @@ TEMP_ZIP=$(mktemp /tmp/comfyui-build-XXXXXX)
 rm -f "$TEMP_ZIP"
 TEMP_ZIP="${TEMP_ZIP}.zip"
 cd "$SCRIPT_DIR" && zip -r "$TEMP_ZIP" Dockerfile buildspec.yml custom_nodes/ -x "*__pycache__*"
+if [ ! -s "$TEMP_ZIP" ]; then
+  echo "FATAL: source archive $TEMP_ZIP is missing or empty (is 'zip' installed?)."
+  exit 1
+fi
 
 echo "Uploading source to s3://${S3_BUCKET}/${S3_KEY}..."
 aws s3 cp "$TEMP_ZIP" "s3://${S3_BUCKET}/${S3_KEY}" --region "$REGION" --profile "$PROFILE"
@@ -36,6 +40,11 @@ BUILD_ID=$(aws codebuild start-build \
   --region "$REGION" \
   --profile "$PROFILE" \
   --query 'build.id' --output text)
+
+if [ -z "$BUILD_ID" ] || [ "$BUILD_ID" = "None" ]; then
+  echo "FATAL: failed to start CodeBuild (empty build id) — check the project name and credentials."
+  exit 1
+fi
 
 echo "Build started: $BUILD_ID"
 echo "Waiting for build to complete..."

@@ -14,12 +14,19 @@ export class LambdaModelsSync extends cdk.Stack {
         bucketName: `comfyui-models-access-logs-${this.account}-${this.region}`,
         removalPolicy: cdk.RemovalPolicy.RETAIN,
         lifecycleRules: [{ expiration: cdk.Duration.days(90) }],
+        encryption: s3.BucketEncryption.S3_MANAGED,
+        blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+        enforceSSL: true,
     });
     const models_bucket = new s3.Bucket(this, bucketName, {
         bucketName: bucketName,
         removalPolicy: cdk.RemovalPolicy.RETAIN,
         serverAccessLogsBucket: accessLogsBucket,
         serverAccessLogsPrefix: 'models-bucket/',
+        encryption: s3.BucketEncryption.S3_MANAGED,
+        blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+        enforceSSL: true,
+        versioned: true,
     });
 
     const lambdaRole = new iam.Role(this, 'ComfyModelsSyncLambdaRole', {
@@ -33,7 +40,7 @@ export class LambdaModelsSync extends cdk.Stack {
                     new iam.PolicyStatement({
                         actions: ['ssm:SendCommand'],
                         resources: [
-                            `arn:aws:ec2:${this.region}:${this.account}:instance/*`,
+                            `arn:${this.partition}:ec2:${this.region}:${this.account}:instance/*`,
                         ],
                         conditions: {
                             StringEquals: {
@@ -44,7 +51,7 @@ export class LambdaModelsSync extends cdk.Stack {
                     new iam.PolicyStatement({
                         actions: ['ssm:SendCommand'],
                         resources: [
-                            `arn:aws:ssm:${this.region}::document/AWS-RunShellScript`,
+                            `arn:${this.partition}:ssm:${this.region}::document/AWS-RunShellScript`,
                         ],
                     }),
                     new iam.PolicyStatement({

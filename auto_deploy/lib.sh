@@ -24,7 +24,7 @@ assert_cdk_version() {
 
 preflight_checks() {
     local missing=()
-    for tool in aws kubectl jq; do
+    for tool in aws kubectl jq zip; do
         command -v "$tool" &>/dev/null || missing+=("$tool")
     done
     [ ${#missing[@]} -gt 0 ] && { echo "FATAL: missing tools: ${missing[*]}" >&2; exit 1; }

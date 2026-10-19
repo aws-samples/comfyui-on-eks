@@ -61,7 +61,7 @@ spec:
       # under video/. Uses the comfyui-sa Pod Identity role (needs s3:PutObject/ListBucket
       # on the outputs bucket video/ prefix — added in deploy_infra.sh deploy_pod_identity).
       - name: video-s3-sync
-        image: public.ecr.aws/aws-cli/aws-cli:latest
+        image: public.ecr.aws/aws-cli/aws-cli:2.38.1
         command: ["/bin/sh", "-c"]
         args:
           - |

@@ -76,9 +76,9 @@ BEDROCK_ALTERNATIVES = {
         "description": "Stability Upscale (fast/conservative/creative) via Bedrock (no download needed)",
     },
     "checkpoints/svd.safetensors": {
-        "node": "BedrockNovaReel",
+        "node": "BedrockLumaRay",
         "capability": "video-generation",
-        "description": "Nova Reel or Luma Ray v2 via Bedrock (no download needed)",
+        "description": "Luma Ray v2 via Bedrock (no download needed)",
     },
     "diffusion_models/z_image_turbo_bf16.safetensors": {
         "node": "BedrockStabilityGenerate",
