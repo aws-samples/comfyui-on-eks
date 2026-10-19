@@ -97,13 +97,6 @@ See the Stability sections below for inputs and model IDs.
 
 ## Video Generation
 
-### Bedrock Nova Reel (Video)
-
-Text-to-video and image-to-video generation using Amazon Nova Reel. Produces 6-second clips at 1280x720, 24fps. Outputs to S3.
-
-**Inputs:** prompt, s3_output_bucket, s3_output_prefix, seed, optional image (for img2vid)
-**Output:** s3_video_uri (STRING)
-
 ### Bedrock Luma Ray v2 (Video)
 
 Text-to-video and image-to-video via Luma Ray v2. Produces 5-9 second clips with configurable aspect ratio. Outputs to S3.
@@ -117,7 +110,6 @@ Text-to-video and image-to-video via Luma Ray v2. Produces 5-9 second clips with
 |------|----------|-------------|
 | Bedrock Text (Converse) | Bedrock | Text generation with 15+ LLMs |
 | Bedrock Vision (Converse) | Bedrock | Image understanding with 12+ multimodal models |
-| Bedrock Nova Reel (Video) | Bedrock/Nova Reel | Text/image-to-video |
 | Bedrock Luma Ray v2 (Video) | Bedrock/Luma | Text/image-to-video |
 | Bedrock Stability Generate | Bedrock/Stability | Text-to-image with SD3.5/Core/Ultra |
 | Bedrock Stability Inpaint | Bedrock/Stability | Mask-based inpainting |

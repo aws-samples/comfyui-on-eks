@@ -89,7 +89,7 @@ The nodes communicate with Bedrock via EKS Pod Identity. The deploy script autom
 | **Bedrock Text (Converse)** | Bedrock | Text generation via Converse API | Prompt enhancement, creative writing |
 | **Bedrock Vision (Converse)** | Bedrock | Image+text understanding via Converse API | Image captioning, scene analysis |
 | **Bedrock Stability Generate** | Bedrock/Stability | Text-to-image and image-to-image | Text-to-image with SD3.5 Large / Stable Image Core / Ultra |
-| **Bedrock Nova Reel (Video)** | Bedrock/Nova Reel | Text/image-to-video generation | Short video clips with camera motion control |
+| **Bedrock Luma Ray v2 (Video)** | Bedrock/Luma | Text/image-to-video generation | Short video clips (5-9s) written to S3 |
 | **Bedrock Stability Inpaint** | Bedrock/Stability | Mask-based inpainting | Fill masked regions with generated content |
 | **Bedrock Stability Remove Background** | Bedrock/Stability | Background removal | Extract subjects from images |
 | **Bedrock Stability Upscale** | Bedrock/Stability | Image upscaling (fast/conservative/creative) | Enhance resolution |
@@ -134,7 +134,7 @@ The nodes communicate with Bedrock via EKS Pod Identity. The deploy script autom
 
 | Model ID | Provider | Capability |
 |----------|----------|------------|
-| `amazon.nova-reel-v1:0` | Amazon | Text-to-video, image-to-video (6s clips, 1280x720, 24fps) |
+| `luma.ray-v2:0` | Luma AI | Text-to-video, image-to-video (5-9s clips, written to S3) |
 
 ### How Bedrock Access Works
 
@@ -156,7 +156,7 @@ The nodes communicate with Bedrock via EKS Pod Identity. The deploy script autom
 ### Prerequisites
 
 1. Enable the desired model access in the [Bedrock console](https://console.aws.amazon.com/bedrock/home#/modelaccess) (Nova, Stability AI, Claude, and/or Qwen)
-2. For Nova Reel: provide an S3 bucket for video output (the node writes async results to S3)
+2. For Luma Ray v2 video: provide an S3 bucket for video output (the node writes async results to S3)
 3. The deploy script handles all IAM configuration automatically
 
 ### Example Workflows
@@ -176,11 +176,11 @@ The nodes communicate with Bedrock via EKS Pod Identity. The deploy script autom
 2. Select upscale mode (fast, conservative, or creative)
 3. Connect the upscaled IMAGE to a save node
 
-**Video Generation** — Use the Nova Reel node:
+**Video Generation** — Use the Bedrock Luma Ray v2 node:
 1. Enter a text prompt describing the video scene
 2. Optionally connect an IMAGE as the first frame
 3. Provide an S3 bucket/prefix for the output video
-4. The node returns the S3 URI of the generated .mp4 file (6 seconds, 1280x720, 24fps)
+4. The node returns the S3 URI of the generated .mp4 file (5-9 seconds)
 
 ## Deployment Instructions
 
