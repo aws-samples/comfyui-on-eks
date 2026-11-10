@@ -433,10 +433,15 @@ configure_ssm_patching() {
 
 wait_for_comfyui_ready() {
     echo "==== Waiting for ComfyUI pod to be ready ===="
+    # On a fresh account the first GPU node must be provisioned by Karpenter, pull the
+    # ~7.6 GB image and sync the Tier 1 models from S3, which can take well over 6 minutes.
+    # i counts seconds, so the limit is 1800 (30 min). --request-timeout stops a single
+    # kubectl call from hanging the loop forever.
     i=0
-    while [ "$(kubectl get pods -l app=comfyui -o jsonpath='{.items[0].status.phase}' 2>/dev/null)" != "Running" ]; do
-        if [ $i -gt 360 ]; then
+    while [ "$(kubectl get pods -l app=comfyui --request-timeout=20s -o jsonpath='{.items[0].status.conditions[?(@.type=="Ready")].status}' 2>/dev/null)" != "True" ]; do
+        if [ $i -gt 1800 ]; then
             echo "ComfyUI pod is not ready after 30min"
+            kubectl get pods -l app=comfyui --request-timeout=20s -o wide
             exit 1
         fi
         echo "  ComfyUI pod not ready yet, waiting... (${i}s)"

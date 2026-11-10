@@ -6,6 +6,16 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/env.sh"
 source "$SCRIPT_DIR/lib.sh"
 
+# --delete-data: also delete the retained S3 buckets (models, inputs, outputs, access logs).
+# Irreversible: the downloaded models are lost and are re-downloaded on the next deploy.
+DELETE_DATA=false
+for arg in "$@"; do
+    case "$arg" in
+        --delete-data) DELETE_DATA=true ;;
+        *) echo "Unknown option: $arg (supported: --delete-data)"; exit 1 ;;
+    esac
+done
+
 delete_k8s_resources() {
     echo "=== Start deleting k8s resources ==="
 
@@ -165,6 +175,60 @@ delete_s3() {
         cd "$CDK_DIR" && "$CDK" destroy -f "$S3_STACK"
     fi
     echo "=== Finish deleting S3 ==="
+    echo
+}
+
+# Empties and deletes one bucket, including every object version and delete marker
+# (the models bucket is versioned, so `s3 rb --force` alone leaves it non-empty).
+empty_and_delete_bucket() {
+    local bucket=$1
+    if ! aws s3api head-bucket --bucket "$bucket" 2>/dev/null; then
+        echo "  $bucket not found"
+        return 0
+    fi
+    echo "  Emptying and deleting: $bucket"
+    aws s3 rm "s3://$bucket" --recursive --only-show-errors
+    # list-object-versions auto-paginates; delete-objects takes at most 1000 keys per call.
+    local tmp="/tmp/comfyui-versions-$$"
+    aws s3api list-object-versions --bucket "$bucket" --output json \
+        --query '[Versions[].{Key:Key,VersionId:VersionId}, DeleteMarkers[].{Key:Key,VersionId:VersionId}][]' > "$tmp.all.json"
+    python3 - "$tmp" <<'PYEOF'
+import json, sys
+prefix = sys.argv[1]
+objs = json.load(open(prefix + ".all.json")) or []
+for i in range(0, len(objs), 1000):
+    json.dump({"Objects": objs[i:i + 1000], "Quiet": True}, open(f"{prefix}.batch{i // 1000}.json", "w"))
+print(f"  {len(objs)} object versions/delete markers to purge")
+PYEOF
+    for f in "$tmp".batch*.json; do
+        [ -e "$f" ] || continue
+        aws s3api delete-objects --bucket "$bucket" --delete "file://$f" > /dev/null
+    done
+    rm -f "$tmp".*.json
+    aws s3 rb "s3://$bucket" || echo "  WARNING: could not delete $bucket"
+}
+
+delete_data_buckets() {
+    if [ "$DELETE_DATA" != true ]; then
+        return 0
+    fi
+    echo "=== Start deleting S3 data buckets (--delete-data) ==="
+    for bucket in "comfyui-models-${ACCOUNT_ID}-${AWS_DEFAULT_REGION}" \
+                  "comfyui-models-access-logs-${ACCOUNT_ID}-${AWS_DEFAULT_REGION}" \
+                  "comfyui-inputs-${ACCOUNT_ID}-${AWS_DEFAULT_REGION}" \
+                  "comfyui-outputs-${ACCOUNT_ID}-${AWS_DEFAULT_REGION}"; do
+        empty_and_delete_bucket "$bucket"
+    done
+    echo "=== Finish deleting S3 data buckets ==="
+    echo
+}
+
+# CDK caches context lookups (ALB, VPC, security groups) in cdk.context.json. After a
+# teardown those IDs point at deleted resources, and the next deploy's CloudFront stack
+# fails with "LoadBalancerNotFound". Clear the cache so the next deploy looks them up again.
+clear_cdk_context() {
+    echo "=== Clearing cached CDK context lookups ==="
+    cd "$CDK_DIR" && "$CDK" context --clear > /dev/null 2>&1 || rm -f "$CDK_DIR/cdk.context.json"
     echo
 }
 
@@ -454,6 +518,8 @@ delete_s3
 delete_lambda_sync
 delete_comfyui_cluster
 cleanup_residuals
+delete_data_buckets
+clear_cdk_context
 
 if verify_teardown_complete; then
     echo ""
@@ -461,8 +527,12 @@ if verify_teardown_complete; then
     echo "  Destroy infra done!"
     echo "=========================================="
     echo ""
-    echo "Note: S3 buckets (models, inputs, outputs) are preserved."
-    echo "To delete them: rerun with --delete-data"
+    if [ "$DELETE_DATA" = true ]; then
+        echo "S3 data buckets deleted (--delete-data)."
+    else
+        echo "Note: S3 buckets (models, inputs, outputs) are preserved."
+        echo "To delete them: rerun with --delete-data"
+    fi
 else
     echo ""
     echo "=========================================="
