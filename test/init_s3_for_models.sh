@@ -113,7 +113,7 @@ download ~/comfyui-models/vae/ace_1.5_vae.safetensors \
 # ============================================================
 echo ""
 echo "=== Flux 1 Dev ==="
-download ~/comfyui-models/diffusion_models/flux1-dev.safetensors \
+download ~/comfyui-models/diffusion_models/flux1-dev-fp8.safetensors \
     "https://huggingface.co/Comfy-Org/flux1-dev/resolve/main/flux1-dev-fp8.safetensors?download=true"
 download ~/comfyui-models/text_encoders/clip_l.safetensors \
     "https://huggingface.co/comfyanonymous/flux_text_encoders/resolve/main/clip_l.safetensors?download=true"
@@ -184,7 +184,7 @@ echo "=== Qwen Lightning LoRAs ==="
 download ~/comfyui-models/loras/Qwen-Image-Lightning-8steps-V1.0.safetensors \
     "https://huggingface.co/lightx2v/Qwen-Image-Lightning/resolve/main/Qwen-Image-Lightning-8steps-V1.0.safetensors?download=true"
 download ~/comfyui-models/loras/Qwen-Image-Edit-2509-Lightning-4steps-V1.0-bf16.safetensors \
-    "https://huggingface.co/lightx2v/Qwen-Image-Edit-2509-Lightning/resolve/main/Qwen-Image-Edit-2509-Lightning-4steps-V1.0-bf16.safetensors?download=true"
+    "https://huggingface.co/lightx2v/Qwen-Image-Lightning/resolve/main/Qwen-Image-Edit-2509/Qwen-Image-Edit-2509-Lightning-4steps-V1.0-bf16.safetensors?download=true"
 
 # ============================================================
 # Upload all to S3

@@ -351,6 +351,8 @@ Beyond the pre-loaded models, the solution includes an **auto-download extension
 
 The catalog is defined in `comfyui_image/custom_nodes/comfyui-auto-model-downloader/model_catalog.json` and can be extended by adding new entries.
 
+> **Gated models.** The original Black Forest Labs FLUX.1-dev and FLUX.1-schnell bf16 files (`flux1-dev.safetensors`, `flux1-schnell.safetensors`, used by `test/test_workflows/flux_dev.json` and `flux_schnell.json`) require a Hugging Face account that has accepted the model licence, so they cannot be auto-downloaded. Use the ungated Comfy-Org fp8 builds instead (`flux_dev_ckpt.json`, `flux_schnell_ckpt.json`), or accept the licence on Hugging Face, download the file yourself and upload it to the models bucket under `diffusion_models/`.
+
 ## Component Versions
 
 | Component | Version |
