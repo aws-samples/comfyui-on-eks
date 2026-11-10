@@ -13,14 +13,24 @@ MODELS = [
     "us.openai.gpt-6.1-sol",
     "us.openai.gpt-6-sol",
     "us.openai.gpt-5.5",
+    # xAI Grok (frontier, text):
+    "us.xai.grok-4.7",
+    # OpenAI gpt-oss (open weight):
+    "openai.gpt-oss-120b-1:0",
     # Mistral (open weight):
     "mistral.mistral-large-3-675b-instruct",
     "mistral.ministral-3-14b-instruct",
     "mistral.magistral-small-2509",
     # NVIDIA Nemotron (open weight):
     "nvidia.nemotron-super-3-120b",
+    "nvidia.nemotron-nano-3-30b",
+    # DeepSeek, MiniMax, Z.AI (open weight):
+    "deepseek.v3.2",
+    "minimax.minimax-m2.5",
+    "zai.glm-5",
     # Qwen (open weight):
     "qwen.qwen3-235b-a22b-2507-v1:0",
+    "qwen.qwen3-next-80b-a3b",
     "qwen.qwen3-32b-v1:0",
     # Amazon Nova removed — the Nova line is being deprecated by AWS (Nova Premier already
     # EOL; Canvas/Reel removed earlier). Use the non-Nova models above instead.

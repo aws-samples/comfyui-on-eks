@@ -8,8 +8,12 @@ VISION_MODELS = [
     "us.anthropic.claude-haiku-5-5",
     "us.anthropic.claude-sonnet-5-5",
     "us.anthropic.claude-opus-5-5",
+    # xAI Grok (frontier, multimodal):
+    "us.xai.grok-4.7",
     # Open-weight vision models:
     "us.mistral.pixtral-large-2502-v1:0",
+    "mistral.ministral-3-14b-instruct",
+    "mistral.ministral-3-8b-instruct",
     "qwen.qwen3-vl-235b-a22b",
     # Amazon Nova removed — the Nova line is being deprecated by AWS (Nova Premier already
     # EOL; Canvas/Reel removed earlier). Use the non-Nova vision models above instead.

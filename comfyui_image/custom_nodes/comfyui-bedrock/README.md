@@ -30,12 +30,20 @@ Sends an image + text prompt to a multimodal model. Use for image captioning, sc
 | Anthropic | `us.anthropic.claude-sonnet-5-5` | Latest Claude, balanced |
 | Anthropic | `us.anthropic.claude-opus-5-5` | Latest Claude, most capable |
 | OpenAI | `us.openai.gpt-6.1-sol` | Latest GPT |
+| OpenAI | `us.openai.gpt-6-sol` | GPT 6 |
 | OpenAI | `us.openai.gpt-5.5` | GPT 5.5 |
+| OpenAI | `openai.gpt-oss-120b-1:0` | 120B (open weight) |
+| xAI | `us.xai.grok-4.7` | Latest Grok |
 | Mistral | `mistral.mistral-large-3-675b-instruct` | 675B large (open weight) |
 | Mistral | `mistral.ministral-3-14b-instruct` | 14B (open weight) |
 | Mistral | `mistral.magistral-small-2509` | reasoning (open weight) |
 | NVIDIA | `nvidia.nemotron-super-3-120b` | 120B (open weight) |
+| NVIDIA | `nvidia.nemotron-nano-3-30b` | 30B (open weight) |
+| DeepSeek | `deepseek.v3.2` | V3.2 (open weight) |
+| MiniMax | `minimax.minimax-m2.5` | M2.5 (open weight) |
+| Z.AI | `zai.glm-5` | GLM-5 (open weight) |
 | Qwen | `qwen.qwen3-235b-a22b-2507-v1:0` | 235B MoE (open weight) |
+| Qwen | `qwen.qwen3-next-80b-a3b` | 80B MoE (open weight) |
 | Qwen | `qwen.qwen3-32b-v1:0` | 32B dense (open weight) |
 
 > Default is **Claude Haiku 5.5**. Claude 5.x rejects `temperature`/`topP`, so the node sends those only when changed from defaults — the default path works across every model above. Amazon Nova has been removed — the Nova line is being deprecated by AWS (Nova Premier already EOL; Nova Canvas/Reel removed earlier). Models in the Bedrock Legacy state (EOL March 30, 2027) — Llama 3.3/4, Nemotron Nano 9B v2, DeepSeek R1 — have also been removed.
@@ -47,7 +55,10 @@ Sends an image + text prompt to a multimodal model. Use for image captioning, sc
 | Anthropic | `us.anthropic.claude-haiku-5-5` | Fast vision (default) |
 | Anthropic | `us.anthropic.claude-sonnet-5-5` | Balanced vision |
 | Anthropic | `us.anthropic.claude-opus-5-5` | Most capable vision |
+| xAI | `us.xai.grok-4.7` | Latest Grok, multimodal |
 | Mistral | `us.mistral.pixtral-large-2502-v1:0` | Pixtral Large |
+| Mistral | `mistral.ministral-3-14b-instruct` | 14B multimodal (open weight) |
+| Mistral | `mistral.ministral-3-8b-instruct` | 8B multimodal (open weight) |
 | Qwen | `qwen.qwen3-vl-235b-a22b` | 235B vision-language |
 
 > Llama 4 Scout/Maverick and Gemma 3 27B/12B were removed: they are in the Bedrock Legacy state (EOL March 30, 2027).
@@ -106,8 +117,8 @@ Text-to-video and image-to-video via Luma Ray v2. Produces 5-9 second clips with
 
 | Node | Category | Description |
 |------|----------|-------------|
-| Bedrock Text (Converse) | Bedrock | Text generation with 12 LLMs |
-| Bedrock Vision (Converse) | Bedrock | Image understanding with 5 multimodal models |
+| Bedrock Text (Converse) | Bedrock | Text generation with 19 LLMs |
+| Bedrock Vision (Converse) | Bedrock | Image understanding with 8 multimodal models |
 | Bedrock Luma Ray v2 (Video) | Bedrock/Luma | Text/image-to-video |
 | Bedrock Stability Inpaint | Bedrock/Stability | Mask-based inpainting |
 | Bedrock Stability Outpaint | Bedrock/Stability | Extend image boundaries |

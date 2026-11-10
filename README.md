@@ -105,9 +105,14 @@ The nodes communicate with Bedrock via EKS Pod Identity. The deploy script autom
 | Provider | Model ID | Type |
 |----------|----------|------|
 | Anthropic (**default**) | `us.anthropic.claude-haiku-5-5`, `us.anthropic.claude-sonnet-5-5`, `us.anthropic.claude-opus-5-5` (latest 5.x line) | Text + Vision |
-| Mistral | `mistral.mistral-large-3-675b-instruct`, `mistral.ministral-3-14b-instruct`, `mistral.magistral-small-2509`, `us.mistral.pixtral-large-2502-v1:0` | Text + Vision |
-| NVIDIA | `nvidia.nemotron-super-3-120b` | Text |
-| Qwen | `qwen.qwen3-235b-a22b-2507-v1:0`, `qwen.qwen3-32b-v1:0`, `qwen.qwen3-vl-235b-a22b` | Text + Vision |
+| OpenAI | `us.openai.gpt-6.1-sol`, `us.openai.gpt-6-sol`, `us.openai.gpt-5.5`, `openai.gpt-oss-120b-1:0` (open weight) | Text |
+| xAI | `us.xai.grok-4.7` | Text + Vision |
+| Mistral | `mistral.mistral-large-3-675b-instruct`, `mistral.ministral-3-14b-instruct`, `mistral.ministral-3-8b-instruct`, `mistral.magistral-small-2509`, `us.mistral.pixtral-large-2502-v1:0` | Text + Vision |
+| NVIDIA | `nvidia.nemotron-super-3-120b`, `nvidia.nemotron-nano-3-30b` | Text |
+| DeepSeek | `deepseek.v3.2` | Text |
+| MiniMax | `minimax.minimax-m2.5` | Text |
+| Z.AI | `zai.glm-5` | Text |
+| Qwen | `qwen.qwen3-235b-a22b-2507-v1:0`, `qwen.qwen3-next-80b-a3b`, `qwen.qwen3-32b-v1:0`, `qwen.qwen3-vl-235b-a22b` | Text + Vision |
 
 > The Converse nodes default to **Claude Haiku 5.5**. The Claude 5.x models reject the `temperature`/`topP` sampling knobs, so the nodes send those only when you change them from their defaults — the default path works across every listed model. Amazon Nova has been removed — the Nova line is being deprecated by AWS (Nova Premier already EOL; Nova Canvas/Reel removed earlier). Models in the [Bedrock Legacy state](https://docs.aws.amazon.com/bedrock/latest/userguide/model-lifecycle-legacy.html) with a March 30, 2027 end of life (Llama 3.3 and 4, Gemma 3, Nemotron Nano 9B v2, DeepSeek R1) have also been removed.
 
@@ -352,8 +357,8 @@ The catalog is defined in `comfyui_image/custom_nodes/comfyui-auto-model-downloa
 | Amazon EKS | 1.35 |
 | Karpenter | 1.9.0 |
 | NVIDIA GPU Operator | v26.3.2 (driver/toolkit from AMI) |
-| ComfyUI | v0.41.3 |
-| PyTorch | 2.13.0 (CUDA 13.0) |
+| ComfyUI | v0.44.2 |
+| PyTorch | 2.14.1 (CUDA 13.0) |
 | Mountpoint S3 CSI Driver | v2.7.0 |
 | AWS CDK | aws-cdk-lib 2.273.0 (CLI 2.1145.0) |
 | EKS Blueprints | 1.19.0 |
@@ -409,6 +414,13 @@ The total cost of deploying this solution in us-west-2 is approximately **$450/m
 - Removed Converse models in the Bedrock Legacy state (end of life 2027-03-30, per the public
   Bedrock model lifecycle page): Llama 3.3 70B, Llama 4 Scout and Maverick, Gemma 3 27B and 12B,
   Nemotron Nano 9B v2, DeepSeek R1.
+- Added Converse models, each verified to answer through the node's call shape in us-west-2:
+  xAI Grok 4.7 (text + vision), gpt-oss-120b, Nemotron Nano 3 30B, DeepSeek V3.2, MiniMax M2.5,
+  GLM-5, Qwen3-Next 80B (text), and Ministral 3 8B/14B (vision). GLM-5.3 and Kimi K3.1 were
+  left out because they throttled on every call in a default-quota account.
+- ComfyUI v0.41.3 -> v0.44.2, PyTorch 2.13.0 -> 2.14.1 (torchvision 0.29.1), aws-cli sidecar
+  2.38.1 -> 2.40.0. ComfyUI now starts with `--offline`, which disables the deploy-to-cloud
+  upload route added in v0.44 (`POST /api/deploy/bundle`) and Comfy-Org partner nodes.
 - SD 2.1 and SD 2 Inpainting: Stability removed the original Hugging Face repos; the catalog and
   model buildspec now use the `sd2-community` mirror, pinned by sha256.
 - Model downloads now fail on HTTP errors (`curl -f`) instead of uploading the error body to S3.
@@ -466,7 +478,7 @@ Automatic deployment scripts in `comfyui-on-eks/auto_deploy/`, supports Ubuntu a
 
 ### Flux / SD3 / Custom Nodes Support
 
-ComfyUI v0.41.3 supports Flux, Flux.2, Stable Diffusion 3.5, Qwen Image, Wan 2.2, and custom nodes. To use any model:
+ComfyUI v0.44.2 supports Flux, Flux.2, Stable Diffusion 3.5, Qwen Image, Wan 2.2, and custom nodes. To use any model:
 
 1. Upload models to the S3 models bucket following the `ComfyUI/models` directory structure
 2. Use the corresponding workflow JSON via the API (see `test/` folder for examples)
