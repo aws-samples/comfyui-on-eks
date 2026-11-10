@@ -85,7 +85,7 @@ BEDROCK_ALTERNATIVES = {
         "capability": "text-to-image",
         "description": "Stability SD3.5 Large via Bedrock (no download needed)",
     },
-    "diffusion_models/flux1-dev-fp8.safetensors": {
+    "checkpoints/flux1-dev-fp8.safetensors": {
         "node": "BedrockStabilityGenerate",
         "capability": "text-to-image",
         "description": "Stability SD3.5 Large via Bedrock (no download needed)",

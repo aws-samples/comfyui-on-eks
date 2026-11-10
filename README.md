@@ -280,9 +280,9 @@ deploy_infra.sh
 
 | Category | Models | Used By |
 |----------|--------|---------|
-| **diffusion_models/** | z_image_turbo, flux1-dev-fp8, qwen_image, qwen_image_edit, wan2.2 (i2v high/low noise), acestep_v1.5_turbo, lotus-depth | Templates 01-05, Flux, Qwen, Wan |
+| **diffusion_models/** | z_image_turbo, qwen_image, qwen_image_edit, wan2.2 (i2v high/low noise), acestep_v1.5_turbo, lotus-depth | Templates 01-05, Flux, Qwen, Wan |
 | **text_encoders/** | qwen_3_4b, clip_l, t5xxl_fp16, qwen_2.5_vl_7b, umt5_xxl, qwen_0.6b/4b_ace15 | All workflows |
-| **checkpoints/** | SD 1.5, SDXL base/refiner, DreamShaper 8, SD2 inpainting, SD2.1, SVD, hunyuan_3d_v2.1 | Archived + 3D workflows |
+| **checkpoints/** | SD 1.5, SDXL base/refiner, DreamShaper 8, SD2 inpainting, SD2.1, SVD, hunyuan_3d_v2.1, flux1-dev-fp8 (all-in-one) | Archived, 3D and Flux checkpoint workflows |
 | **vae/** | ae, vae-ft-mse, qwen_image_vae, wan_2.1_vae, ace_1.5_vae | All workflows |
 | **controlnet/** | scribble, openpose, depth (SD1.5 fp16) | Archived ControlNet workflows |
 | **upscale_models/** | RealESRGAN_x4plus | Image upscale workflows |

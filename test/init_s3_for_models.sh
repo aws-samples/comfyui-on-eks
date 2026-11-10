@@ -113,7 +113,7 @@ download ~/comfyui-models/vae/ace_1.5_vae.safetensors \
 # ============================================================
 echo ""
 echo "=== Flux 1 Dev ==="
-download ~/comfyui-models/diffusion_models/flux1-dev-fp8.safetensors \
+download ~/comfyui-models/checkpoints/flux1-dev-fp8.safetensors \
     "https://huggingface.co/Comfy-Org/flux1-dev/resolve/main/flux1-dev-fp8.safetensors?download=true"
 download ~/comfyui-models/text_encoders/clip_l.safetensors \
     "https://huggingface.co/comfyanonymous/flux_text_encoders/resolve/main/clip_l.safetensors?download=true"

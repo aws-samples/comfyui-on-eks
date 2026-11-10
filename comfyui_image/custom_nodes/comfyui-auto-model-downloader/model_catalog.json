@@ -72,7 +72,7 @@
     "size_gb": 7.4,
     "group": "hunyuan_3d"
   },
-  "diffusion_models/flux1-dev-fp8.safetensors": {
+  "checkpoints/flux1-dev-fp8.safetensors": {
     "url": "https://huggingface.co/Comfy-Org/flux1-dev/resolve/main/flux1-dev-fp8.safetensors?download=true",
     "size_gb": 17.2,
     "group": "flux1_dev",
