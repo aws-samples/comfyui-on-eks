@@ -182,7 +182,7 @@ delete_s3() {
 # (the models bucket is versioned, so `s3 rb --force` alone leaves it non-empty).
 empty_and_delete_bucket() {
     local bucket=$1
-    if ! aws s3api head-bucket --bucket "$bucket" 2>/dev/null; then
+    if ! aws s3api head-bucket --bucket "$bucket" > /dev/null 2>&1; then
         echo "  $bucket not found"
         return 0
     fi
