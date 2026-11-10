@@ -52,11 +52,13 @@
   },
   "checkpoints/512-inpainting-ema.safetensors": {
     "url": "https://huggingface.co/sd2-community/stable-diffusion-2-inpainting/resolve/main/512-inpainting-ema.safetensors?download=true",
+    "sha256": "b29e2ed9a8fe58e76f7e801bda091d23738bd74c1da3f339bcbe2d40922fcb60",
     "size_gb": 2.0,
     "group": "sd2_inpainting"
   },
   "checkpoints/v2-1_768-ema-pruned.safetensors": {
     "url": "https://huggingface.co/sd2-community/stable-diffusion-2-1/resolve/main/v2-1_768-ema-pruned.safetensors?download=true",
+    "sha256": "dcd690123cfc64383981a31d955694f6acf2072a80537fdb612c8e58ec87a8ac",
     "size_gb": 5.2,
     "group": "sd21"
   },
@@ -437,17 +439,20 @@
   },
   "checkpoints/sd3.5_large_fp8_scaled.safetensors": {
     "url": "https://huggingface.co/Comfy-Org/stable-diffusion-3.5/resolve/main/sd3.5_large_fp8_scaled.safetensors?download=true",
+    "sha256": "5ad94d6f951556b1ab6b75930fd4effbafaf3130fe9df440e7f2d05a220dd1be",
     "size_gb": 14.9,
     "group": "sd3",
     "requires": ["text_encoders/clip_l.safetensors", "text_encoders/clip_g.safetensors", "text_encoders/t5xxl_fp16.safetensors"]
   },
   "checkpoints/sd3.5_medium_incl_clips_t5xxlfp8scaled.safetensors": {
     "url": "https://huggingface.co/Comfy-Org/stable-diffusion-3.5/resolve/main/sd3.5_medium_incl_clips_t5xxlfp8scaled.safetensors?download=true",
+    "sha256": "1778e8857679042c176c21cd8a0da7b29bded68be018557477f84419df79bacf",
     "size_gb": 11.6,
     "group": "sd3"
   },
   "text_encoders/clip_g.safetensors": {
     "url": "https://huggingface.co/Comfy-Org/stable-diffusion-3.5/resolve/main/text_encoders/clip_g.safetensors?download=true",
+    "sha256": "ec310df2af79c318e24d20511b601a591ca8cd4f1fce1d8dff822a356bcdb1f4",
     "size_gb": 1.4,
     "group": "sd3"
   }

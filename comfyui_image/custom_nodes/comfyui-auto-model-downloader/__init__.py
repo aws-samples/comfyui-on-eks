@@ -563,7 +563,7 @@ def _try_download_from_huggingface(model_path: str) -> bool:
     try:
         logger.info(f"Downloading from HuggingFace: {model_path}")
         result = subprocess.run(
-            ["curl", "-L", "--retry", "3", "--retry-delay", "5",
+            ["curl", "-fL", "--retry", "3", "--retry-delay", "5",
              "--connect-timeout", "30", "-o", temp_path, url],
             capture_output=True, timeout=3600,
         )
