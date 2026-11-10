@@ -543,7 +543,6 @@ def _try_download_from_s3(s3, bucket: str, model_path: str) -> bool:
 
 def _try_download_from_huggingface(model_path: str) -> bool:
     """Download model directly from HuggingFace if not in S3."""
-    import subprocess
 
     entry = resolver.catalog.get(model_path)
     if not entry or "url" not in entry:
@@ -560,21 +559,37 @@ def _try_download_from_huggingface(model_path: str) -> bool:
         logger.error(f"Refusing non-HTTPS download URL for {model_path}: {url}")
         return False
 
+    # The container image does not ship curl, so download with requests (pinned in the
+    # Dockerfile). HTTP errors (401 on a gated/removed repo, 404) raise instead of writing
+    # the error body to disk; the sha256 is computed while streaming.
+    import hashlib
+    import time
+    import requests
+
     try:
         logger.info(f"Downloading from HuggingFace: {model_path}")
-        result = subprocess.run(
-            ["curl", "-fL", "--retry", "3", "--retry-delay", "5",
-             "--connect-timeout", "30", "-o", temp_path, url],
-            capture_output=True, timeout=3600,
-        )
-        if result.returncode == 0 and os.path.exists(temp_path) and os.path.getsize(temp_path) > 1000:
+        h = hashlib.sha256()
+        downloaded = False
+        for attempt in range(1, 4):
+            try:
+                h = hashlib.sha256()
+                with requests.get(url, stream=True, timeout=(30, 300), allow_redirects=True) as resp:
+                    resp.raise_for_status()
+                    with open(temp_path, "wb") as f:
+                        for chunk in resp.iter_content(chunk_size=8 * 1024 * 1024):
+                            f.write(chunk)
+                            h.update(chunk)
+                downloaded = True
+                break
+            except requests.HTTPError as e:
+                logger.error(f"HuggingFace download failed for {model_path}: {e}")
+                break
+            except requests.RequestException as e:
+                logger.warning(f"HuggingFace download attempt {attempt}/3 failed for {model_path}: {e}")
+                time.sleep(5 * attempt)
+        if downloaded and os.path.getsize(temp_path) > 1000:
             expected_sha256 = entry.get("sha256")
             if expected_sha256:
-                import hashlib
-                h = hashlib.sha256()
-                with open(temp_path, "rb") as f:
-                    for chunk in iter(lambda: f.read(65536), b""):
-                        h.update(chunk)
                 if h.hexdigest() != expected_sha256:
                     logger.error(f"Checksum mismatch for {model_path}: expected {expected_sha256}, got {h.hexdigest()}")
                     os.remove(temp_path)

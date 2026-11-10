@@ -307,6 +307,26 @@ deploy_pod_identity() {
         ]
     }"
 
+    # Models bucket access for the auto-model-downloader. Pod Identity credentials replace
+    # the node role inside the pod (IMDS hop limit 1 blocks the node role), so the pod needs
+    # its own grant: read to fetch a missing model from S3, write to cache a model it fetched
+    # from Hugging Face back to S3 (the S3 event Lambda then syncs it to every GPU node).
+    aws iam put-role-policy --role-name $POD_IDENTITY_ROLE_NAME --policy-name ModelsS3ReadWrite --policy-document "{
+        \"Version\": \"2012-10-17\",
+        \"Statement\": [
+            {
+                \"Effect\": \"Allow\",
+                \"Action\": [\"s3:GetObject\", \"s3:PutObject\", \"s3:AbortMultipartUpload\"],
+                \"Resource\": \"arn:aws:s3:::comfyui-models-${ACCOUNT_ID}-${AWS_DEFAULT_REGION}/*\"
+            },
+            {
+                \"Effect\": \"Allow\",
+                \"Action\": [\"s3:ListBucket\"],
+                \"Resource\": \"arn:aws:s3:::comfyui-models-${ACCOUNT_ID}-${AWS_DEFAULT_REGION}\"
+            }
+        ]
+    }"
+
     # Create service account
     kubectl create serviceaccount comfyui-sa -n default 2>/dev/null || true
 
