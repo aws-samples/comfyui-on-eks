@@ -31,12 +31,26 @@ phases:
             if [ $? -ne 0 ]; then
               echo "FAILED permanently: $name"
               rm -f "$dest"
+              FAILED_MODELS="$FAILED_MODELS $1"
               return 1
             fi
           fi
           echo "Uploading to S3: $1"
-          aws s3 cp "$dest" "s3://${MODELS_BUCKET}/$1"
+          if ! aws s3 cp "$dest" "s3://${MODELS_BUCKET}/$1"; then
+            echo "FAILED upload: $1"
+            FAILED_MODELS="$FAILED_MODELS $1"
+          fi
           rm -f "$dest"
+        }
+
+        # A failed download must fail the build, otherwise CodeBuild reports SUCCEEDED
+        # and the gap only shows up later as a missing model in a workflow.
+        FAILED_MODELS=""
+        fail_if_any() {
+          if [ -n "$FAILED_MODELS" ]; then
+            echo "ERROR: these models failed to download:$FAILED_MODELS"
+            exit 1
+          fi
         }
 
         echo "=== Tier 1: z_image_turbo (Get Started) ==="
@@ -50,6 +64,7 @@ phases:
           "https://huggingface.co/Comfy-Org/Real-ESRGAN_repackaged/resolve/main/RealESRGAN_x4plus.safetensors?download=true"
 
         if [ "$MODEL_TIER" = "tier1" ]; then
+          fail_if_any
           echo "Tier 1 only - stopping here"
           exit 0
         fi
@@ -148,6 +163,7 @@ phases:
         download "loras/Flux_2-Turbo-LoRA_comfyui.safetensors" \
           "https://huggingface.co/ByteZSzn/Flux.2-Turbo-ComfyUI/resolve/main/Flux_2-Turbo-LoRA_comfyui.safetensors?download=true"
 
+        fail_if_any
         echo "=== All downloads complete ==="
 
   post_build:
