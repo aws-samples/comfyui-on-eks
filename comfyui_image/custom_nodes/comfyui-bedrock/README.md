@@ -96,7 +96,7 @@ See the Stability sections below for inputs and model IDs.
 | Bedrock Stability Inpaint | Fill masked regions | stable-image-inpaint-v1 |
 | Bedrock Stability Outpaint | Extend image borders | stable-outpaint-v1 |
 | Bedrock Stability Upscale | Upscale (fast/conservative/creative) | 3 model variants |
-| Bedrock Stability Remove Background | Background removal | stable-image-remove-background-v1 |
+| Bedrock Stability Remove Background | Background removal; outputs `image` (subject on black) and `mask` (1 = removed background). Wire both into core's **Join Image with Alpha** to save a transparent PNG | stable-image-remove-background-v1 |
 | Bedrock Stability Control (Structure/Sketch) | Guided generation from control image | structure + sketch variants |
 | Bedrock Stability Search & Replace | Find and replace objects by description | stable-image-search-replace-v1 |
 | Bedrock Stability Search & Recolor | Find and recolor objects | stable-image-search-recolor-v1 |

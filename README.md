@@ -90,7 +90,7 @@ The nodes communicate with Bedrock via EKS Pod Identity. The deploy script autom
 | **Bedrock Vision (Converse)** | Bedrock | Image+text understanding via Converse API | Image captioning, scene analysis |
 | **Bedrock Luma Ray v2 (Video)** | Bedrock/Luma | Text/image-to-video generation | Short video clips (5-9s) written to S3 |
 | **Bedrock Stability Inpaint** | Bedrock/Stability | Mask-based inpainting | Fill masked regions with generated content |
-| **Bedrock Stability Remove Background** | Bedrock/Stability | Background removal | Extract subjects from images |
+| **Bedrock Stability Remove Background** | Bedrock/Stability | Background removal (outputs image + mask) | Extract subjects; use Join Image with Alpha for a transparent PNG |
 | **Bedrock Stability Upscale** | Bedrock/Stability | Image upscaling (fast/conservative/creative) | Enhance resolution |
 | **Bedrock Stability Control** | Bedrock/Stability | Structure/sketch-guided generation | ControlNet-style depth/edge-guided output |
 | **Bedrock Stability Search & Replace** | Bedrock/Stability | Text-guided object replacement | Replace objects by description |
@@ -421,6 +421,9 @@ The total cost of deploying this solution in us-west-2 is approximately **$450/m
 - ComfyUI v0.41.3 -> v0.44.2, PyTorch 2.13.0 -> 2.14.1 (torchvision 0.29.1), aws-cli sidecar
   2.38.1 -> 2.40.0. ComfyUI now starts with `--offline`, which disables the deploy-to-cloud
   upload route added in v0.44 (`POST /api/deploy/bundle`) and Comfy-Org partner nodes.
+- Fixed Bedrock Stability Remove Background returning the original image: Bedrock's RGBA output
+  keeps the original colours under transparent pixels, and the node dropped the alpha channel.
+  It now outputs the subject on black plus a `mask` of the removed background.
 - SD 2.1 and SD 2 Inpainting: Stability removed the original Hugging Face repos; the catalog and
   model buildspec now use the `sd2-community` mirror, pinned by sha256.
 - Model downloads now fail on HTTP errors (`curl -f`) instead of uploading the error body to S3.
