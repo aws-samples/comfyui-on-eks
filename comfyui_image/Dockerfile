@@ -2,6 +2,14 @@ FROM nvcr.io/nvidia/cuda:13.0.3-cudnn-runtime-ubuntu24.04
 
 WORKDIR /app
 
+# Optional Ubuntu archive mirror (e.g. us-west-2.ec2.archive.ubuntu.com, Canonical's
+# in-region EC2 mirror). The CodeBuild buildspec passes the build region's mirror so
+# the build does not depend on archive.ubuntu.com being reachable. Empty = default.
+ARG UBUNTU_MIRROR=""
+RUN if [ -n "$UBUNTU_MIRROR" ]; then \
+      sed -i "s#http://archive.ubuntu.com/ubuntu#http://${UBUNTU_MIRROR}/ubuntu#g" /etc/apt/sources.list.d/ubuntu.sources; \
+    fi
+
 RUN apt-get update && \
     apt-get upgrade -y && \
     apt-get install -y --only-upgrade \
