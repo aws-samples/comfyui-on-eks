@@ -199,6 +199,13 @@ verify_image_freshness() {
 
 deploy_karpenter() {
     echo "==== Start deploying Karpenter ===="
+    # EC2 Spot launches need the AWSServiceRoleForEC2Spot service-linked role. In an account
+    # that has never launched Spot it does not exist, and Karpenter is not allowed to create
+    # it, so every Spot launch fails with AuthFailure.ServiceLinkedRoleCreationNotPermitted.
+    if ! aws iam get-role --role-name AWSServiceRoleForEC2Spot > /dev/null 2>&1; then
+        echo "Creating the EC2 Spot service-linked role"
+        aws iam create-service-linked-role --aws-service-name spot.amazonaws.com > /dev/null
+    fi
     kubectl delete -f "$CDK_DIR/manifests/Karpenter/karpenter_v1.yaml" --ignore-not-found
     KarpenterInstanceNodeRole=$(aws cloudformation describe-stacks --stack-name "$EKS_CLUSTER_STACK" --query 'Stacks[0].Outputs[?OutputKey==`KarpenterInstanceNodeRole`].OutputValue' --output text)
     sg_tag="eks-cluster-sg-ComfyUI-on-EKS-Cluster*"
