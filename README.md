@@ -404,6 +404,20 @@ The total cost of deploying this solution in us-west-2 is approximately **$450/m
 
 ## Change logs
 
+### Stability model lifecycle and model download fixes -- 2026.11.10
+
+- Removed Bedrock Stable Image Core and Stable Image Ultra from the Stability Generate node
+  (Stability AI moved both to Bedrock Legacy on 2026-11-09; end of life 2027-05-09). SD3.5 Large
+  remains on Bedrock; SD3.5 Large and Medium open weights are now in the auto-download catalog
+  from the Comfy-Org Hugging Face repo, replacing the gated `sd3_medium` entry.
+- SD 2.1 and SD 2 Inpainting: Stability removed the original Hugging Face repos; the catalog and
+  model buildspec now use the `sd2-community` mirror, pinned by sha256.
+- Model downloads now fail on HTTP errors (`curl -f`) instead of uploading the error body to S3.
+- Auto-model-downloader: added a models-bucket grant to the Pod Identity role (S3 reads were
+  returning 403) and replaced the `curl` Hugging Face fallback with `requests` (the image has no curl).
+- Image build uses the in-region Ubuntu EC2 archive mirror.
+- npm overrides for zod 4.6.7, qs 6.17.1, glob 14.0.4 and minimatch 11.0.5.
+
 ### ComfyUI Upgrade -- 2026.10.19
 
 - Upgraded ComfyUI v0.21.1 -> v0.41.3 (pinned to commit `8713616`, released 2026-10-17).
