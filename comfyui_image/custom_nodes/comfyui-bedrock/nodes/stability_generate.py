@@ -1,9 +1,12 @@
 from .utils import get_bedrock_client, tensor_to_base64, mask_to_base64, base64_to_tensor, invoke_stability_model
 
+# Stable Image Core and Stable Image Ultra were removed: Stability AI moved both to
+# the Bedrock Legacy state on 2026-11-09 and they reach end of life on 2027-05-09.
+# SD 3.5 Large is the remaining Bedrock text-to-image model. For local GPU
+# generation, use the open-weight Stability checkpoints (SDXL base/refiner, SD 1.5)
+# fetched from Hugging Face by the auto-model-downloader.
 GENERATE_MODELS = [
     ("SD 3.5 Large", "stability.sd3-5-large-v1:0"),
-    ("Stable Image Core", "stability.stable-image-core-v1:1"),
-    ("Stable Image Ultra", "stability.stable-image-ultra-v1:1"),
 ]
 
 
@@ -176,7 +179,7 @@ NODE_CLASS_MAPPINGS = {
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
-    "BedrockStabilityGenerate": "Bedrock Stability Generate (SD3.5/Core/Ultra)",
+    "BedrockStabilityGenerate": "Bedrock Stability Generate (SD3.5 Large)",
     "BedrockStabilityOutpaint": "Bedrock Stability Outpaint",
     "BedrockStabilityEraseObject": "Bedrock Stability Erase Object",
     "BedrockStabilitySearchRecolor": "Bedrock Stability Search & Recolor",

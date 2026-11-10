@@ -12,7 +12,7 @@ A solution to deploy [ComfyUI](https://github.com/comfyanonymous/ComfyUI) on Ama
 6. **Secure Access via CloudFront VPC Origins**: [Amazon CloudFront](https://aws.amazon.com/cloudfront/) connects to the internal ALB via [VPC Origins](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/private-content-vpc-origins.html) — the ALB is never exposed to the internet.
 7. **Serverless Event-Triggered Model Synchronization**: S3 events trigger a Lambda function to sync model files across all GPU nodes via SSM.
 8. **CodeBuild for Builds and Model Downloads**: Container images and model downloads run on [AWS CodeBuild](https://aws.amazon.com/codebuild/) — no local Docker, GPU, disk space, or bandwidth required. Models download at 200+ MiB/s directly from HuggingFace to S3.
-9. **Amazon Bedrock Integration**: Built-in custom nodes for [Amazon Bedrock](https://aws.amazon.com/bedrock/) — text-to-image and editing (Stability AI: SD3.5 Large / Stable Image Core / Ultra), text-to-video (Luma Ray v2), prompt enhancement (Claude, Llama, Qwen3), and image understanding (vision models).
+9. **Amazon Bedrock Integration**: Built-in custom nodes for [Amazon Bedrock](https://aws.amazon.com/bedrock/) — text-to-image and editing (Stability AI: SD3.5 Large), text-to-video (Luma Ray v2), prompt enhancement (Claude, Llama, Qwen3), and image understanding (vision models).
 
 ## Security Considerations
 
@@ -88,7 +88,7 @@ The nodes communicate with Bedrock via EKS Pod Identity. The deploy script autom
 |------|----------|-------------|----------|
 | **Bedrock Text (Converse)** | Bedrock | Text generation via Converse API | Prompt enhancement, creative writing |
 | **Bedrock Vision (Converse)** | Bedrock | Image+text understanding via Converse API | Image captioning, scene analysis |
-| **Bedrock Stability Generate** | Bedrock/Stability | Text-to-image and image-to-image | Text-to-image with SD3.5 Large / Stable Image Core / Ultra |
+| **Bedrock Stability Generate** | Bedrock/Stability | Text-to-image and image-to-image | Text-to-image with SD3.5 Large |
 | **Bedrock Luma Ray v2 (Video)** | Bedrock/Luma | Text/image-to-video generation | Short video clips (5-9s) written to S3 |
 | **Bedrock Stability Inpaint** | Bedrock/Stability | Mask-based inpainting | Fill masked regions with generated content |
 | **Bedrock Stability Remove Background** | Bedrock/Stability | Background removal | Extract subjects from images |
@@ -120,8 +120,6 @@ The nodes communicate with Bedrock via EKS Pod Identity. The deploy script autom
 | Model ID | Provider | Capability |
 |----------|----------|------------|
 | `stability.sd3-5-large-v1:0` | Stability AI | Text-to-image and image-to-image (SD3.5 Large) |
-| `stability.stable-image-core-v1:1` | Stability AI | Fast, affordable text-to-image |
-| `stability.stable-image-ultra-v1:1` | Stability AI | Highest-fidelity text-to-image |
 | `stability.stable-image-inpaint-v1:0` | Stability AI | Inpainting |
 | `stability.stable-image-remove-background-v1:0` | Stability AI | Background removal |
 | `stability.stable-fast-upscale-v1:0` | Stability AI | Fast upscaling |
@@ -132,7 +130,7 @@ The nodes communicate with Bedrock via EKS Pod Identity. The deploy script autom
 | `stability.stable-image-search-replace-v1:0` | Stability AI | Object replacement |
 | `stability.stable-style-transfer-v1:0` | Stability AI | Style transfer |
 
-> The three text-to-image models (SD3.5 Large, Stable Image Core, Stable Image Ultra) support on-demand throughput and are invoked by the bare model ID. All the editing/upscale models above are **inference-profile only** — the nodes invoke them with the `us.` cross-region prefix (e.g. `us.stability.stable-fast-upscale-v1:0`), which the Pod Identity policy allows via the region-wildcarded inference-profile ARN.
+> The text-to-image model (SD3.5 Large) supports on-demand throughput and is invoked by the bare model ID. Stable Image Core and Stable Image Ultra were removed because Stability AI moved them to the Bedrock Legacy state on November 9, 2026 (end of life May 9, 2027). For local GPU generation with Stability models, use the open-weight SDXL base/refiner and SD 1.5 checkpoints, which the auto-model-downloader fetches from Hugging Face. All the editing/upscale models above are **inference-profile only** — the nodes invoke them with the `us.` cross-region prefix (e.g. `us.stability.stable-fast-upscale-v1:0`), which the Pod Identity policy allows via the region-wildcarded inference-profile ARN.
 
 **Video Generation (StartAsyncInvoke API)**
 
@@ -172,7 +170,7 @@ The nodes communicate with Bedrock via EKS Pod Identity. The deploy script autom
 
 **Cloud Image Generation** — Use the Bedrock Stability Generate node:
 1. Enter a text prompt describing the desired image
-2. Pick a model (SD3.5 Large / Stable Image Core / Ultra) and an aspect ratio
+2. Pick an aspect ratio (the model is SD3.5 Large)
 3. Connect the output IMAGE to a preview or save node
 
 **Upscaling** — Use the Stability Upscale node:

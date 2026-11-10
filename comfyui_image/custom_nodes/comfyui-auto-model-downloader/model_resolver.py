@@ -53,12 +53,12 @@ BEDROCK_ALTERNATIVES = {
     "checkpoints/sd_xl_base_1.0.safetensors": {
         "node": "BedrockStabilityGenerate",
         "capability": "text-to-image",
-        "description": "Stability SD3.5 Large / Image Ultra via Bedrock (no download needed)",
+        "description": "Stability SD3.5 Large via Bedrock (no download needed)",
     },
     "checkpoints/sd_xl_refiner_1.0.safetensors": {
         "node": "BedrockStabilityGenerate",
         "capability": "text-to-image",
-        "description": "Stability Image Ultra via Bedrock (no download needed)",
+        "description": "Stability SD3.5 Large via Bedrock (no download needed)",
     },
     "checkpoints/DreamShaper_8_pruned.safetensors": {
         "node": "BedrockStabilityGenerate",
@@ -83,7 +83,7 @@ BEDROCK_ALTERNATIVES = {
     "diffusion_models/z_image_turbo_bf16.safetensors": {
         "node": "BedrockStabilityGenerate",
         "capability": "text-to-image",
-        "description": "Stability Image Core via Bedrock — fast text-to-image (no download needed)",
+        "description": "Stability SD3.5 Large via Bedrock (no download needed)",
     },
     "diffusion_models/flux1-dev-fp8.safetensors": {
         "node": "BedrockStabilityGenerate",

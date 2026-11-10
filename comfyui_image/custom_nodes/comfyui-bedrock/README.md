@@ -70,7 +70,7 @@ provide:
 
 | Former Nova Canvas task | Use instead |
 |-------------------------|-------------|
-| TEXT_IMAGE | **Bedrock Stability Generate** (SD3.5 Large / Stable Image Core / Ultra) |
+| TEXT_IMAGE | **Bedrock Stability Generate** (SD3.5 Large) |
 | IMAGE_VARIATION | **Bedrock Stability Generate** (supply an `image` for image-to-image) |
 | INPAINTING | **Bedrock Stability Inpaint** |
 | OUTPAINTING | **Bedrock Stability Outpaint** |
@@ -83,7 +83,7 @@ See the Stability sections below for inputs and model IDs.
 
 | Node | Capability | Model |
 |------|-----------|-------|
-| Bedrock Stability Generate | Text-to-image / image-to-image | SD 3.5 Large, Stable Image Core, Stable Image Ultra |
+| Bedrock Stability Generate | Text-to-image / image-to-image | SD 3.5 Large (Stable Image Core/Ultra removed: Bedrock Legacy, EOL 2027-05-09) |
 | Bedrock Stability Inpaint | Fill masked regions | stable-image-inpaint-v1 |
 | Bedrock Stability Outpaint | Extend image borders | stable-outpaint-v1 |
 | Bedrock Stability Upscale | Upscale (fast/conservative/creative) | 3 model variants |
@@ -111,7 +111,7 @@ Text-to-video and image-to-video via Luma Ray v2. Produces 5-9 second clips with
 | Bedrock Text (Converse) | Bedrock | Text generation with 15+ LLMs |
 | Bedrock Vision (Converse) | Bedrock | Image understanding with 12+ multimodal models |
 | Bedrock Luma Ray v2 (Video) | Bedrock/Luma | Text/image-to-video |
-| Bedrock Stability Generate | Bedrock/Stability | Text-to-image with SD3.5/Core/Ultra |
+| Bedrock Stability Generate | Bedrock/Stability | Text-to-image with SD3.5 Large |
 | Bedrock Stability Inpaint | Bedrock/Stability | Mask-based inpainting |
 | Bedrock Stability Outpaint | Bedrock/Stability | Extend image boundaries |
 | Bedrock Stability Upscale | Bedrock/Stability | Image upscaling (3 modes) |
