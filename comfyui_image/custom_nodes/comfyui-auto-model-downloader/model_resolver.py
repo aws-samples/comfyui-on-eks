@@ -44,27 +44,10 @@ NODE_INPUT_MODEL_FIELDS = {
 }
 
 
+# Text-to-image checkpoints no longer have a Bedrock alternative: all three Bedrock
+# Stability text-to-image models went Legacy on 2026-11-09 (EOL 2027-05-09), so the
+# downloader fetches those checkpoints instead of offering Bedrock.
 BEDROCK_ALTERNATIVES = {
-    "checkpoints/v1-5-pruned-emaonly-fp16.safetensors": {
-        "node": "BedrockStabilityGenerate",
-        "capability": "text-to-image",
-        "description": "Stability SD3.5 Large via Bedrock (no download needed)",
-    },
-    "checkpoints/sd_xl_base_1.0.safetensors": {
-        "node": "BedrockStabilityGenerate",
-        "capability": "text-to-image",
-        "description": "Stability SD3.5 Large via Bedrock (no download needed)",
-    },
-    "checkpoints/sd_xl_refiner_1.0.safetensors": {
-        "node": "BedrockStabilityGenerate",
-        "capability": "text-to-image",
-        "description": "Stability SD3.5 Large via Bedrock (no download needed)",
-    },
-    "checkpoints/DreamShaper_8_pruned.safetensors": {
-        "node": "BedrockStabilityGenerate",
-        "capability": "text-to-image",
-        "description": "Stability SD3.5 Large via Bedrock (no download needed)",
-    },
     "checkpoints/512-inpainting-ema.safetensors": {
         "node": "BedrockStabilityInpaint",
         "capability": "inpainting",
@@ -79,16 +62,6 @@ BEDROCK_ALTERNATIVES = {
         "node": "BedrockLumaRay",
         "capability": "video-generation",
         "description": "Luma Ray v2 via Bedrock (no download needed)",
-    },
-    "diffusion_models/z_image_turbo_bf16.safetensors": {
-        "node": "BedrockStabilityGenerate",
-        "capability": "text-to-image",
-        "description": "Stability SD3.5 Large via Bedrock (no download needed)",
-    },
-    "checkpoints/flux1-dev-fp8.safetensors": {
-        "node": "BedrockStabilityGenerate",
-        "capability": "text-to-image",
-        "description": "Stability SD3.5 Large via Bedrock (no download needed)",
     },
 }
 

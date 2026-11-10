@@ -1,57 +1,11 @@
-from .utils import get_bedrock_client, tensor_to_base64, mask_to_base64, base64_to_tensor, invoke_stability_model
+from .utils import get_bedrock_client, tensor_to_base64, mask_to_base64, invoke_stability_model
 
-# Stable Image Core and Stable Image Ultra were removed: Stability AI moved both to
-# the Bedrock Legacy state on 2026-11-09 and they reach end of life on 2027-05-09.
-# SD 3.5 Large is the remaining Bedrock text-to-image model. For local GPU
-# generation, use the open-weight Stability checkpoints (SDXL base/refiner, SD 1.5)
-# fetched from Hugging Face by the auto-model-downloader.
-GENERATE_MODELS = [
-    ("SD 3.5 Large", "stability.sd3-5-large-v1:0"),
-]
-
-
-class BedrockStabilityGenerate:
-    @classmethod
-    def INPUT_TYPES(cls):
-        return {
-            "required": {
-                "prompt": ("STRING", {"multiline": True, "default": ""}),
-                "model": ([m[0] for m in GENERATE_MODELS], {"default": GENERATE_MODELS[0][0]}),
-                "aspect_ratio": (["1:1", "16:9", "21:9", "2:3", "3:2", "4:5", "5:4", "9:16", "9:21"], {"default": "1:1"}),
-                "output_format": (["png", "jpeg", "webp"], {"default": "png"}),
-            },
-            "optional": {
-                "negative_prompt": ("STRING", {"multiline": True, "default": ""}),
-                "seed": ("INT", {"default": 0, "min": 0, "max": 4294967294}),
-                "image": ("IMAGE",),
-                "strength": ("FLOAT", {"default": 0.35, "min": 0.0, "max": 1.0, "step": 0.05}),
-            },
-        }
-
-    RETURN_TYPES = ("IMAGE",)
-    RETURN_NAMES = ("image",)
-    FUNCTION = "generate"
-    CATEGORY = "Bedrock/Stability"
-
-    def generate(self, prompt, model, aspect_ratio, output_format, negative_prompt="", seed=0, image=None, strength=0.35):
-        client = get_bedrock_client()
-        model_id = dict(GENERATE_MODELS)[model]
-
-        body = {
-            "prompt": prompt,
-            "output_format": output_format,
-            "aspect_ratio": aspect_ratio,
-        }
-        if negative_prompt:
-            body["negative_prompt"] = negative_prompt
-        if seed > 0:
-            body["seed"] = seed
-        if image is not None:
-            body["image"] = tensor_to_base64(image)
-            body["strength"] = strength
-            body["mode"] = "image-to-image"
-
-        return (invoke_stability_model(client, model_id, body),)
+# The Bedrock Stability Generate node (text-to-image / image-to-image) was removed:
+# Stability AI moved all three Bedrock text-to-image models (SD 3.5 Large, Stable Image
+# Core, Stable Image Ultra) to the Bedrock Legacy state on 2026-11-09, and they reach
+# end of life on 2027-05-09. For text-to-image, use the local SD 3.5 Large / Medium,
+# FLUX or SDXL checkpoints, which the auto-model-downloader fetches from Hugging Face.
+# The editing nodes below use separate inference-profile models and are unaffected.
 
 
 class BedrockStabilityOutpaint:
@@ -172,14 +126,12 @@ class BedrockStabilitySearchRecolor:
 
 
 NODE_CLASS_MAPPINGS = {
-    "BedrockStabilityGenerate": BedrockStabilityGenerate,
     "BedrockStabilityOutpaint": BedrockStabilityOutpaint,
     "BedrockStabilityEraseObject": BedrockStabilityEraseObject,
     "BedrockStabilitySearchRecolor": BedrockStabilitySearchRecolor,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
-    "BedrockStabilityGenerate": "Bedrock Stability Generate (SD3.5 Large)",
     "BedrockStabilityOutpaint": "Bedrock Stability Outpaint",
     "BedrockStabilityEraseObject": "Bedrock Stability Erase Object",
     "BedrockStabilitySearchRecolor": "Bedrock Stability Search & Recolor",
