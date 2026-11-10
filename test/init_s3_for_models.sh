@@ -29,7 +29,7 @@ download() {
         return 0
     fi
     echo "Downloading $name..."
-    curl -L --retry 3 --retry-delay 5 -o "$dest" "$url"
+    curl -fL --retry 3 --retry-delay 5 -o "$dest" "$url"
     if [ $? -ne 0 ]; then
         echo "FAILED: $name"
         rm -f "$dest"
@@ -134,9 +134,9 @@ download ~/comfyui-models/checkpoints/sd_xl_refiner_1.0.safetensors \
 download ~/comfyui-models/checkpoints/DreamShaper_8_pruned.safetensors \
     "https://huggingface.co/Lykon/DreamShaper/resolve/main/DreamShaper_8_pruned.safetensors?download=true"
 download ~/comfyui-models/checkpoints/512-inpainting-ema.safetensors \
-    "https://huggingface.co/stabilityai/stable-diffusion-2-inpainting/resolve/main/512-inpainting-ema.safetensors?download=true"
+    "https://huggingface.co/sd2-community/stable-diffusion-2-inpainting/resolve/main/512-inpainting-ema.safetensors?download=true"
 download ~/comfyui-models/checkpoints/v2-1_768-ema-pruned.safetensors \
-    "https://huggingface.co/stabilityai/stable-diffusion-2-1/resolve/main/v2-1_768-ema-pruned.safetensors?download=true"
+    "https://huggingface.co/sd2-community/stable-diffusion-2-1/resolve/main/v2-1_768-ema-pruned.safetensors?download=true"
 download ~/comfyui-models/checkpoints/svd.safetensors \
     "https://huggingface.co/stabilityai/stable-video-diffusion-img2vid/resolve/main/svd.safetensors?download=true"
 

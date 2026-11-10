@@ -51,12 +51,12 @@
     "group": "sd15"
   },
   "checkpoints/512-inpainting-ema.safetensors": {
-    "url": "https://huggingface.co/stabilityai/stable-diffusion-2-inpainting/resolve/main/512-inpainting-ema.safetensors?download=true",
+    "url": "https://huggingface.co/sd2-community/stable-diffusion-2-inpainting/resolve/main/512-inpainting-ema.safetensors?download=true",
     "size_gb": 2.0,
     "group": "sd2_inpainting"
   },
   "checkpoints/v2-1_768-ema-pruned.safetensors": {
-    "url": "https://huggingface.co/stabilityai/stable-diffusion-2-1/resolve/main/v2-1_768-ema-pruned.safetensors?download=true",
+    "url": "https://huggingface.co/sd2-community/stable-diffusion-2-1/resolve/main/v2-1_768-ema-pruned.safetensors?download=true",
     "size_gb": 5.2,
     "group": "sd21"
   },
@@ -163,25 +163,25 @@
   },
   "diffusion_models/wan2.2_i2v_high_noise_14B_fp8_scaled.safetensors": {
     "url": "https://huggingface.co/Comfy-Org/Wan_2.2_ComfyUI_Repackaged/resolve/main/split_files/diffusion_models/wan2.2_i2v_high_noise_14B_fp8_scaled.safetensors?download=true",
-    "size_gb": 14.5,
+    "size_gb": 14.9,
     "group": "wan22_i2v",
     "requires": ["text_encoders/umt5_xxl_fp8_e4m3fn_scaled.safetensors", "vae/wan_2.1_vae.safetensors"]
   },
   "diffusion_models/wan2.2_i2v_low_noise_14B_fp8_scaled.safetensors": {
     "url": "https://huggingface.co/Comfy-Org/Wan_2.2_ComfyUI_Repackaged/resolve/main/split_files/diffusion_models/wan2.2_i2v_low_noise_14B_fp8_scaled.safetensors?download=true",
-    "size_gb": 14.5,
+    "size_gb": 14.9,
     "group": "wan22_i2v",
     "requires": ["text_encoders/umt5_xxl_fp8_e4m3fn_scaled.safetensors", "vae/wan_2.1_vae.safetensors"]
   },
   "diffusion_models/wan2.2_t2v_high_noise_14B_fp8_scaled.safetensors": {
     "url": "https://huggingface.co/Comfy-Org/Wan_2.2_ComfyUI_Repackaged/resolve/main/split_files/diffusion_models/wan2.2_t2v_high_noise_14B_fp8_scaled.safetensors?download=true",
-    "size_gb": 14.5,
+    "size_gb": 14.9,
     "group": "wan22_t2v",
     "requires": ["text_encoders/umt5_xxl_fp8_e4m3fn_scaled.safetensors", "vae/wan_2.1_vae.safetensors"]
   },
   "diffusion_models/wan2.2_t2v_low_noise_14B_fp8_scaled.safetensors": {
     "url": "https://huggingface.co/Comfy-Org/Wan_2.2_ComfyUI_Repackaged/resolve/main/split_files/diffusion_models/wan2.2_t2v_low_noise_14B_fp8_scaled.safetensors?download=true",
-    "size_gb": 14.5,
+    "size_gb": 14.9,
     "group": "wan22_t2v",
     "requires": ["text_encoders/umt5_xxl_fp8_e4m3fn_scaled.safetensors", "vae/wan_2.1_vae.safetensors"]
   },
@@ -379,7 +379,7 @@
   },
   "text_encoders/qwen_2.5_vl_7b.safetensors": {
     "url": "https://huggingface.co/Comfy-Org/HunyuanImage_2.1_ComfyUI/resolve/main/split_files/text_encoders/qwen_2.5_vl_7b.safetensors?download=true",
-    "size_gb": 14.5,
+    "size_gb": 14.9,
     "group": "capybara"
   },
   "text_encoders/byt5_small_glyphxl_fp16.safetensors": {
@@ -435,14 +435,19 @@
     "group": "flux1_schnell",
     "requires": ["text_encoders/clip_l.safetensors", "text_encoders/t5xxl_fp16.safetensors", "vae/ae.safetensors"]
   },
-  "checkpoints/sd3_medium.safetensors": {
-    "url": "https://huggingface.co/stabilityai/stable-diffusion-3-medium/resolve/main/sd3_medium.safetensors",
-    "size_gb": 5.0,
+  "checkpoints/sd3.5_large_fp8_scaled.safetensors": {
+    "url": "https://huggingface.co/Comfy-Org/stable-diffusion-3.5/resolve/main/sd3.5_large_fp8_scaled.safetensors?download=true",
+    "size_gb": 14.9,
     "group": "sd3",
     "requires": ["text_encoders/clip_l.safetensors", "text_encoders/clip_g.safetensors", "text_encoders/t5xxl_fp16.safetensors"]
   },
+  "checkpoints/sd3.5_medium_incl_clips_t5xxlfp8scaled.safetensors": {
+    "url": "https://huggingface.co/Comfy-Org/stable-diffusion-3.5/resolve/main/sd3.5_medium_incl_clips_t5xxlfp8scaled.safetensors?download=true",
+    "size_gb": 11.6,
+    "group": "sd3"
+  },
   "text_encoders/clip_g.safetensors": {
-    "url": "https://huggingface.co/Comfy-Org/stable-diffusion-3.5-fp8/resolve/main/text_encoders/clip_g.safetensors?download=true",
+    "url": "https://huggingface.co/Comfy-Org/stable-diffusion-3.5/resolve/main/text_encoders/clip_g.safetensors?download=true",
     "size_gb": 1.4,
     "group": "sd3"
   }

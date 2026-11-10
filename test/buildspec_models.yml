@@ -24,10 +24,10 @@ phases:
             return 0
           fi
           echo "Downloading: $1"
-          curl -L --retry 5 --retry-delay 10 --connect-timeout 30 -o "$dest" "$url"
+          curl -fL --retry 5 --retry-delay 10 --connect-timeout 30 -o "$dest" "$url"
           if [ $? -ne 0 ]; then
             echo "RETRY: $name"
-            curl -L --retry 3 --retry-delay 30 --connect-timeout 60 --max-time 3600 -o "$dest" "$url"
+            curl -fL --retry 3 --retry-delay 30 --connect-timeout 60 --max-time 3600 -o "$dest" "$url"
             if [ $? -ne 0 ]; then
               echo "FAILED permanently: $name"
               rm -f "$dest"
@@ -64,9 +64,9 @@ phases:
         download "checkpoints/DreamShaper_8_pruned.safetensors" \
           "https://huggingface.co/Lykon/DreamShaper/resolve/main/DreamShaper_8_pruned.safetensors?download=true"
         download "checkpoints/512-inpainting-ema.safetensors" \
-          "https://huggingface.co/stabilityai/stable-diffusion-2-inpainting/resolve/main/512-inpainting-ema.safetensors?download=true"
+          "https://huggingface.co/sd2-community/stable-diffusion-2-inpainting/resolve/main/512-inpainting-ema.safetensors?download=true"
         download "checkpoints/v2-1_768-ema-pruned.safetensors" \
-          "https://huggingface.co/stabilityai/stable-diffusion-2-1/resolve/main/v2-1_768-ema-pruned.safetensors?download=true"
+          "https://huggingface.co/sd2-community/stable-diffusion-2-1/resolve/main/v2-1_768-ema-pruned.safetensors?download=true"
         download "checkpoints/svd.safetensors" \
           "https://huggingface.co/stabilityai/stable-video-diffusion-img2vid/resolve/main/svd.safetensors?download=true"
 
