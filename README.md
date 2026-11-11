@@ -360,7 +360,7 @@ The catalog is defined in `comfyui_image/custom_nodes/comfyui-auto-model-downloa
 | ComfyUI | v0.44.2 |
 | PyTorch | 2.14.1 (CUDA 13.0) |
 | Mountpoint S3 CSI Driver | v2.7.0 |
-| AWS CDK | aws-cdk-lib 2.273.0 (CLI 2.1145.0) |
+| AWS CDK | aws-cdk-lib 2.276.0 (CLI 2.1148.0) |
 | EKS Blueprints | 1.19.0 |
 | Node AMI | AL2023 GPU (driver 580+) |
 
@@ -419,7 +419,7 @@ The total cost of deploying this solution in us-west-2 is approximately **$450/m
   GLM-5, Qwen3-Next 80B (text), and Ministral 3 8B/14B (vision). GLM-5.3 and Kimi K3.1 were
   left out because they throttled on every call in a default-quota account.
 - ComfyUI v0.41.3 -> v0.44.2, PyTorch 2.13.0 -> 2.14.1 (torchvision 0.29.1), aws-cli sidecar
-  2.38.1 -> 2.40.0. ComfyUI now starts with `--offline`, which disables the deploy-to-cloud
+  2.38.1 -> 2.40.0, aws-cdk-lib 2.273.0 -> 2.276.0 (CLI 2.1145.0 -> 2.1148.0). ComfyUI now starts with `--offline`, which disables the deploy-to-cloud
   upload route added in v0.44 (`POST /api/deploy/bundle`) and Comfy-Org partner nodes.
 - Fixed Bedrock Stability Remove Background returning the original image: Bedrock's RGBA output
   keeps the original colours under transparent pixels, and the node dropped the alpha channel.
