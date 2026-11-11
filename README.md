@@ -354,12 +354,12 @@ The catalog is defined in `comfyui_image/custom_nodes/comfyui-auto-model-downloa
 
 | Component | Version |
 |-----------|---------|
-| Amazon EKS | 1.35 |
-| Karpenter | 1.9.0 |
-| NVIDIA GPU Operator | v26.3.2 (driver/toolkit from AMI) |
-| ComfyUI | v0.44.2 |
-| PyTorch | 2.14.1 (CUDA 13.0) |
-| Mountpoint S3 CSI Driver | v2.7.0 |
+| Amazon EKS | 1.36 |
+| Karpenter | 1.15.1 |
+| NVIDIA GPU Operator | v26.7.2 (driver/toolkit from AMI) |
+| ComfyUI | v0.45.1 |
+| PyTorch | 2.14.1 (CUDA 13.2) |
+| Mountpoint S3 CSI Driver | v2.9.2 |
 | AWS CDK | aws-cdk-lib 2.276.0 (CLI 2.1148.0) |
 | EKS Blueprints | 1.19.0 |
 | Node AMI | AL2023 GPU (driver 580+) |
@@ -430,6 +430,11 @@ The total cost of deploying this solution in us-west-2 is approximately **$450/m
 - Auto-model-downloader: added a models-bucket grant to the Pod Identity role (S3 reads were
   returning 403) and replaced the `curl` Hugging Face fallback with `requests` (the image has no curl).
 - Image build uses the in-region Ubuntu EC2 archive mirror.
+- Platform refresh: EKS 1.35 -> 1.36 (kube-proxy v1.36.0-eksbuild.65, VPC CNI v1.23.3), Karpenter
+  1.9.0 -> 1.15.1, Mountpoint S3 CSI 2.7.0 -> 2.9.2, GPU Operator v26.3.2 -> v26.7.2 (device plugin
+  and GFD v0.17.0 -> v0.20.1), ComfyUI v0.44.2 -> v0.45.1, CUDA base 13.0.3 -> 13.2.1 (torch 2.14.1
+  cu132), model-sync Lambda Python 3.12 -> 3.14, CodeBuild standard:7.0 -> standard:8.0, and
+  deploy-host tooling kubectl v1.32.4 -> v1.36.6, eksctl v0.208.0 -> v0.231.0, CDK CLI -> 2.1148.0.
 - npm overrides for zod 4.6.7, qs 6.17.1, glob 14.0.4 and minimatch 11.0.5.
 
 ### ComfyUI Upgrade -- 2026.10.19
@@ -481,7 +486,7 @@ Automatic deployment scripts in `comfyui-on-eks/auto_deploy/`, supports Ubuntu a
 
 ### Flux / SD3 / Custom Nodes Support
 
-ComfyUI v0.44.2 supports Flux, Flux.2, Stable Diffusion 3.5, Qwen Image, Wan 2.2, and custom nodes. To use any model:
+ComfyUI v0.45.1 supports Flux, Flux.2, Stable Diffusion 3.5, Qwen Image, Wan 2.2, and custom nodes. To use any model:
 
 1. Upload models to the S3 models bucket following the `ComfyUI/models` directory structure
 2. Use the corresponding workflow JSON via the API (see `test/` folder for examples)

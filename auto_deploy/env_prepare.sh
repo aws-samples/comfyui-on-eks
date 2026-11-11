@@ -61,7 +61,7 @@ install_awscli() {
 
 install_eksctl() {
     echo "==== Start installing eksctl ===="
-    EKSCTL_VERSION="v0.208.0"
+    EKSCTL_VERSION="v0.231.0"
     ARCH=$GO_ARCH
     PLATFORM=$(uname -s)_$ARCH
     curl -sLO "https://github.com/eksctl-io/eksctl/releases/download/${EKSCTL_VERSION}/eksctl_$PLATFORM.tar.gz"
@@ -80,7 +80,7 @@ install_eksctl() {
 
 install_kubectl() {
     echo "==== Start installing kubectl ===="
-    KUBECTL_VERSION="v1.32.4"
+    KUBECTL_VERSION="v1.36.6"  # keep within one minor of the cluster (EKS 1.36)
     curl -sLO "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/${GO_ARCH}/kubectl"
     curl -sLO "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/${GO_ARCH}/kubectl.sha256"
     echo "$(cat kubectl.sha256)  kubectl" | sha256sum --check
@@ -149,7 +149,7 @@ install_npm() {
 }
 
 install_cdk() {
-    npm install -g aws-cdk@2.1128.0
+    npm install -g aws-cdk@2.1148.0
     cdk version
 }
 

@@ -2,7 +2,7 @@
 # Shared functions for deploy_infra.sh and destroy_infra.sh.
 # Sourced after env.sh (which sets CDK_DIR, CDK, ACCOUNT_ID, AWS_DEFAULT_REGION).
 
-REQUIRED_CDK_VERSION="2.1128.0"
+REQUIRED_CDK_VERSION="2.1148.0"
 
 assert_cdk_version() {
     local actual

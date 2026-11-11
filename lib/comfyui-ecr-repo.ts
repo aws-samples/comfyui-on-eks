@@ -77,7 +77,7 @@ export class ComfyuiEcrRepo extends cdk.Stack {
         const imageProject = new codebuild.Project(this, 'ComfyuiImageBuild', {
             projectName: 'comfyui-image-build',
             environment: {
-                buildImage: codebuild.LinuxBuildImage.STANDARD_7_0,
+                buildImage: codebuild.LinuxBuildImage.STANDARD_8_0,
                 computeType: codebuild.ComputeType.LARGE,
                 privileged: true,
                 environmentVariables: {
@@ -123,7 +123,7 @@ export class ComfyuiEcrRepo extends cdk.Stack {
         new codebuild.Project(this, 'ComfyuiModelDownload', {
             projectName: 'comfyui-model-download',
             environment: {
-                buildImage: codebuild.LinuxBuildImage.STANDARD_7_0,
+                buildImage: codebuild.LinuxBuildImage.STANDARD_8_0,
                 computeType: codebuild.ComputeType.LARGE,
                 environmentVariables: {
                     MODELS_BUCKET: { value: `comfyui-models-${this.account}-${this.region}` },
