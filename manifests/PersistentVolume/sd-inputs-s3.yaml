@@ -12,6 +12,13 @@ spec:
   mountOptions:
     - allow-delete
     - region REGION
+    # Mountpoint CSI v2 runs mount-s3 as uid 1000, so the mount is owned by 1000 with mode
+    # 755. The ComfyUI container runs as root but drops ALL capabilities (no
+    # CAP_DAC_OVERRIDE), so root is held to those mode bits and every write failed
+    # (UI image uploads returned HTTP 500). Mountpoint rejects uid/gid 0, so widen the
+    # mode instead; the mount is private to this single-user pod.
+    - dir-mode 0777
+    - file-mode 0666
   csi:
     driver: s3.csi.aws.com # required
     volumeHandle: s3-csi-driver-volume-inputs # need to be unique
