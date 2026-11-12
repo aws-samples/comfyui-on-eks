@@ -24,19 +24,33 @@ phases:
             return 0
           fi
           echo "Downloading: $1"
-          curl -L --retry 5 --retry-delay 10 --connect-timeout 30 -o "$dest" "$url"
+          curl -fL --retry 5 --retry-delay 10 --connect-timeout 30 -o "$dest" "$url"
           if [ $? -ne 0 ]; then
             echo "RETRY: $name"
-            curl -L --retry 3 --retry-delay 30 --connect-timeout 60 --max-time 3600 -o "$dest" "$url"
+            curl -fL --retry 3 --retry-delay 30 --connect-timeout 60 --max-time 3600 -o "$dest" "$url"
             if [ $? -ne 0 ]; then
               echo "FAILED permanently: $name"
               rm -f "$dest"
+              FAILED_MODELS="$FAILED_MODELS $1"
               return 1
             fi
           fi
           echo "Uploading to S3: $1"
-          aws s3 cp "$dest" "s3://${MODELS_BUCKET}/$1"
+          if ! aws s3 cp "$dest" "s3://${MODELS_BUCKET}/$1"; then
+            echo "FAILED upload: $1"
+            FAILED_MODELS="$FAILED_MODELS $1"
+          fi
           rm -f "$dest"
+        }
+
+        # A failed download must fail the build, otherwise CodeBuild reports SUCCEEDED
+        # and the gap only shows up later as a missing model in a workflow.
+        FAILED_MODELS=""
+        fail_if_any() {
+          if [ -n "$FAILED_MODELS" ]; then
+            echo "ERROR: these models failed to download:$FAILED_MODELS"
+            exit 1
+          fi
         }
 
         echo "=== Tier 1: z_image_turbo (Get Started) ==="
@@ -50,6 +64,7 @@ phases:
           "https://huggingface.co/Comfy-Org/Real-ESRGAN_repackaged/resolve/main/RealESRGAN_x4plus.safetensors?download=true"
 
         if [ "$MODEL_TIER" = "tier1" ]; then
+          fail_if_any
           echo "Tier 1 only - stopping here"
           exit 0
         fi
@@ -64,9 +79,9 @@ phases:
         download "checkpoints/DreamShaper_8_pruned.safetensors" \
           "https://huggingface.co/Lykon/DreamShaper/resolve/main/DreamShaper_8_pruned.safetensors?download=true"
         download "checkpoints/512-inpainting-ema.safetensors" \
-          "https://huggingface.co/stabilityai/stable-diffusion-2-inpainting/resolve/main/512-inpainting-ema.safetensors?download=true"
+          "https://huggingface.co/sd2-community/stable-diffusion-2-inpainting/resolve/main/512-inpainting-ema.safetensors?download=true"
         download "checkpoints/v2-1_768-ema-pruned.safetensors" \
-          "https://huggingface.co/stabilityai/stable-diffusion-2-1/resolve/main/v2-1_768-ema-pruned.safetensors?download=true"
+          "https://huggingface.co/sd2-community/stable-diffusion-2-1/resolve/main/v2-1_768-ema-pruned.safetensors?download=true"
         download "checkpoints/svd.safetensors" \
           "https://huggingface.co/stabilityai/stable-video-diffusion-img2vid/resolve/main/svd.safetensors?download=true"
 
@@ -89,7 +104,7 @@ phases:
           "https://huggingface.co/Comfy-Org/ace_step_1.5_ComfyUI_files/resolve/main/split_files/vae/ace_1.5_vae.safetensors?download=true"
 
         echo "=== Flux 1 Dev ==="
-        download "diffusion_models/flux1-dev-fp8.safetensors" \
+        download "checkpoints/flux1-dev-fp8.safetensors" \
           "https://huggingface.co/Comfy-Org/flux1-dev/resolve/main/flux1-dev-fp8.safetensors?download=true"
         download "text_encoders/clip_l.safetensors" \
           "https://huggingface.co/comfyanonymous/flux_text_encoders/resolve/main/clip_l.safetensors?download=true"
@@ -106,7 +121,7 @@ phases:
         download "loras/Qwen-Image-Lightning-8steps-V1.0.safetensors" \
           "https://huggingface.co/lightx2v/Qwen-Image-Lightning/resolve/main/Qwen-Image-Lightning-8steps-V1.0.safetensors?download=true"
         download "loras/Qwen-Image-Edit-2509-Lightning-4steps-V1.0-bf16.safetensors" \
-          "https://huggingface.co/lightx2v/Qwen-Image-Edit-2509-Lightning/resolve/main/Qwen-Image-Edit-2509-Lightning-4steps-V1.0-bf16.safetensors?download=true"
+          "https://huggingface.co/lightx2v/Qwen-Image-Lightning/resolve/main/Qwen-Image-Edit-2509/Qwen-Image-Edit-2509-Lightning-4steps-V1.0-bf16.safetensors?download=true"
 
         echo "=== Wan 2.2 Video ==="
         download "text_encoders/umt5_xxl_fp8_e4m3fn_scaled.safetensors" \
@@ -148,6 +163,7 @@ phases:
         download "loras/Flux_2-Turbo-LoRA_comfyui.safetensors" \
           "https://huggingface.co/ByteZSzn/Flux.2-Turbo-ComfyUI/resolve/main/Flux_2-Turbo-LoRA_comfyui.safetensors?download=true"
 
+        fail_if_any
         echo "=== All downloads complete ==="
 
   post_build:

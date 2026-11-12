@@ -48,8 +48,11 @@ class BedrockStabilityRemoveBackground:
             },
         }
 
-    RETURN_TYPES = ("IMAGE",)
-    RETURN_NAMES = ("image",)
+    # image: the subject on black (the removed background is visible in previews).
+    # mask:  1.0 where the background was removed (ComfyUI LoadImage convention); wire
+    #        image + mask into "Join Image with Alpha" to save a transparent PNG.
+    RETURN_TYPES = ("IMAGE", "MASK")
+    RETURN_NAMES = ("image", "mask")
     FUNCTION = "remove_bg"
     CATEGORY = "Bedrock/Stability"
 
@@ -59,7 +62,7 @@ class BedrockStabilityRemoveBackground:
             "image": tensor_to_base64(image),
             "output_format": output_format,
         }
-        return (invoke_stability_model(client, "us.stability.stable-image-remove-background-v1:0", body),)
+        return invoke_stability_model(client, "us.stability.stable-image-remove-background-v1:0", body, with_alpha=True)
 
 
 class BedrockStabilityUpscale:

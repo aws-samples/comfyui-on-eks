@@ -74,7 +74,7 @@ export class LambdaModelsSync extends cdk.Stack {
     });
 
     const modelsSyncLambda = new lambda.Function(this, 'ComfyModelsSyncLambda', {
-        runtime: lambda.Runtime.PYTHON_3_12,
+        runtime: lambda.Runtime.PYTHON_3_14,
         code: lambda.Code.fromAsset('lib/ComfyModelsSyncLambda'),
         handler: 'model_sync.lambda_handler',
         functionName: 'comfy-models-sync',

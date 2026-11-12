@@ -49,27 +49,27 @@ export default class BlueprintConstruct {
 
         // Add-ons
         const karpenterAddOn = new blueprints.addons.KarpenterV1AddOn({
-            version: '1.9.0',
+            version: '1.15.1',
             values: {replicas: 1}
         });
         const addOns: Array<blueprints.ClusterAddOn> = [
             new blueprints.addons.VpcCniAddOn({
-                version: 'v1.23.0-eksbuild.1',
+                version: 'v1.23.3-eksbuild.1',
             }),
-            new blueprints.addons.KubeProxyAddOn('v1.35.3-eksbuild.18'),
+            new blueprints.addons.KubeProxyAddOn('v1.36.0-eksbuild.65'),
             new blueprints.addons.AwsLoadBalancerControllerAddOn(),
             new blueprints.addons.SSMAgentAddOn(),
             new blueprints.addons.EksPodIdentityAgentAddOn(),
             karpenterAddOn,
             new blueprints.addons.S3CSIDriverAddOn({
-                version: '2.7.0',
+                version: '2.9.2',
                 bucketNames: [
                     `comfyui-inputs-${cdk.Aws.ACCOUNT_ID}-${cdk.Aws.REGION}`,
                     `comfyui-outputs-${cdk.Aws.ACCOUNT_ID}-${cdk.Aws.REGION}`,
                 ],
             }),
             new blueprints.GpuOperatorAddon({
-                version: 'v26.3.2',
+                version: 'v26.7.2',
                 values:{
                     driver: {
                       enabled: false
@@ -82,7 +82,7 @@ export default class BlueprintConstruct {
                     },
                     devicePlugin: {
                       enabled: true,
-                      version: 'v0.17.0'
+                      version: 'v0.20.1'
                     },
                     migManager: {
                       enabled: true,
@@ -92,14 +92,14 @@ export default class BlueprintConstruct {
                       defaultRuntime: 'containerd'
                     },
                     gfd: {
-                      version: 'v0.17.0'
+                      version: 'v0.20.1'
                     }
                   }
             }),
         ];
 
         const clusterProvider = new blueprints.GenericClusterProvider({
-            version: KubernetesVersion.V1_35,
+            version: KubernetesVersion.V1_36,
             tags: {
                 "Name": "comfyui-on-eks-cluster",
                 "Type": "generic-cluster"

@@ -77,9 +77,26 @@ spec:
     else
         echo "comfyui-userdata: WARNING first-boot security patch failed (rc=$?); node continues, daily SSM autopatch will retry"
     fi
-    mkfs -t xfs /dev/nvme1n1
+    # Find the instance-store NVMe disk by its device model. Nitro does not guarantee
+    # NVMe enumeration order: on some instance types (e.g. g6.2xlarge) the root EBS
+    # volume is nvme1n1 and the instance store is nvme0n1, so a hard-coded device name
+    # makes mkfs hit the busy root disk and the models silently land on the 200 GiB
+    # root volume, which then fills up and the kubelet evicts the pod.
     mkdir -p /comfyui-models
-    mount /dev/nvme1n1 /comfyui-models
+    instance_store=""
+    for dev in /sys/block/nvme*n1; do
+        if grep -q "Instance Storage" "$dev/device/model" 2>/dev/null; then
+            instance_store="/dev/$(basename "$dev")"
+            break
+        fi
+    done
+    if [ -n "$instance_store" ]; then
+        echo "comfyui-userdata: using instance store $instance_store for /comfyui-models"
+        mkfs -t xfs -f "$instance_store"
+        mount "$instance_store" /comfyui-models
+    else
+        echo "comfyui-userdata: WARNING no instance-store NVMe found; models will use the root volume"
+    fi
     account=$(aws sts get-caller-identity --query 'Account' --output text)
     region=$(ec2-metadata --availability-zone | sed 's/.$//'|awk '{print $NF}')
     bucket="s3://comfyui-models-${account}-${region}"

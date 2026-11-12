@@ -13,23 +13,30 @@ MODELS = [
     "us.openai.gpt-6.1-sol",
     "us.openai.gpt-6-sol",
     "us.openai.gpt-5.5",
-    # Meta Llama (open weight):
-    "us.meta.llama4-scout-17b-instruct-v1:0",
-    "us.meta.llama4-maverick-17b-instruct-v1:0",
-    "us.meta.llama3-3-70b-instruct-v1:0",
+    # xAI Grok (frontier, text):
+    "us.xai.grok-4.7",
+    # OpenAI gpt-oss (open weight):
+    "openai.gpt-oss-120b-1:0",
     # Mistral (open weight):
     "mistral.mistral-large-3-675b-instruct",
     "mistral.ministral-3-14b-instruct",
     "mistral.magistral-small-2509",
     # NVIDIA Nemotron (open weight):
     "nvidia.nemotron-super-3-120b",
-    "nvidia.nemotron-nano-9b-v2",
-    # DeepSeek + Qwen (open weight):
-    "us.deepseek.r1-v1:0",
+    "nvidia.nemotron-nano-3-30b",
+    # DeepSeek, MiniMax, Z.AI (open weight):
+    "deepseek.v3.2",
+    "minimax.minimax-m2.5",
+    "zai.glm-5",
+    # Qwen (open weight):
     "qwen.qwen3-235b-a22b-2507-v1:0",
+    "qwen.qwen3-next-80b-a3b",
     "qwen.qwen3-32b-v1:0",
     # Amazon Nova removed — the Nova line is being deprecated by AWS (Nova Premier already
     # EOL; Canvas/Reel removed earlier). Use the non-Nova models above instead.
+    # Also removed: models in the Bedrock Legacy state (EOL 2027-03-30) per the Bedrock
+    # model lifecycle page — Llama 3.3 70B, Llama 4 Scout/Maverick, Nemotron Nano 9B v2,
+    # DeepSeek R1.
 ]
 
 

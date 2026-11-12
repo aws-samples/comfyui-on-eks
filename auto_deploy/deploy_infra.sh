@@ -199,6 +199,13 @@ verify_image_freshness() {
 
 deploy_karpenter() {
     echo "==== Start deploying Karpenter ===="
+    # EC2 Spot launches need the AWSServiceRoleForEC2Spot service-linked role. In an account
+    # that has never launched Spot it does not exist, and Karpenter is not allowed to create
+    # it, so every Spot launch fails with AuthFailure.ServiceLinkedRoleCreationNotPermitted.
+    if ! aws iam get-role --role-name AWSServiceRoleForEC2Spot > /dev/null 2>&1; then
+        echo "Creating the EC2 Spot service-linked role"
+        aws iam create-service-linked-role --aws-service-name spot.amazonaws.com > /dev/null
+    fi
     kubectl delete -f "$CDK_DIR/manifests/Karpenter/karpenter_v1.yaml" --ignore-not-found
     KarpenterInstanceNodeRole=$(aws cloudformation describe-stacks --stack-name "$EKS_CLUSTER_STACK" --query 'Stacks[0].Outputs[?OutputKey==`KarpenterInstanceNodeRole`].OutputValue' --output text)
     sg_tag="eks-cluster-sg-ComfyUI-on-EKS-Cluster*"
@@ -303,6 +310,26 @@ deploy_pod_identity() {
                 \"Action\": [\"s3:ListBucket\"],
                 \"Resource\": \"arn:aws:s3:::comfyui-outputs-${ACCOUNT_ID}-${AWS_DEFAULT_REGION}\",
                 \"Condition\": { \"StringLike\": { \"s3:prefix\": [\"video/*\"] } }
+            }
+        ]
+    }"
+
+    # Models bucket access for the auto-model-downloader. Pod Identity credentials replace
+    # the node role inside the pod (IMDS hop limit 1 blocks the node role), so the pod needs
+    # its own grant: read to fetch a missing model from S3, write to cache a model it fetched
+    # from Hugging Face back to S3 (the S3 event Lambda then syncs it to every GPU node).
+    aws iam put-role-policy --role-name $POD_IDENTITY_ROLE_NAME --policy-name ModelsS3ReadWrite --policy-document "{
+        \"Version\": \"2012-10-17\",
+        \"Statement\": [
+            {
+                \"Effect\": \"Allow\",
+                \"Action\": [\"s3:GetObject\", \"s3:PutObject\", \"s3:AbortMultipartUpload\"],
+                \"Resource\": \"arn:aws:s3:::comfyui-models-${ACCOUNT_ID}-${AWS_DEFAULT_REGION}/*\"
+            },
+            {
+                \"Effect\": \"Allow\",
+                \"Action\": [\"s3:ListBucket\"],
+                \"Resource\": \"arn:aws:s3:::comfyui-models-${ACCOUNT_ID}-${AWS_DEFAULT_REGION}\"
             }
         ]
     }"
@@ -413,10 +440,18 @@ configure_ssm_patching() {
 
 wait_for_comfyui_ready() {
     echo "==== Waiting for ComfyUI pod to be ready ===="
+    # On a fresh account the first GPU node must be provisioned by Karpenter, pull the
+    # ~8 GB image and sync the Tier 1 models from S3. When g5/g6 capacity is short in the
+    # region, Karpenter retries for a while before a node launches (observed: 34 min in
+    # us-west-2), so allow 60 min. i counts seconds. --request-timeout stops a single
+    # kubectl call from hanging the loop forever.
     i=0
-    while [ "$(kubectl get pods -l app=comfyui -o jsonpath='{.items[0].status.phase}' 2>/dev/null)" != "Running" ]; do
-        if [ $i -gt 360 ]; then
-            echo "ComfyUI pod is not ready after 30min"
+    while [ "$(kubectl get pods -l app=comfyui --request-timeout=20s -o jsonpath='{.items[0].status.conditions[?(@.type=="Ready")].status}' 2>/dev/null)" != "True" ]; do
+        if [ $i -gt 3600 ]; then
+            echo "ComfyUI pod is not ready after 60min"
+            kubectl get pods -l app=comfyui --request-timeout=20s -o wide
+            echo "Recent Karpenter capacity events (InsufficientCapacityError = no GPU capacity yet):"
+            kubectl get events --request-timeout=20s --sort-by=.lastTimestamp | grep -iE "InsufficientCapacity|NoCompatibleInstanceTypes|AuthFailure" | tail -5
             exit 1
         fi
         echo "  ComfyUI pod not ready yet, waiting... (${i}s)"

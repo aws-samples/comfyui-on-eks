@@ -34,7 +34,7 @@ def get_bedrock_client(region=None):
     return boto3.client("bedrock-runtime", region_name=_resolve_region(region), config=_BEDROCK_CONFIG)
 
 
-def invoke_stability_model(client, model_id, body):
+def invoke_stability_model(client, model_id, body, with_alpha=False):
     """Invoke a Stability InvokeModel call and return the first output image as a tensor.
 
     Centralizes error handling for all Stability nodes: surfaces ClientError with
@@ -63,6 +63,8 @@ def invoke_stability_model(client, model_id, body):
             f"Bedrock model {model_id} returned no image "
             f"(finish_reasons={finish}); the request may have been content-filtered."
         )
+    if with_alpha:
+        return bytes_to_tensor_and_mask(base64.b64decode(images[0]))
     return base64_to_tensor(images[0])
 
 
@@ -142,3 +144,22 @@ def bytes_to_tensor(image_bytes):
 
 def base64_to_tensor(b64_string):
     return bytes_to_tensor(base64.b64decode(b64_string))
+
+
+def bytes_to_tensor_and_mask(image_bytes):
+    """Decode a possibly-transparent image into (IMAGE, MASK).
+
+    Stability's remove-background returns an RGBA PNG whose transparent pixels still
+    carry the ORIGINAL colours, so a plain .convert("RGB") silently brings the removed
+    background back. Here the RGB is composited onto black by alpha (the removal is
+    visible in previews), and the MASK follows ComfyUI's LoadImage convention
+    (1.0 = transparent/background), so core's "Join Image with Alpha" node rebuilds a
+    transparent RGBA image from the two outputs.
+    """
+    img = Image.open(io.BytesIO(image_bytes)).convert("RGBA")
+    rgba = np.array(img).astype(np.float32) / 255.0
+    alpha = rgba[..., 3:4]
+    rgb = rgba[..., :3] * alpha
+    image = torch.from_numpy(rgb).unsqueeze(0)
+    mask = torch.from_numpy(1.0 - alpha[..., 0]).unsqueeze(0)
+    return image, mask

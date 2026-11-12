@@ -11,7 +11,7 @@ export CDK_DEFAULT_REGION="$AWS_DEFAULT_REGION"
 export CDK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 # Use the repo-local CDK CLI (pinned in package.json) to avoid PATH-resolution
-# failures when a stale global CDK is installed. Verified: 2.1128.0.
+# failures when a stale global CDK is installed. Verified: 2.1148.0.
 export CDK="$CDK_DIR/node_modules/.bin/cdk"
 
 export input_bucket_name="comfyui-inputs-$ACCOUNT_ID-$AWS_DEFAULT_REGION"

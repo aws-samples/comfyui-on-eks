@@ -1,6 +1,14 @@
-FROM nvcr.io/nvidia/cuda:13.0.3-cudnn-runtime-ubuntu24.04
+FROM nvcr.io/nvidia/cuda:13.2.1-cudnn-runtime-ubuntu24.04
 
 WORKDIR /app
+
+# Optional Ubuntu archive mirror (e.g. us-west-2.ec2.archive.ubuntu.com, Canonical's
+# in-region EC2 mirror). The CodeBuild buildspec passes the build region's mirror so
+# the build does not depend on archive.ubuntu.com being reachable. Empty = default.
+ARG UBUNTU_MIRROR=""
+RUN if [ -n "$UBUNTU_MIRROR" ]; then \
+      sed -i "s#http://archive.ubuntu.com/ubuntu#http://${UBUNTU_MIRROR}/ubuntu#g" /etc/apt/sources.list.d/ubuntu.sources; \
+    fi
 
 RUN apt-get update && \
     apt-get upgrade -y && \
@@ -23,11 +31,13 @@ RUN apt-get update && \
 RUN pip3 install --break-system-packages --ignore-installed "pip>=24.3" "wheel>=0.46.2" && \
     apt-get purge -y python3-pip python3-wheel && \
     rm -rf /var/lib/apt/lists/*
-RUN pip3 install --break-system-packages torch==2.13.0 torchvision==0.28.0 --extra-index-url https://download.pytorch.org/whl/cu130
+# torch 2.14.1 + torchvision 0.29.1 built for CUDA 13.2 (cu132) to match the 13.2.1 base image.
+# torch 2.15.0 is published, but no matching torchvision yet. CUDA 13.2 runs on the AL2023
+# GPU AMI's 580-series driver (CUDA 13.0) through CUDA minor-version compatibility.
+RUN pip3 install --break-system-packages torch==2.14.1 torchvision==0.29.1 --extra-index-url https://download.pytorch.org/whl/cu132
 RUN git clone https://github.com/comfyanonymous/ComfyUI.git
-# ComfyUI v0.41.3 (released 2026-10-17). Proven-stable patch tag, deliberately one
-# minor behind the v0.42.x line cut the day before, to pick up a few days of soak.
-RUN cd /app/ComfyUI && git checkout 8713616fcc321624e306bbd36be5906203dcb0dc
+# ComfyUI v0.45.1 (released 2026-11-10), the newest release.
+RUN cd /app/ComfyUI && git checkout 02457b8c8cad2da1801ef69bd9c6d654c751d32c
 RUN pip3 install --break-system-packages -r /app/ComfyUI/requirements.txt
 RUN pip3 install --break-system-packages requests==2.34.2
 
@@ -46,4 +56,10 @@ COPY custom_nodes/comfyui-auto-model-downloader /app/ComfyUI/custom_nodes/comfyu
 RUN mkdir -p /app/ComfyUI/output/video
 
 EXPOSE 8848
-CMD ["python3", "-u", "/app/ComfyUI/main.py", "--listen", "0.0.0.0", "--port", "8848"]
+# --offline: since v0.44, ComfyUI registers POST /api/deploy/bundle, which uploads an
+# installation snapshot (custom nodes, model list) to Comfy-Org's cloud builder. This
+# deployment has no authentication in front of CloudFront by default, so any visitor could
+# trigger that upload. --offline disables it, also disables Comfy-Org partner (paid API)
+# nodes, and makes the browser UI load only same-origin content. The Bedrock nodes and the
+# auto-model-downloader run server-side / same-origin and are unaffected.
+CMD ["python3", "-u", "/app/ComfyUI/main.py", "--listen", "0.0.0.0", "--port", "8848", "--offline"]

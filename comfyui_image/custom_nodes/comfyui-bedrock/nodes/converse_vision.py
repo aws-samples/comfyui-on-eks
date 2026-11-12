@@ -8,15 +8,17 @@ VISION_MODELS = [
     "us.anthropic.claude-haiku-5-5",
     "us.anthropic.claude-sonnet-5-5",
     "us.anthropic.claude-opus-5-5",
+    # xAI Grok (frontier, multimodal):
+    "us.xai.grok-4.7",
     # Open-weight vision models:
-    "us.meta.llama4-scout-17b-instruct-v1:0",
-    "us.meta.llama4-maverick-17b-instruct-v1:0",
     "us.mistral.pixtral-large-2502-v1:0",
-    "google.gemma-3-27b-it",
-    "google.gemma-3-12b-it",
+    "mistral.ministral-3-14b-instruct",
+    "mistral.ministral-3-8b-instruct",
     "qwen.qwen3-vl-235b-a22b",
     # Amazon Nova removed — the Nova line is being deprecated by AWS (Nova Premier already
     # EOL; Canvas/Reel removed earlier). Use the non-Nova vision models above instead.
+    # Also removed: models in the Bedrock Legacy state (EOL 2027-03-30) per the Bedrock
+    # model lifecycle page — Llama 4 Scout/Maverick, Gemma 3 27B/12B.
 ]
 
 
